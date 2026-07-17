@@ -19,8 +19,6 @@ let rafId = 0;
 let lastTap = 0;
 const cutinSeen = new Set(); // 숙적 컷인은 접속당 한 번 — 재조우는 짧게
 
-const FACTION_BAND = { wei: '#56749f', shu: '#567f52', wu: '#a85048', free: '#7e7668' };
-
 function foeSvg(bandColor) {
   return `
   <svg viewBox="0 0 64 72" class="foe-figure" aria-hidden="true">
@@ -30,15 +28,7 @@ function foeSvg(bandColor) {
   </svg>`;
 }
 
-function allyUnitSvg(bandColor) {
-  return `
-  <svg viewBox="0 0 64 72" aria-hidden="true">
-    <circle cx="32" cy="20" r="11"></circle>
-    <path d="M32 33 C20 33 13 42 12 58 L52 58 C51 42 44 33 32 33 Z"></path>
-    <rect x="20" y="13.4" width="24" height="5" rx="2.5" fill="${bandColor}" transform="rotate(6 32 16)"></rect>
-  </svg>`;
-}
-
+// 아군은 실제 영웅 초상이 전장에 선다 — "내 캐릭터가 싸운다"는 감각
 function alliesHtml() {
   return battle
     .alliesSnapshot()
@@ -46,7 +36,7 @@ function alliesHtml() {
       (u) => `
     <div class="ally-unit${u.hp <= 0 ? ' down' : ''}" data-id="${u.id}">
       <div class="unit-hp ally-hp"><i style="width:${(u.hp / u.maxHp) * 100}%"></i></div>
-      ${allyUnitSvg(FACTION_BAND[u.faction] ?? '#567f52')}
+      <div class="unit-sprite f-${u.faction}">${portraitHtml(u.id, 'unit-face')}</div>
       <span class="ally-unit-name">${u.name}</span>
     </div>`
     )
@@ -83,10 +73,23 @@ function gatePower(stage) {
   return Math.ceil(stage.enemyPower * BALANCE.battle.bossPowerRatio);
 }
 
+function chapterBand(s = getState()) {
+  const chapter = battle.currentChapter(s);
+  return ['#C8A93A', '#8A3A34', '#7A6A9E', '#4F6FA0'][chapter.id - 1] ?? '#8A3A34';
+}
+
+/** "무찌른 적 3/10"보다 "우두머리까지 7명"이 목표가 잡힌다.
+ *  다 무찔렀는데 전투력이 모자라면 막혀 있다는 사실을 숨기지 않는다. */
+function killLineText(s) {
+  const left = BALANCE.battle.killsPerStage - s.stage.kills;
+  if (left > 0) return `우두머리까지 <b>${left}</b>명`;
+  return battle.canBeatBoss(s) ? '우두머리와 결전!' : '우두머리가 길을 막았다!';
+}
+
 function template(s) {
   const chapter = battle.currentChapter(s);
   const stage = battle.currentStage(s);
-  const bandColor = ['#C8A93A', '#8A3A34', '#7A6A9E', '#4F6FA0'][chapter.id - 1] ?? '#8A3A34';
+  const bandColor = chapterBand(s);
 
   return `
   <section class="screen battle-screen">
@@ -101,7 +104,7 @@ function template(s) {
 
       <div class="foe down" id="bs-foe">
         <div class="unit-hp foe-hp"><i id="bs-foe-hp" style="width:100%"></i></div>
-        ${foeSvg(bandColor)}
+        <div id="bs-foe-figure">${foeSvg(bandColor)}</div>
         <div class="unit-name foe-name" id="bs-foe-name">${chapter.foe}</div>
       </div>
 
@@ -117,11 +120,11 @@ function template(s) {
 
     <div class="battle-status">
       <div class="status-top">
-        <span class="kill-info">무찌른 적 <b id="bs-kills">${s.stage.kills}</b> / ${BALANCE.battle.killsPerStage}</span>
-        <span class="power-pair">
-          아군 <b id="bs-ally-power">${fmt(partyPower(s))}</b>
+        <span class="kill-info" id="bs-kill-line">${killLineText(s)}</span>
+        <span class="power-line" id="bs-power-line">
+          내 전투력 <b id="bs-ally-power">${fmt(partyPower(s))}</b>
           <i class="vs-mark"></i>
-          돌파 <b id="bs-foe-power">${fmt(gatePower(stage))}</b>
+          돌파 필요 <b id="bs-foe-power">${fmt(gatePower(stage))}</b>
         </span>
       </div>
       <div class="kill-bar"><i id="bs-kill-fill"></i></div>
@@ -158,6 +161,8 @@ function partyFlagsHtml(s) {
   return slots.join('');
 }
 
+let foeFigureKey = ''; // 지금 그려진 적 모습 ('mob' 또는 rival:영웅id) — 바뀔 때만 다시 그린다
+
 function updateFoe() {
   const s = getState();
   const enemy = battle.currentEnemy();
@@ -173,15 +178,28 @@ function updateFoe() {
     foeBox.classList.toggle('rival', Boolean(enemy.rival));
     nameEl.textContent = enemy.name;
     if (hpEl) hpEl.style.width = `${(enemy.hp / enemy.maxHp) * 100}%`;
+
+    // 숙적은 얼굴 없는 그림자가 아니라 그 영웅의 얼굴로 나타난다
+    const fig = document.getElementById('bs-foe-figure');
+    const key = enemy.rival && enemy.rivalId ? `rival:${enemy.rivalId}` : 'mob';
+    if (fig && key !== foeFigureKey) {
+      foeFigureKey = key;
+      fig.innerHTML =
+        key === 'mob'
+          ? foeSvg(chapterBand(s))
+          : `<div class="unit-sprite rival-sprite">${portraitHtml(enemy.rivalId, 'unit-face')}</div>`;
+    }
   }
 
   if (battle.isRecovering()) {
     hintEl.textContent = '전열을 가다듬는 중…';
   } else if (battle.isBossPhase(s) && !battle.canBeatBoss(s)) {
     const gap = gatePower(battle.currentStage(s)) - partyPower(s);
-    hintEl.textContent = `돌파까지 전투력 ${fmt(gap)} — 단련·승급·모집으로 채울 수 있어요`;
+    hintEl.textContent = `전투력이 ${fmt(gap)} 모자라요 — 아래 [공격 연마]나 영웅 탭의 단련으로 키우세요`;
   } else if (battle.isBossPhase(s)) {
     hintEl.textContent = '우두머리와 맞붙는 중!';
+  } else if (s.resources.coin >= upgrades.atkUpgradeCost()) {
+    hintEl.textContent = '엽전이 모였어요 — 아래 [공격 연마]를 누르면 더 세져요';
   } else {
     hintEl.textContent = '';
   }
@@ -200,6 +218,7 @@ function updateUpgradeButton() {
   if (nextEl) nextEl.textContent = `→ ${fmt(atk + atkPerUpgrade())}`;
   if (costEl) costEl.textContent = `엽전 ${fmt(cost)}`;
   btn.disabled = s.resources.coin < cost;
+  btn.classList.toggle('can-buy', !btn.disabled); // 살 수 있으면 은은히 빛난다 — "여길 누르세요"
 }
 
 function updatePowers() {
@@ -208,6 +227,9 @@ function updatePowers() {
   const foe = document.getElementById('bs-foe-power');
   if (ally) ally.textContent = fmt(partyPower(s));
   if (foe) foe.textContent = fmt(gatePower(battle.currentStage(s)));
+  // 모자라면 필요 수치가 붉게, 충분하면 금빛으로 — 숫자를 읽지 않아도 상태가 보인다
+  const line = document.getElementById('bs-power-line');
+  if (line) line.classList.toggle('lack', partyPower(s) < gatePower(battle.currentStage(s)));
 }
 
 function foeAnchor() {
@@ -215,6 +237,15 @@ function foeAnchor() {
   if (!foeBox) return null;
   const rect = foeBox.getBoundingClientRect();
   return { x: rect.left + rect.width / 2, y: rect.top };
+}
+
+/** 베기 궤적 — 매 타격마다 각도가 조금씩 다른 빛줄기가 적을 긋는다 */
+function spawnSlash(foeBox) {
+  const mark = document.createElement('i');
+  mark.className = 'slash';
+  mark.style.setProperty('--slash-rot', `${Math.round(-38 + Math.random() * 66)}deg`);
+  foeBox.appendChild(mark);
+  setTimeout(() => mark.remove(), 300);
 }
 
 /** 숙적 조우 컷인 — 이름 깃발과 연의체 한마디가 전장을 가로지른다 */
@@ -259,6 +290,7 @@ export function render(root) {
   destroy();
   const s = getState();
   root.insertAdjacentHTML('beforeend', template(s));
+  foeFigureKey = 'mob'; // template은 항상 그림자 병사로 그린다
   updateFoe();
   updateUpgradeButton();
   updateCombo();
@@ -344,7 +376,10 @@ export function render(root) {
       const hpEl = document.getElementById('bs-foe-hp');
       if (hpEl) hpEl.style.width = `${(hp / maxHp) * 100}%`;
       const foeBox = document.getElementById('bs-foe');
-      if (foeBox) pulse(foeBox, 'hit');
+      if (foeBox) {
+        pulse(foeBox, 'hit');
+        spawnSlash(foeBox); // 베는 궤적 — 때렸다는 게 눈에 보인다
+      }
       const striker = document.querySelector(`.ally-unit[data-id="${attackerId}"]`);
       if (striker) pulse(striker, 'lunge');
       const at = foeAnchor();
@@ -352,6 +387,17 @@ export function render(root) {
     }),
 
     on('battle:death', ({ boss }) => {
+      // 쓰러지는 연출 — 사라지기 전에 옆으로 넘어간다
+      const foeBox = document.getElementById('bs-foe');
+      const fieldEl = document.getElementById('bs-field');
+      if (foeBox && fieldEl && !foeBox.classList.contains('down')) {
+        const ghost = foeBox.cloneNode(true);
+        ghost.removeAttribute('id');
+        for (const n of ghost.querySelectorAll('[id]')) n.removeAttribute('id');
+        ghost.classList.add('foe-corpse');
+        fieldEl.appendChild(ghost);
+        setTimeout(() => ghost.remove(), 650);
+      }
       const at = foeAnchor();
       if (at) burst(at.x, at.y + 26, { count: boss ? 12 : 7 });
       if (boss) {
@@ -380,10 +426,10 @@ export function render(root) {
     }),
 
     on('stage:kill', ({ kills, coins }) => {
-      const killsEl = document.getElementById('bs-kills');
-      if (killsEl) {
-        killsEl.textContent = kills;
-        pulse(killsEl);
+      const lineEl = document.getElementById('bs-kill-line');
+      if (lineEl) {
+        lineEl.innerHTML = killLineText(getState());
+        pulse(lineEl);
       }
       const at = foeAnchor();
       if (at) floatText(at.x, at.y - 6, `+${fmt(coins)}`, 'gold');
@@ -413,6 +459,9 @@ export function render(root) {
         render(rootEl);
       }
     }),
+
+    // 엽전이 쌓이면 연마 버튼이 눌 수 있는 상태로 깨어나야 한다 (기존엔 성장 이벤트까지 잠들어 있었음)
+    on('coin', () => updateUpgradeButton()),
 
     // 단련·승급·모집·편성은 전투력을 바꾸고, 공격력은 전투력에서 파생된다
     on('hero:level', refreshGrowthViews),

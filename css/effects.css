@@ -86,10 +86,20 @@
   80% { transform: translate(2px, 0); }
 }
 
-/* 아군 공격 — 앞으로 찌른다 */
-.ally-unit.lunge { animation: lunge 0.18s ease-out; }
+/* 아군 공격 — 적을 향해 몸을 던진다 */
+.ally-unit.lunge { animation: lunge 0.22s ease-out; }
 @keyframes lunge {
-  40% { transform: translateX(7px); }
+  35% { transform: translate(11px, -6px) rotate(3deg); }
+  70% { transform: translate(4px, -2px); }
+}
+
+/* 연마 가능 — 버튼이 은은히 빛나며 "여길 누르세요" */
+.atk-upgrade.can-buy {
+  border-color: rgba(201, 162, 39, 0.5);
+  animation: can-buy-glow 1.6s ease-in-out infinite;
+}
+@keyframes can-buy-glow {
+  50% { box-shadow: 0 0 14px rgba(201, 162, 39, 0.28); }
 }
 
 /* 재 파편 */
