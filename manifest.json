@@ -1,0 +1,16 @@
+{
+  "name": "삼국지 영웅 키우기",
+  "short_name": "삼국영웅",
+  "description": "삼국지 영웅을 모아 키우는 방치형 게임",
+  "lang": "ko",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#171310",
+  "theme_color": "#171310",
+  "icons": [
+    { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

@@ -1,0 +1,7 @@
+# 비밀 키 — 절대 커밋 금지
+.env
+
+# 도구 부산물
+node_modules/
+tools/output-raw/
+assets/heroes-v1-backup/
