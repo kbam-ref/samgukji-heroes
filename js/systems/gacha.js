@@ -31,7 +31,7 @@ export function pityRemaining(s) {
 }
 
 /**
- * count회 모집. 보옥이 모자라면 null.
+ * count회 모집. 옥구슬이 모자라면 null.
  * 반환: [{ hero, dupe }]
  */
 export function pull(count) {

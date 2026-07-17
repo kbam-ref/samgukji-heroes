@@ -38,7 +38,7 @@ export function openTale(entry) {
       const jade = talesSys.finishTale(tale.id);
       if (jade > 0) {
         play('claim');
-        body.innerHTML = `<p class="tale-done">이야기가 깃발에 새겨졌다.<br>보옥 +${fmt(jade)} ‧ 인연이 깊어졌다 (+1%p)</p>`;
+        body.innerHTML = `<p class="tale-done">이야기가 깃발에 새겨졌다.<br>옥구슬 +${fmt(jade)} ‧ 인연이 깊어졌다 (+1%p)</p>`;
       } else {
         body.innerHTML = `<p class="tale-done">다시 읽어도 좋은 이야기다.</p>`;
       }

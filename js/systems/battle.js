@@ -28,7 +28,7 @@ let enemy = null;      // 동시에 한 마리만 존재한다
 let respawnLeft = 0;   // 새 적 등장까지 남은 시간(초)
 let wipeLeft = 0;      // 재정비 남은 시간(초)
 let enemyCharge = 0;   // 적의 다음 공격까지 누적
-let comboCharge = 0;   // 합격기 충전 (인연 발동 중의 아군 공격 횟수)
+let comboCharge = 0;   // 협공기 충전 (인연 발동 중의 아군 공격 횟수)
 let tapGiven = 0;      // 지금 적에게서 이미 거둔 터치 엽전 — 연타 악용 상한용
 
 // ── 조회 ─────────────────────────────────────────────
@@ -73,7 +73,7 @@ export function reset() {
   tapGiven = 0;
 }
 
-// ── 합격기 — 인연이 발동 중일 때 아군의 공격이 쌓이면 한 방 ──
+// ── 협공기 — 인연이 발동 중일 때 아군의 공격이 쌓이면 한 방 ──
 
 export function comboProgress() {
   return Math.min(1, comboCharge / BALANCE.combo.strikes);
@@ -83,7 +83,7 @@ export function comboReady() {
   return comboCharge >= BALANCE.combo.strikes;
 }
 
-/** 합격 발동 — 총 화력 × 배율의 한 방. 성공 시 true */
+/** 협공 발동 — 총 화력 × 배율의 한 방. 성공 시 true */
 export function fireCombo() {
   const s = state.getState();
   if (!s || !enemy || wipeLeft > 0) return false;
@@ -223,7 +223,7 @@ function resolveDeath(s, wasBoss, wasRival, enemyRivalId) {
     state.addCoin(Math.round(stage.coinPerKill * B.bossCoinRatio * rivalMult));
     for (const bond of activeBonds(s)) state.bumpBondMastery(bond.id); // 인연 숙련
     if (wasRival && enemyRivalId) {
-      state.recordRivalKill(enemyRivalId); // 첫 격파면 보옥
+      state.recordRivalKill(enemyRivalId); // 첫 격파면 옥구슬
       const target = bountyTarget(s);
       if (target && target.id === enemyRivalId) state.claimBounty(BALANCE.bounty.jade); // 현상수배
     }
@@ -234,7 +234,7 @@ function resolveDeath(s, wasBoss, wasRival, enemyRivalId) {
         // 장 평정 — 다음 장 진입의 발판이 될 엽전 뭉치
         state.addCoin(Math.round(stage.coinPerKill * B.chapterClearCoinMult));
       }
-      state.addJade(B.jadeOnClear); // 전장 돌파 보옥 — 모집이 계속 흐르게
+      state.addJade(B.jadeOnClear); // 전장 돌파 옥구슬 — 모집이 계속 흐르게
       state.clearStage();
     }
   } else {
@@ -275,7 +275,7 @@ function strikeBy(unit, s) {
 
   applyHit(s, damage, unit.id);
 
-  // 합격 충전 — 인연이 발동 중일 때만 쌓인다 (군령: 의기충천이 빠르게 한다)
+  // 협공 충전 — 인연이 발동 중일 때만 쌓인다 (군령: 의기충천이 빠르게 한다)
   if (bondBonus(s) > 0 && comboCharge < BALANCE.combo.strikes) {
     comboCharge += orderEffect(s, 'comboChargeMult', 1);
     emit('combo:charge', { progress: comboProgress(), ready: comboReady() });

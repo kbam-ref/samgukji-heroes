@@ -33,7 +33,7 @@ function showOfflineReward(gain) {
     <p class="offline-sub">영웅 탭에서 단련에 쓰면 좋아요</p>`;
 
   showModal({
-    title: '다녀오셨군요, 주공',
+    title: '다녀오셨군요, 주군',
     body,
     dismissible: false,
     actions: [

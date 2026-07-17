@@ -3,7 +3,7 @@
 //
 // 이벤트 목록:
 //   coin        { total, gained }      엽전 변화
-//   jade        { total, gained }      보옥 변화
+//   jade        { total, gained }      옥구슬 변화
 //   hero:add    { id }                 새 영웅 획득
 //   hero:dupe   { id, dupes }          겹침 획득
 //   hero:level  { id, level }          단련(레벨 상승)
@@ -172,7 +172,7 @@ export function raidsLeft() {
 }
 
 /**
- * 숙적 격파 기록. 첫 격파면 보옥을 얹어준다 — 벽에 막혀도 가챠가 돌게.
+ * 숙적 격파 기록. 첫 격파면 옥구슬을 얹어준다 — 벽에 막혀도 가챠가 돌게.
  * 반환: 첫 격파 여부
  */
 export function recordRivalKill(heroId) {
@@ -234,7 +234,7 @@ export function claimBounty(jade) {
 
 // ── 열전·숙련·군령 ────────────────────────────────────
 
-/** 열전 첫 열람 — 보옥과 함께 인연이 영구히 깊어진다. */
+/** 열전 첫 열람 — 옥구슬과 함께 인연이 영구히 깊어진다. */
 export function readTale(id, jade) {
   state.tales = state.tales ?? { read: [] };
   if (state.tales.read.includes(id)) return false;

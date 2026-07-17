@@ -28,7 +28,7 @@ export function render(root) {
     <div class="settings-group">
       <h3>기록</h3>
       <div class="settings-row"><span>여정을 시작한 날</span><b>${startedText}</b></div>
-      <div class="settings-row"><span>무찌른 적</span><b>${fmt(s.stats?.totalKills ?? 0)}마리</b></div>
+      <div class="settings-row"><span>무찌른 적</span><b>${fmt(s.stats?.totalKills ?? 0)}명</b></div>
       <div class="settings-row"><span>돌파한 전장</span><b>${fmt(s.stats?.totalClears ?? 0)}곳</b></div>
       <div class="settings-row"><span>모집 횟수</span><b>${fmt(s.gacha.total)}회</b></div>
       <div class="settings-row"><span>세이브 버전</span><b>v${SAVE_VERSION}</b></div>

@@ -184,10 +184,10 @@ export function render(root) {
       <div class="pity-gauge"><i id="gs-pity-fill"></i></div>
       <div class="gacha-actions">
         <button class="btn pull-btn" data-count="1">
-          1회 모집<span>보옥 ${fmt(BALANCE.gacha.costSingle)}</span>
+          1회 모집<span>옥구슬 ${fmt(BALANCE.gacha.costSingle)}</span>
         </button>
         <button class="btn primary pull-btn" data-count="10">
-          10회 모집<span>보옥 ${fmt(BALANCE.gacha.costTen)}</span>
+          10회 모집<span>옥구슬 ${fmt(BALANCE.gacha.costTen)}</span>
         </button>
       </div>
       <p class="rate-note">${rateNote()}</p>
@@ -206,7 +206,7 @@ export function render(root) {
     if (!results) {
       shake(btn);
       const rect = btn.getBoundingClientRect();
-      floatText(rect.left + rect.width / 2, rect.top, '보옥이 모자라요', 'warn');
+      floatText(rect.left + rect.width / 2, rect.top, '옥구슬이 모자라요', 'warn');
       return;
     }
 

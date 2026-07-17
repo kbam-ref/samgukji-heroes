@@ -1,4 +1,4 @@
-// 상단 자원 막대 — 엽전·보옥 잔액과 목표 버튼. 변화에 즉시 반응한다.
+// 상단 자원 막대 — 엽전·옥구슬 잔액과 목표 버튼. 변화에 즉시 반응한다.
 
 import { on } from '../core/events.js';
 import { getState } from '../core/state.js';
@@ -37,7 +37,7 @@ export function renderResourceBar(root) {
       ${COIN_ICON}<b>${fmt(shown.coin)}</b><span class="res-label">엽전</span>
     </div>
     <div class="resource jade" id="res-jade">
-      ${JADE_ICON}<b>${fmt(shown.jade)}</b><span class="res-label">보옥</span>
+      ${JADE_ICON}<b>${fmt(shown.jade)}</b><span class="res-label">옥구슬</span>
     </div>
     <button class="goals-btn" id="goals-btn" aria-label="목표">
       ${GOAL_ICON}<i class="goals-badge" id="goals-badge" hidden></i>

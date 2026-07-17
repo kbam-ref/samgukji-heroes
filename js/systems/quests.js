@@ -69,7 +69,7 @@ export function hasClaimable(s = state.getState()) {
   );
 }
 
-/** 보상 수령 — 달성 검증 후 state에 위임. 성공 시 보상 보옥 수, 실패 시 0 */
+/** 보상 수령 — 달성 검증 후 state에 위임. 성공 시 보상 옥구슬 수, 실패 시 0 */
 export function claim(id) {
   const s = state.getState();
 

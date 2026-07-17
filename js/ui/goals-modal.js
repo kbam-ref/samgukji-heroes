@@ -13,7 +13,7 @@ function rowHtml({ quest, progress, done, claimed }) {
   const stateText = claimed
     ? '<span class="q-done">받음</span>'
     : done
-      ? `<button class="btn primary q-claim" data-id="${quest.id}">받기<span>보옥 ${fmt(quest.reward.jade)}</span></button>`
+      ? `<button class="btn primary q-claim" data-id="${quest.id}">받기<span>옥구슬 ${fmt(quest.reward.jade)}</span></button>`
       : `<span class="q-progress">${fmt(progress)} / ${fmt(quest.goal)}</span>`;
   return `
   <li class="q-row${claimed ? ' claimed' : ''}">
@@ -42,7 +42,7 @@ function bountyHtml() {
   <li class="q-row${done ? ' claimed' : ''}">
     <div class="q-info">
       <b>현상수배 ‧ ${target.name}</b>
-      <span class="q-blurb">${quests.bountyLocation(target)}에서 오늘 처치 — 보옥 ${fmt(BALANCE.bounty.jade)}</span>
+      <span class="q-blurb">${quests.bountyLocation(target)}에서 오늘 처치 — 옥구슬 ${fmt(BALANCE.bounty.jade)}</span>
     </div>
     ${done ? '<span class="q-done">완수</span>' : '<span class="q-progress">대기 중</span>'}
   </li>`;

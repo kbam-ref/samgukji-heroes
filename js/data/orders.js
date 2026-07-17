@@ -13,7 +13,7 @@ export const ORDERS = [
     id: 'shu-spirit',
     faction: 'shu',
     name: '의기충천',
-    blurb: '합격의 기세가 20% 빠르게 차오른다',
+    blurb: '협공의 기세가 20% 빠르게 차오른다',
     effect: { comboChargeMult: 1.2 },
   },
   {

@@ -242,7 +242,7 @@ function showRivalCutin(enemy) {
 function updateCombo() {
   const btn = document.getElementById('bs-combo');
   if (!btn) return;
-  btn.hidden = bondBonus(getState()) <= 0; // 인연이 있어야 합격이 있다
+  btn.hidden = bondBonus(getState()) <= 0; // 인연이 있어야 협공이 있다
   const fill = document.getElementById('bs-combo-fill');
   if (fill) fill.style.height = `${battle.comboProgress() * 100}%`;
   btn.classList.toggle('ready', battle.comboReady());
@@ -332,12 +332,12 @@ export function render(root) {
 
     on('rival:first', ({ jade }) => {
       const at = foeAnchor();
-      if (at) floatText(at.x, at.y - 30, `숙적 격파! 보옥 +${fmt(jade)}`, 'victory');
+      if (at) floatText(at.x, at.y - 30, `숙적 격파! 옥구슬 +${fmt(jade)}`, 'victory');
     }),
 
     on('bounty:done', ({ jade }) => {
       const at = foeAnchor();
-      if (at) floatText(at.x, at.y - 52, `현상수배 완수! 보옥 +${fmt(jade)}`, 'victory');
+      if (at) floatText(at.x, at.y - 52, `현상수배 완수! 옥구슬 +${fmt(jade)}`, 'victory');
     }),
 
     on('battle:hit', ({ damage, hp, maxHp, attackerId }) => {
@@ -405,7 +405,7 @@ export function render(root) {
         const rect = fieldEl.getBoundingClientRect();
         const cx = rect.left + rect.width / 2;
         floatText(cx, rect.top + rect.height / 2, '돌파!', 'victory');
-        floatText(cx, rect.top + rect.height / 2 + 34, `보옥 +${fmt(BALANCE.battle.jadeOnClear)}`, 'gold');
+        floatText(cx, rect.top + rect.height / 2 + 34, `옥구슬 +${fmt(BALANCE.battle.jadeOnClear)}`, 'gold');
       }
       const rootEl = document.getElementById('screen-root');
       if (rootEl) {
