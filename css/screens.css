@@ -246,6 +246,23 @@
   100% { transform: rotate(var(--slash-rot, -24deg)) scaleX(1.15); opacity: 0; }
 }
 
+/* 충격 링 — 타격점에서 퍼지는 파문 */
+.impact-ring {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border: 2px solid rgba(250, 245, 232, 0.85);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: impact-pop 0.3s ease-out forwards;
+}
+@keyframes impact-pop {
+  to { transform: scale(3.4); opacity: 0; }
+}
+
 /* 쓰러지는 적 — 사라지기 전에 옆으로 넘어간다 */
 .foe-corpse {
   pointer-events: none;

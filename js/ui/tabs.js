@@ -37,16 +37,24 @@ export function renderTabs(navRoot, screenRoot) {
     const btn = e.target.closest('.tab');
     if (btn) {
       vibrate(8);
-      switchTo(btn.dataset.tab, navRoot, screenRoot);
+      switchTo(btn.dataset.tab, navRoot, screenRoot, { push: true });
     }
+  });
+
+  // 폰 뒤로가기 = 이전 탭으로 (앱이 바로 꺼지지 않게)
+  window.addEventListener('popstate', () => {
+    const id = location.hash.slice(1);
+    if (TABS.some((t) => t.id === id)) switchTo(id, navRoot, screenRoot, { push: false });
   });
 
   // 주소의 #탭이름으로 바로 열 수 있다 (예: #heroes)
   const fromHash = location.hash.slice(1);
-  switchTo(TABS.some((t) => t.id === fromHash) ? fromHash : 'battle', navRoot, screenRoot);
+  switchTo(TABS.some((t) => t.id === fromHash) ? fromHash : 'battle', navRoot, screenRoot, { push: false });
 }
 
-export function switchTo(id, navRoot, screenRoot) {
+/** push=true(탭 버튼)는 히스토리에 쌓아 뒤로가기로 되돌아올 수 있게 하고,
+ *  push=false(첫 진입·뒤로가기 자체)는 쌓지 않는다 */
+export function switchTo(id, navRoot, screenRoot, { push = true } = {}) {
   const tab = TABS.find((t) => t.id === id);
   if (!tab || active === id) return;
 
@@ -60,5 +68,6 @@ export function switchTo(id, navRoot, screenRoot) {
   screenRoot.innerHTML = '';
   screenRoot.scrollTop = 0;
   tab.screen.render(screenRoot);
-  history.replaceState(null, '', `#${id}`);
+  if (push) history.pushState(null, '', `#${id}`);
+  else history.replaceState(null, '', `#${id}`);
 }

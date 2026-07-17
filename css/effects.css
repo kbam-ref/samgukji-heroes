@@ -65,10 +65,11 @@
 }
 
 /* 적이 맞을 때 — 기본 transform(가운데 정렬)을 유지한 채 움찔한다 */
-.foe.hit { animation: hit-recoil 0.2s ease-out; }
-@keyframes hit-recoil {
-  0%   { transform: translateX(-50%); }
-  40%  { transform: translateX(-50%) translateY(-4px); }
+/* 피격 — 뒤로 밀려나며 휘청인다 */
+.foe.hit { animation: hit-knockback 0.24s ease-out; }
+@keyframes hit-knockback {
+  30%  { transform: translateX(calc(-50% + 10px)) rotate(5deg); }
+  65%  { transform: translateX(calc(-50% + 4px)) rotate(1deg); }
   100% { transform: translateX(-50%); }
 }
 
@@ -86,11 +87,28 @@
   80% { transform: translate(2px, 0); }
 }
 
-/* 아군 공격 — 적을 향해 몸을 던진다 */
-.ally-unit.lunge { animation: lunge 0.22s ease-out; }
-@keyframes lunge {
-  35% { transform: translate(11px, -6px) rotate(3deg); }
-  70% { transform: translate(4px, -2px); }
+/* 아군 공격 — 적의 코앞까지 실제로 달려가 때리고 돌아온다 (--dx/--dy는 JS가 계산) */
+.ally-unit.dash {
+  z-index: 5;
+  animation: dash-attack 0.38s cubic-bezier(0.32, 0, 0.28, 1);
+}
+@keyframes dash-attack {
+  36% { transform: translate(var(--dx, 60px), var(--dy, -30px)) rotate(7deg) scale(1.04); }
+  50% { transform: translate(calc(var(--dx, 60px) + 7px), var(--dy, -30px)) rotate(-5deg) scale(1.1); }
+  68% { transform: translate(var(--dx, 60px), var(--dy, -30px)) rotate(2deg); }
+}
+
+/* 적의 반격 — 아군 쪽으로 몸을 날린다 */
+.foe.strike { animation: foe-dash 0.3s ease-out; }
+@keyframes foe-dash {
+  38% { transform: translateX(-50%) translate(-44px, 12px) scale(1.04); }
+}
+
+/* 맞은 아군 — 붉게 번쩍이며 휘청인다 */
+.ally-unit.hurt .unit-sprite { animation: hurt-flash 0.3s ease-out; }
+@keyframes hurt-flash {
+  30% { filter: brightness(1.9) saturate(1.6) hue-rotate(-25deg); transform: translateX(-4px); }
+  60% { transform: translateX(3px); }
 }
 
 /* 연마 가능 — 버튼이 은은히 빛나며 "여길 누르세요" */
@@ -137,12 +155,19 @@
   .pulse,
   .shake,
   .foe.hit,
+  .foe.strike,
+  .foe-corpse,
   .field-tap,
   .field-shake,
   .combo-btn.ready,
   .combo-btn.ready::after,
   .foe-figure,
-  .ally-unit svg,
+  .unit-sprite,
+  .ally-unit.dash,
+  .ally-unit.hurt .unit-sprite,
+  .slash,
+  .impact-ring,
+  .atk-upgrade.can-buy,
   .screen,
   .modal-backdrop,
   .modal-panel,

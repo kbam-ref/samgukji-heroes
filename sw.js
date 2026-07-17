@@ -1,7 +1,7 @@
 // 서비스워커 — 전체 에셋을 캐시해 비행기 모드에서도 완전히 플레이 가능하게 한다.
 // 에셋이 바뀌면 CACHE 버전을 올린다.
 
-const CACHE = 'samgukji-v15';
+const CACHE = 'samgukji-v16';
 
 // 영웅 초상 — js/data/heroes.js의 id와 일치 (24명)
 const HERO_IDS = [
@@ -12,12 +12,15 @@ const HERO_IDS = [
   'jiling', 'liaohua', 'yujin', 'chengpu',
 ];
 
+// 이미지 — 하나쯤 빠져도 네트워크 폴백이 있으므로 best-effort로 담는다
+const IMAGE_ASSETS = HERO_IDS.map((id) => `./assets/heroes/${id}.png`);
+
+// 코어(HTML·CSS·JS) — 하나라도 빠지면 앱이 백지가 되므로 원자적으로 담는다
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './assets/icon.svg',
-  ...HERO_IDS.map((id) => `./assets/heroes/${id}.png`),
   './css/base.css',
   './css/screens.css',
   './css/effects.css',
@@ -62,19 +65,19 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
-  // addAll은 원자적이라 파일 하나만 실패해도 설치 전체가 무산된다 —
-  // 파일별로 시도하고, 실패는 기록만 하고 계속 간다 (오프라인 전면 불능 방지)
+  // 코어는 addAll(원자적) — JS 하나만 빠져도 부팅이 통째로 죽어 "메뉴가 사라진" 것처럼 보인다.
+  // 코어 설치가 실패하면 이 버전 설치 자체를 무산시켜, 이전의 온전한 캐시를 그대로 쓴다.
+  // 이미지는 파일별 best-effort — 빠져도 네트워크 폴백으로 그때그때 채워진다.
   event.waitUntil(
-    caches
-      .open(CACHE)
-      .then((cache) =>
-        Promise.all(
-          ASSETS.map((url) =>
-            cache.add(url).catch((err) => console.warn('캐시 실패(건너뜀):', url, err))
-          )
+    caches.open(CACHE).then(async (cache) => {
+      await cache.addAll(ASSETS);
+      await Promise.all(
+        IMAGE_ASSETS.map((url) =>
+          cache.add(url).catch((err) => console.warn('이미지 캐시 실패(건너뜀):', url, err))
         )
-      )
-      .then(() => self.skipWaiting())
+      );
+      return self.skipWaiting();
+    })
   );
 });
 

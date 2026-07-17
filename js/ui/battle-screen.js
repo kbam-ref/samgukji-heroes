@@ -239,13 +239,32 @@ function foeAnchor() {
   return { x: rect.left + rect.width / 2, y: rect.top };
 }
 
-/** 베기 궤적 — 매 타격마다 각도가 조금씩 다른 빛줄기가 적을 긋는다 */
+/** 베기 궤적 + 충격 링 — 매 타격마다 각도가 조금씩 다른 빛줄기가 적을 긋는다 */
 function spawnSlash(foeBox) {
   const mark = document.createElement('i');
   mark.className = 'slash';
   mark.style.setProperty('--slash-rot', `${Math.round(-38 + Math.random() * 66)}deg`);
   foeBox.appendChild(mark);
-  setTimeout(() => mark.remove(), 300);
+  const ring = document.createElement('i');
+  ring.className = 'impact-ring';
+  foeBox.appendChild(ring);
+  setTimeout(() => {
+    mark.remove();
+    ring.remove();
+  }, 320);
+}
+
+/** 돌진 공격 — 공격자가 적의 코앞까지 실제 좌표로 달려간다 */
+function dashAttack(unit, foeBox) {
+  if (unit.classList.contains('dash')) return; // 이미 달리는 중
+  const u = unit.getBoundingClientRect();
+  const f = foeBox.getBoundingClientRect();
+  const dx = f.left + f.width / 2 - (u.left + u.width / 2) - 30; // 몸 하나 앞에서 멈춘다
+  const dy = f.top + f.height * 0.55 - (u.top + u.height * 0.5);
+  unit.style.setProperty('--dx', `${Math.round(dx)}px`);
+  unit.style.setProperty('--dy', `${Math.round(dy)}px`);
+  unit.classList.add('dash');
+  setTimeout(() => unit.classList.remove('dash'), 400);
 }
 
 /** 숙적 조우 컷인 — 이름 깃발과 연의체 한마디가 전장을 가로지른다 */
@@ -355,6 +374,13 @@ export function render(root) {
         const rect = fieldEl.getBoundingClientRect();
         floatText(rect.left + rect.width / 2, rect.top + rect.height / 2 - 12, bond?.warcry ?? '협공!', 'alarm');
       }
+      // 전원 연속 돌진 — 협공다운 러시
+      const foeBox = document.getElementById('bs-foe');
+      if (foeBox) {
+        [...document.querySelectorAll('.ally-unit:not(.down)')].forEach((u, i) =>
+          setTimeout(() => foeBox.isConnected && dashAttack(u, foeBox), i * 80)
+        );
+      }
       flash('ember');
       pulse(field, 'field-shake');
       play('combo');
@@ -376,14 +402,25 @@ export function render(root) {
       const hpEl = document.getElementById('bs-foe-hp');
       if (hpEl) hpEl.style.width = `${(hp / maxHp) * 100}%`;
       const foeBox = document.getElementById('bs-foe');
-      if (foeBox) {
-        pulse(foeBox, 'hit');
-        spawnSlash(foeBox); // 베는 궤적 — 때렸다는 게 눈에 보인다
-      }
       const striker = document.querySelector(`.ally-unit[data-id="${attackerId}"]`);
-      if (striker) pulse(striker, 'lunge');
+      if (striker && foeBox) dashAttack(striker, foeBox);
+      // 피격 연출은 공격자가 도착하는 타이밍에 맞춰 살짝 늦게
+      setTimeout(() => {
+        if (foeBox && foeBox.isConnected) {
+          pulse(foeBox, 'hit');
+          spawnSlash(foeBox);
+        }
+      }, 130);
       const at = foeAnchor();
       if (at) floatText(at.x + (Math.random() * 26 - 13), at.y + 10, `-${fmt(damage)}`);
+    }),
+
+    // 적의 반격 — 적이 몸을 날리고, 맞은 아군이 붉게 휘청인다
+    on('battle:foeStrike', ({ targetId }) => {
+      const foeBox = document.getElementById('bs-foe');
+      if (foeBox) pulse(foeBox, 'strike');
+      const victim = document.querySelector(`.ally-unit[data-id="${targetId}"]`);
+      if (victim) pulse(victim, 'hurt');
     }),
 
     on('battle:death', ({ boss }) => {
