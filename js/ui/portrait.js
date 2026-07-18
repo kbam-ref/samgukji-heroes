@@ -17,3 +17,8 @@ export function spriteSrc(id) {
 export function spriteHtml(id, cls = '') {
   return `<img class="portrait${cls ? ' ' + cls : ''}" src="${spriteSrc(id)}" alt="" loading="lazy" draggable="false">`;
 }
+
+// 적 유닛 스프라이트 (stages.js의 foeArt/bossArt id와 일치)
+export function enemySpriteHtml(id, cls = '') {
+  return `<img class="portrait${cls ? ' ' + cls : ''}" src="./assets/enemies-cut/${id}.png" alt="" loading="lazy" draggable="false">`;
+}

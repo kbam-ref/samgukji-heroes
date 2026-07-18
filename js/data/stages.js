@@ -1,12 +1,15 @@
 // 전장 — 순수 데이터 (로직 없음)
 // 연의의 사건 순서를 따라 장(章)이 이어진다.
 // enemyPower: 이 전장의 적 전투력 기준 / coinPerKill: 적 하나당 엽전
+// foeArt: 이 장 잡병의 스프라이트 id (assets/enemies-cut/{id}.png)
+// bossArt: 이름 있는 우두머리 전용 스프라이트 (없으면 잡병 아트를 키워 쓴다)
 
 export const CHAPTERS = [
   {
     id: 1,
     name: '황건적의 난',
     foe: '황건적',
+    foeArt: 'yellow-turban',
     stages: [
       { name: '탁현 마을 어귀',   enemyPower: 25,  coinPerKill: 6,  boss: '황건 두목' },
       { name: '누상촌 들판',      enemyPower: 35,  coinPerKill: 8,  boss: '황건 두목' },
@@ -17,13 +20,14 @@ export const CHAPTERS = [
       { name: '곡양 전투',        enemyPower: 125, coinPerKill: 25, boss: '장보' },
       { name: '황건 본진 앞',     enemyPower: 155, coinPerKill: 31, boss: '황건 친위대장' },
       { name: '본진 돌파',        enemyPower: 190, coinPerKill: 38, boss: '장보' },
-      { name: '거록의 결전',      enemyPower: 240, coinPerKill: 48, boss: '장각' },
+      { name: '거록의 결전',      enemyPower: 240, coinPerKill: 48, boss: '장각', bossArt: 'zhangjiao' },
     ],
   },
   {
     id: 2,
     name: '동탁의 폭정',
     foe: '동탁군',
+    foeArt: 'dong-soldier',
     stages: [
       { name: '낙양 가는 길',     enemyPower: 300,  coinPerKill: 62,  boss: '동탁군 순찰장' },
       { name: '불타는 저잣거리',  enemyPower: 355,  coinPerKill: 75,  boss: '이각' },
@@ -41,6 +45,7 @@ export const CHAPTERS = [
     id: 3,
     name: '군웅의 시대',
     foe: '원술군',
+    foeArt: 'warlord-soldier',
     stages: [
       { name: '수춘 가는 길',     enemyPower: 1450,  coinPerKill: 335,  boss: '원술군 정찰장' },
       { name: '회남 들녘',        enemyPower: 1720,  coinPerKill: 389,  boss: '뇌박' },
@@ -58,6 +63,7 @@ export const CHAPTERS = [
     id: 4,
     name: '관도대전',
     foe: '원소군',
+    foeArt: 'yuan-soldier',
     stages: [
       { name: '백마 나루',        enemyPower: 7900,  coinPerKill: 1478, boss: '안량' },
       { name: '연진 물목',        enemyPower: 9170,  coinPerKill: 1714, boss: '문추' },

@@ -65,12 +65,17 @@
 }
 
 /* 적이 맞을 때 — 기본 transform(가운데 정렬)을 유지한 채 움찔한다 */
-/* 피격 — 뒤로 밀려나며 휘청인다 */
+/* 피격 — 뒤로 밀려나며 휘청이고, 몸이 하얗게 번쩍인다 */
 .foe.hit { animation: hit-knockback 0.24s ease-out; }
 @keyframes hit-knockback {
   30%  { transform: translateX(calc(-50% + 10px)) rotate(5deg); }
   65%  { transform: translateX(calc(-50% + 4px)) rotate(1deg); }
   100% { transform: translateX(-50%); }
+}
+.foe.hit .unit-face,
+.foe.hit .foe-figure { animation: hit-blink 0.16s ease-out; }
+@keyframes hit-blink {
+  35% { filter: brightness(2.3) saturate(0.4); }
 }
 
 .field-tap { animation: field-press 0.16s ease-out; }
@@ -87,15 +92,34 @@
   80% { transform: translate(2px, 0); }
 }
 
-/* 아군 공격 — 적의 코앞까지 실제로 달려가 때리고 돌아온다 (--dx/--dy는 JS가 계산) */
+/* 아군 공격 — 움찔(예비동작) → 질주 → 내리침 → 반동 (--dx/--dy는 JS가 계산) */
 .ally-unit.dash {
   z-index: 5;
-  animation: dash-attack 0.38s cubic-bezier(0.32, 0, 0.28, 1);
+  animation: dash-attack 0.5s cubic-bezier(0.3, 0, 0.3, 1);
 }
 @keyframes dash-attack {
-  36% { transform: translate(var(--dx, 60px), var(--dy, -30px)) rotate(7deg) scale(1.04); }
-  50% { transform: translate(calc(var(--dx, 60px) + 7px), var(--dy, -30px)) rotate(-5deg) scale(1.1); }
-  68% { transform: translate(var(--dx, 60px), var(--dy, -30px)) rotate(2deg); }
+  0%   { transform: none; }
+  13%  { transform: translate(-6px, 2px) rotate(-9deg) scale(0.95, 1.05); }  /* 몸을 웅크린다 */
+  42%  { transform: translate(var(--dx, 60px), var(--dy, -30px)) rotate(5deg) scale(1.05, 0.97); }
+  52%  { transform: translate(calc(var(--dx, 60px) + 11px), var(--dy, -30px)) rotate(24deg) scale(1.12, 0.92); } /* 내리침 */
+  64%  { transform: translate(var(--dx, 60px), var(--dy, -30px)) rotate(-3deg); } /* 반동 */
+  100% { transform: none; }
+}
+
+/* 출발 자리의 흙먼지 */
+.dash-dust {
+  position: absolute;
+  bottom: 12px;
+  width: 18px;
+  height: 8px;
+  margin-left: -9px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(160, 140, 110, 0.5), transparent);
+  pointer-events: none;
+  animation: dust-puff 0.35s ease-out forwards;
+}
+@keyframes dust-puff {
+  to { transform: translateX(-14px) scale(2.2, 1.4); opacity: 0; }
 }
 
 /* 적의 반격 — 아군 쪽으로 몸을 날린다 */

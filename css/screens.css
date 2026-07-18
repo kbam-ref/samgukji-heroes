@@ -213,15 +213,23 @@
 .battlefield.wiped { filter: saturate(0.5) brightness(0.85); }
 .foe.rival .foe-name { color: var(--r4); font-weight: 700; }
 
-/* 숙적 우두머리 — 그림자가 아니라 그 영웅의 모습 그대로, 붉은 기운을 두르고 */
+/* 적 스프라이트 — 잡병은 장(章)의 병사, 숙적은 그 영웅의 모습 그대로 */
 .foe .unit-sprite {
   width: 72px;
   height: 86px;
   animation: idle-bob 3.2s ease-in-out infinite;
 }
+.foe .foe-sprite .unit-face {
+  transform: scaleX(-1); /* 아군을 마주 보도록 좌우 반전 */
+}
+.foe.boss .foe-sprite .unit-face {
+  transform: scaleX(-1.16) scaleY(1.16); /* 우두머리는 덩치가 크다 */
+  transform-origin: bottom center;
+}
 .foe .rival-sprite .unit-face {
   filter: drop-shadow(0 3px 4px rgba(6, 5, 4, 0.45)) drop-shadow(0 0 10px rgba(169, 68, 56, 0.5));
-  transform: scaleX(-1); /* 아군을 마주 보도록 좌우 반전 */
+  transform: scaleX(-1.16) scaleY(1.16); /* 숙적도 우두머리 — 크게, 붉은 기운 */
+  transform-origin: bottom center;
 }
 
 /* 베기 궤적 — 타격이 눈에 보인다 */
@@ -260,15 +268,22 @@
   to { transform: scale(3.4); opacity: 0; }
 }
 
-/* 쓰러지는 적 — 사라지기 전에 옆으로 넘어간다 */
+/* 쓰러지는 적 — 얻어맞고 붕 떴다가, 잿빛이 되어 넘어가 사라진다 */
 .foe-corpse {
   pointer-events: none;
-  animation: foe-fall 0.55s ease-in forwards;
+  animation: foe-death 0.7s cubic-bezier(0.25, 0.7, 0.4, 1) forwards;
 }
 .foe-corpse .foe-figure,
 .foe-corpse .unit-sprite { animation: none; }
-@keyframes foe-fall {
-  to { transform: translateX(-42%) translateY(12px) rotate(74deg); opacity: 0; }
+.foe-corpse .unit-hp,
+.foe-corpse .unit-name,
+.foe-corpse .slash,
+.foe-corpse .impact-ring { display: none; } /* 몸만 날아간다 */
+@keyframes foe-death {
+  0%   { transform: translateX(-50%); opacity: 1; }
+  22%  { transform: translateX(calc(-50% + 26px)) translateY(-14px) rotate(28deg); filter: brightness(1.7); }
+  55%  { transform: translateX(calc(-50% + 44px)) translateY(6px) rotate(78deg); filter: grayscale(0.7); opacity: 0.9; }
+  100% { transform: translateX(calc(-50% + 54px)) translateY(16px) rotate(98deg); filter: grayscale(1) brightness(0.6); opacity: 0; }
 }
 
 /* 유닛 체력 막대 */

@@ -12,7 +12,7 @@ import { RIVAL_LINES, RIVAL_LINE_DEFAULT } from '../data/rivals.js';
 import { fmt } from './format.js';
 import { floatText, pulse, shake, countUp, burst, flash } from './effects.js';
 import { play, vibrate } from './sound.js';
-import { portraitHtml, spriteHtml } from './portrait.js';
+import { portraitHtml, spriteHtml, enemySpriteHtml } from './portrait.js';
 
 let unsubs = [];
 let rafId = 0;
@@ -78,6 +78,25 @@ function chapterBand(s = getState()) {
   return ['#C8A93A', '#8A3A34', '#7A6A9E', '#4F6FA0'][chapter.id - 1] ?? '#8A3A34';
 }
 
+/** 적의 그림 결정 — 숙적 영웅 > 우두머리 전용 아트 > 장 잡병 아트 > (비상) 그림자 SVG */
+function foeFigure(s, enemy) {
+  if (enemy?.rival && enemy.rivalId) {
+    return {
+      key: `rival:${enemy.rivalId}`,
+      html: `<div class="unit-sprite rival-sprite">${spriteHtml(enemy.rivalId, 'unit-face')}</div>`,
+    };
+  }
+  const stage = battle.currentStage(s);
+  const art = enemy?.boss && stage.bossArt ? stage.bossArt : battle.currentChapter(s).foeArt;
+  if (art) {
+    return {
+      key: `art:${art}`,
+      html: `<div class="unit-sprite foe-sprite">${enemySpriteHtml(art, 'unit-face')}</div>`,
+    };
+  }
+  return { key: 'shadow', html: foeSvg(chapterBand(s)) };
+}
+
 /** "무찌른 적 3/10"보다 "우두머리까지 7명"이 목표가 잡힌다.
  *  다 무찔렀는데 전투력이 모자라면 막혀 있다는 사실을 숨기지 않는다. */
 function killLineText(s) {
@@ -104,7 +123,7 @@ function template(s) {
 
       <div class="foe down" id="bs-foe">
         <div class="unit-hp foe-hp"><i id="bs-foe-hp" style="width:100%"></i></div>
-        <div id="bs-foe-figure">${foeSvg(bandColor)}</div>
+        <div id="bs-foe-figure">${foeFigure(s, null).html}</div>
         <div class="unit-name foe-name" id="bs-foe-name">${chapter.foe}</div>
       </div>
 
@@ -179,15 +198,12 @@ function updateFoe() {
     nameEl.textContent = enemy.name;
     if (hpEl) hpEl.style.width = `${(enemy.hp / enemy.maxHp) * 100}%`;
 
-    // 숙적은 얼굴 없는 그림자가 아니라 그 영웅의 얼굴로 나타난다
+    // 적의 모습 — 숙적은 그 영웅, 이름 있는 우두머리는 전용 아트, 잡병은 장(章)의 병사
     const fig = document.getElementById('bs-foe-figure');
-    const key = enemy.rival && enemy.rivalId ? `rival:${enemy.rivalId}` : 'mob';
+    const { key, html } = foeFigure(s, enemy);
     if (fig && key !== foeFigureKey) {
       foeFigureKey = key;
-      fig.innerHTML =
-        key === 'mob'
-          ? foeSvg(chapterBand(s))
-          : `<div class="unit-sprite rival-sprite">${spriteHtml(enemy.rivalId, 'unit-face')}</div>`;
+      fig.innerHTML = html;
     }
   }
 
@@ -254,7 +270,8 @@ function spawnSlash(foeBox) {
   }, 320);
 }
 
-/** 돌진 공격 — 공격자가 적의 코앞까지 실제 좌표로 달려간다 */
+/** 돌진 공격 — 움찔(예비동작) → 적의 코앞까지 질주 → 내리치고 → 반동으로 복귀.
+ *  출발 자리에는 흙먼지가 인다. */
 function dashAttack(unit, foeBox) {
   if (unit.classList.contains('dash')) return; // 이미 달리는 중
   const u = unit.getBoundingClientRect();
@@ -264,7 +281,16 @@ function dashAttack(unit, foeBox) {
   unit.style.setProperty('--dx', `${Math.round(dx)}px`);
   unit.style.setProperty('--dy', `${Math.round(dy)}px`);
   unit.classList.add('dash');
-  setTimeout(() => unit.classList.remove('dash'), 400);
+  setTimeout(() => unit.classList.remove('dash'), 520);
+
+  const line = unit.parentElement;
+  if (line) {
+    const dust = document.createElement('i');
+    dust.className = 'dash-dust';
+    dust.style.left = `${unit.offsetLeft + unit.offsetWidth / 2}px`;
+    line.appendChild(dust);
+    setTimeout(() => dust.remove(), 380);
+  }
 }
 
 /** 숙적 조우 컷인 — 이름 깃발과 연의체 한마디가 전장을 가로지른다 */
@@ -309,7 +335,7 @@ export function render(root) {
   destroy();
   const s = getState();
   root.insertAdjacentHTML('beforeend', template(s));
-  foeFigureKey = 'mob'; // template은 항상 그림자 병사로 그린다
+  foeFigureKey = foeFigure(s, null).key; // template은 잡병 아트로 그린다
   updateFoe();
   updateUpgradeButton();
   updateCombo();
@@ -404,13 +430,13 @@ export function render(root) {
       const foeBox = document.getElementById('bs-foe');
       const striker = document.querySelector(`.ally-unit[data-id="${attackerId}"]`);
       if (striker && foeBox) dashAttack(striker, foeBox);
-      // 피격 연출은 공격자가 도착하는 타이밍에 맞춰 살짝 늦게
+      // 피격 연출은 공격자가 도착해 내리치는 타이밍(돌진 0.5s의 절반)에 맞춘다
       setTimeout(() => {
         if (foeBox && foeBox.isConnected) {
           pulse(foeBox, 'hit');
           spawnSlash(foeBox);
         }
-      }, 130);
+      }, 240);
       const at = foeAnchor();
       if (at) floatText(at.x + (Math.random() * 26 - 13), at.y + 10, `-${fmt(damage)}`);
     }),
