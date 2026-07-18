@@ -12,7 +12,7 @@ import { RIVAL_LINES, RIVAL_LINE_DEFAULT } from '../data/rivals.js';
 import { fmt } from './format.js';
 import { floatText, pulse, shake, countUp, burst, flash } from './effects.js';
 import { play, vibrate } from './sound.js';
-import { portraitHtml, spriteHtml, enemySpriteHtml } from './portrait.js';
+import { portraitHtml } from './portrait.js';
 
 let unsubs = [];
 let rafId = 0;
@@ -28,6 +28,20 @@ function foeSvg(bandColor) {
   </svg>`;
 }
 
+// 프레임 애니메이션 — 대기/공격 두 포즈를 가진 유닛 이미지 (내리칠 때 src가 공격 프레임으로 바뀐다)
+function unitImg(idleSrc, atkSrc) {
+  return `<img class="portrait unit-face" src="${idleSrc}" data-idle="${idleSrc}" data-atk="${atkSrc}" alt="" loading="lazy" draggable="false">`;
+}
+
+/** 포즈 전환 — 공격 프레임으로 바꿨다가 되돌린다 */
+function poseSwap(img, ms = 330) {
+  if (!img || !img.dataset.atk) return;
+  img.src = img.dataset.atk;
+  setTimeout(() => {
+    if (img.isConnected) img.src = img.dataset.idle;
+  }, ms);
+}
+
 // 아군은 실제 영웅 초상이 전장에 선다 — "내 캐릭터가 싸운다"는 감각
 function alliesHtml() {
   return battle
@@ -36,7 +50,9 @@ function alliesHtml() {
       (u) => `
     <div class="ally-unit${u.hp <= 0 ? ' down' : ''}" data-id="${u.id}">
       <div class="unit-hp ally-hp"><i style="width:${(u.hp / u.maxHp) * 100}%"></i></div>
-      <div class="unit-sprite f-${u.faction}" style="--img:url('./assets/heroes-cut/${u.id}.png')">${spriteHtml(u.id, 'unit-face')}</div>
+      <div class="unit-sprite f-${u.faction}" style="--img:url('./assets/heroes-cut/${u.id}.png')">
+        ${unitImg(`./assets/heroes-cut/${u.id}.png`, `./assets/heroes-atk-cut/${u.id}.png`)}
+      </div>
       <span class="ally-unit-name">${u.name}</span>
     </div>`
     )
@@ -68,14 +84,14 @@ function updateAllies() {
   });
 }
 
-/** 화면에 보여주는 '돌파' 수치 = 실제 돌파에 필요한 전투력 (숨은 배율 없이 정직하게) */
-function gatePower(stage) {
-  return Math.ceil(stage.enemyPower * BALANCE.battle.bossPowerRatio);
+/** 화면에 보여주는 '돌파' 수치 = 다가올(또는 지금) 보스전에 필요한 전투력 */
+function gatePower(s) {
+  return battle.nextBossGate(s);
 }
 
 function chapterBand(s = getState()) {
   const chapter = battle.currentChapter(s);
-  return ['#C8A93A', '#8A3A34', '#7A6A9E', '#4F6FA0'][chapter.id - 1] ?? '#8A3A34';
+  return ['#C8A93A', '#8A3A34', '#7A6A9E', '#4F6FA0'][(chapter.id - 1) % 4];
 }
 
 /** 적의 그림 결정 — 숙적 영웅 > 우두머리 전용 아트 > 장 잡병 아트 > (비상) 그림자 SVG */
@@ -83,7 +99,9 @@ function foeFigure(s, enemy) {
   if (enemy?.rival && enemy.rivalId) {
     return {
       key: `rival:${enemy.rivalId}`,
-      html: `<div class="unit-sprite rival-sprite" style="--img:url('./assets/heroes-cut/${enemy.rivalId}.png')">${spriteHtml(enemy.rivalId, 'unit-face')}</div>`,
+      html: `<div class="unit-sprite rival-sprite" style="--img:url('./assets/heroes-cut/${enemy.rivalId}.png')">
+        ${unitImg(`./assets/heroes-cut/${enemy.rivalId}.png`, `./assets/heroes-atk-cut/${enemy.rivalId}.png`)}
+      </div>`,
     };
   }
   const stage = battle.currentStage(s);
@@ -91,16 +109,21 @@ function foeFigure(s, enemy) {
   if (art) {
     return {
       key: `art:${art}`,
-      html: `<div class="unit-sprite foe-sprite" style="--img:url('./assets/enemies-cut/${art}.png')">${enemySpriteHtml(art, 'unit-face')}</div>`,
+      html: `<div class="unit-sprite foe-sprite" style="--img:url('./assets/enemies-cut/${art}.png')">
+        ${unitImg(`./assets/enemies-cut/${art}.png`, `./assets/enemies-atk-cut/${art}.png`)}
+      </div>`,
     };
   }
   return { key: 'shadow', html: foeSvg(chapterBand(s)) };
 }
 
-/** "무찌른 적 3/10"보다 "우두머리까지 7명"이 목표가 잡힌다.
+/** 일반 전장은 "다음 전장까지 N명", 보스 전장(5·10)은 "우두머리까지 N명".
  *  다 무찔렀는데 전투력이 모자라면 막혀 있다는 사실을 숨기지 않는다. */
 function killLineText(s) {
   const left = BALANCE.battle.killsPerStage - s.stage.kills;
+  if (!battle.isBossStage(s)) {
+    return left > 0 ? `다음 전장까지 <b>${left}</b>명` : '전장 돌파!';
+  }
   if (left > 0) return `우두머리까지 <b>${left}</b>명`;
   return battle.canBeatBoss(s) ? '우두머리와 결전!' : '우두머리가 길을 막았다!';
 }
@@ -109,13 +132,14 @@ function template(s) {
   const chapter = battle.currentChapter(s);
   const stage = battle.currentStage(s);
   const bandColor = chapterBand(s);
+  const diff = s.stage.difficulty ?? 1;
 
   return `
   <section class="screen battle-screen">
     <header class="stage-plate">
-      <div class="stage-chapter">${chapter.id}장 ‧ ${chapter.name}</div>
+      <div class="stage-chapter">난이도 ${diff} ‧ ${chapter.id}장 ‧ ${chapter.name}</div>
       <h1 class="stage-name" id="bs-stage-name">${stage.name}</h1>
-      <div class="stage-step">${s.stage.index} / ${chapter.stages.length} 전장</div>
+      <div class="stage-step">${s.stage.index} / ${chapter.stages.length} 전장${battle.isBossStage(s) ? ' ‧ 우두머리전' : ''}</div>
     </header>
 
     <div class="battlefield" id="bs-field">
@@ -147,7 +171,7 @@ function template(s) {
         <span class="power-line" id="bs-power-line">
           내 전투력 <b id="bs-ally-power">${fmt(partyPower(s))}</b>
           <i class="vs-mark"></i>
-          돌파 필요 <b id="bs-foe-power">${fmt(gatePower(stage))}</b>
+          돌파 필요 <b id="bs-foe-power">${fmt(gatePower(s))}</b>
         </span>
       </div>
       <div class="kill-bar"><i id="bs-kill-fill"></i></div>
@@ -213,8 +237,8 @@ function updateFoe() {
 
   if (battle.isRecovering()) {
     hintEl.textContent = '전열을 가다듬는 중…';
-  } else if (battle.isBossPhase(s) && !battle.canBeatBoss(s)) {
-    const gap = gatePower(battle.currentStage(s)) - partyPower(s);
+  } else if (battle.isBossStage(s) && battle.isBossPhase(s) && !battle.canBeatBoss(s)) {
+    const gap = gatePower(s) - partyPower(s);
     hintEl.textContent = `전투력이 ${fmt(gap)} 모자라요 — 아래 [공격 연마]나 영웅 탭의 단련으로 키우세요`;
   } else if (battle.isBossPhase(s)) {
     hintEl.textContent = '우두머리와 맞붙는 중!';
@@ -246,10 +270,10 @@ function updatePowers() {
   const ally = document.getElementById('bs-ally-power');
   const foe = document.getElementById('bs-foe-power');
   if (ally) ally.textContent = fmt(partyPower(s));
-  if (foe) foe.textContent = fmt(gatePower(battle.currentStage(s)));
+  if (foe) foe.textContent = fmt(gatePower(s));
   // 모자라면 필요 수치가 붉게, 충분하면 금빛으로 — 숫자를 읽지 않아도 상태가 보인다
   const line = document.getElementById('bs-power-line');
-  if (line) line.classList.toggle('lack', partyPower(s) < gatePower(battle.currentStage(s)));
+  if (line) line.classList.toggle('lack', partyPower(s) < gatePower(s));
 }
 
 function foeAnchor() {
@@ -296,14 +320,15 @@ function dashAttack(unit, foeBox) {
     setTimeout(() => dust.remove(), 380);
   }
 
-  // 내리치는 순간(전체 0.56s의 48%) 무기 궤적이 캐릭터 옆에서 그려진다
+  // 내리치는 순간(전체 0.56s의 48%) — 공격 프레임으로 전환 + 무기 궤적
   setTimeout(() => {
     if (!unit.isConnected) return;
+    poseSwap(unit.querySelector('.unit-face'), 330);
     const arc = document.createElement('i');
     arc.className = 'swing-arc';
     unit.appendChild(arc);
     setTimeout(() => arc.remove(), 240);
-  }, 230);
+  }, 210);
 }
 
 /** 숙적 조우 컷인 — 이름 깃발과 연의체 한마디가 전장을 가로지른다 */
@@ -350,6 +375,7 @@ export function render(root) {
   root.insertAdjacentHTML('beforeend', template(s));
   foeFigureKey = foeFigure(s, null).key; // template은 잡병 아트로 그린다
   updateFoe();
+  updatePowers(); // 부족(붉은 표시) 상태를 첫 화면부터 정확히
   updateUpgradeButton();
   updateCombo();
 
@@ -457,10 +483,13 @@ export function render(root) {
       if (heavy) pulse(field, 'hitstop');
     }),
 
-    // 적의 반격 — 적이 몸을 날리고, 맞은 아군이 붉게 휘청인다
+    // 적의 반격 — 적이 공격 프레임으로 바뀌며 몸을 날리고, 맞은 아군이 붉게 휘청인다
     on('battle:foeStrike', ({ targetId }) => {
       const foeBox = document.getElementById('bs-foe');
-      if (foeBox) pulse(foeBox, 'strike');
+      if (foeBox) {
+        pulse(foeBox, 'strike');
+        setTimeout(() => poseSwap(foeBox.querySelector('.unit-face'), 300), 100);
+      }
       const victim = document.querySelector(`.ally-unit[data-id="${targetId}"]`);
       if (victim) pulse(victim, 'hurt');
     }),
@@ -530,19 +559,30 @@ export function render(root) {
       }
     }),
 
-    on('stage:clear', () => {
+    on('stage:clear', (cleared) => {
       const fieldEl = document.getElementById('bs-field');
       if (fieldEl) {
         const rect = fieldEl.getBoundingClientRect();
         const cx = rect.left + rect.width / 2;
         floatText(cx, rect.top + rect.height / 2, '돌파!', 'victory');
-        floatText(cx, rect.top + rect.height / 2 + 34, `옥구슬 +${fmt(BALANCE.battle.jadeOnClear)}`, 'gold');
+        // 옥구슬은 우두머리 전장(5·10)을 꺾었을 때만 나온다
+        if (cleared && cleared.index % 5 === 0) {
+          floatText(cx, rect.top + rect.height / 2 + 34, `옥구슬 +${fmt(BALANCE.battle.jadeOnClear)}`, 'gold');
+        }
       }
       const rootEl = document.getElementById('screen-root');
       if (rootEl) {
         rootEl.innerHTML = '';
         render(rootEl);
       }
+    }),
+
+    // 난이도 상승 — 천하를 한 바퀴 평정했다
+    on('difficulty:up', ({ difficulty }) => {
+      flash('gold');
+      play('legend');
+      vibrate(60);
+      floatText(window.innerWidth / 2, window.innerHeight / 2 - 40, `천하 평정! 난이도 ${difficulty} 개막`, 'victory');
     }),
 
     // 엽전이 쌓이면 연마 버튼이 눌 수 있는 상태로 깨어나야 한다 (기존엔 성장 이벤트까지 잠들어 있었음)

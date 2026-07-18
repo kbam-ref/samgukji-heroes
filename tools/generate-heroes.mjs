@@ -13,7 +13,7 @@
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { HEROES } from '../js/data/heroes.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -45,15 +45,15 @@ async function api(path, options = {}) {
   return data;
 }
 
-// ── 기본 화풍 — 모든 초상이 공유한다 ──
-const STYLE =
+// ── 기본 화풍 — 모든 초상이 공유한다 (generate-pose.mjs도 이 정의를 가져다 쓴다) ──
+export const STYLE =
   'adorable chibi mobile game character portrait, super-deformed proportions with big head and large sparkling eyes, ' +
   'Three Kingdoms era character, soft cel shading, clean bold outlines, cheerful gacha game art, ' +
   'centered composition, no text, no watermark';
 const NEGATIVE = 'photo, 3d render, realistic proportions, scary, grim, text, letters, watermark, frame';
 
 // ── 세력별 색·배경 — 도감에서 세력 컬렉션이 한눈에 묶여 보이게 ──
-const FACTION_LOOK = {
+export const FACTION_LOOK = {
   wei:  'deep blue and silver themed armor and clothing, cool pale-indigo radial background',
   shu:  'green and gold themed armor and clothing, soft jade-green radial background',
   wu:   'crimson and scarlet themed armor and clothing, warm sunset-red radial background',
@@ -61,7 +61,7 @@ const FACTION_LOOK = {
 };
 
 // ── 등급별 배경·장비 화려함 — 가챠에서 등급이 즉시 체감되게 ──
-const RARITY_LOOK = {
+export const RARITY_LOOK = {
   5: 'majestic golden sunburst rays behind the character, sparkling particles, ornate glowing gold-trimmed equipment',
   4: 'bright radiant light rays behind the character, finely decorated equipment',
   3: 'soft glowing halo behind the character',
@@ -70,7 +70,7 @@ const RARITY_LOOK = {
 };
 
 // ── 영웅별 포즈·표정·소품 (id는 js/data/heroes.js와 일치) — 전원 다른 자세·머리모양·표정 ──
-const HERO_PROMPTS = {
+export const HERO_PROMPTS = {
   lvbu: 'peerless warrior swinging a huge crescent halberd overhead in a dynamic action pose, tall pheasant-feather headdress, cocky grin',
   guanyu: 'majestic general stroking his very long flowing black beard, huge guandao planted beside him, calm dignified half-closed eyes',
   caocao: 'ambitious warlord with arms crossed, fur mantle over armor, sly knowing smirk with one eyebrow raised',
@@ -155,25 +155,28 @@ async function generateOne(heroId) {
   throw new Error('시간 초과');
 }
 
-// ── 실행 ──
-const args = process.argv.slice(2).filter((a) => a !== '--force');
-const force = process.argv.includes('--force');
-const targets = args.length > 0 ? args : Object.keys(HERO_PROMPTS);
+// ── 실행 (직접 실행할 때만 — generate-pose.mjs가 프롬프트만 가져다 쓸 수 있게) ──
+const isMain = import.meta.url === pathToFileURL(process.argv[1] ?? '').href;
+if (isMain) {
+  const args = process.argv.slice(2).filter((a) => a !== '--force');
+  const force = process.argv.includes('--force');
+  const targets = args.length > 0 ? args : Object.keys(HERO_PROMPTS);
 
-MODEL = await pickModel();
-if (!existsSync(OUT_DIR)) mkdirSync(OUT_DIR, { recursive: true });
+  MODEL = await pickModel();
+  if (!existsSync(OUT_DIR)) mkdirSync(OUT_DIR, { recursive: true });
 
-console.log(`모델 ${MODEL} 로 ${targets.length}명 생성 시작`);
-for (const id of targets) {
-  const out = join(OUT_DIR, `${id}.png`);
-  if (!force && existsSync(out)) {
-    console.log(`  ${id}: 이미 있음 — 건너뜀 (--force로 다시 생성)`);
-    continue;
+  console.log(`모델 ${MODEL} 로 ${targets.length}명 생성 시작`);
+  for (const id of targets) {
+    const out = join(OUT_DIR, `${id}.png`);
+    if (!force && existsSync(out)) {
+      console.log(`  ${id}: 이미 있음 — 건너뜀 (--force로 다시 생성)`);
+      continue;
+    }
+    try {
+      await generateOne(id);
+    } catch (err) {
+      console.error(`\n  ${id}: 실패 — ${err.message}`);
+    }
   }
-  try {
-    await generateOne(id);
-  } catch (err) {
-    console.error(`\n  ${id}: 실패 — ${err.message}`);
-  }
+  console.log('끝. 결과를 확인한 뒤 마음에 들면 UI 통합을 지시해 주세요.');
 }
-console.log('끝. 결과를 확인한 뒤 마음에 들면 UI 통합을 지시해 주세요.');

@@ -4,7 +4,7 @@
 
 import { BALANCE } from '../data/balance.js';
 
-export const SAVE_VERSION = 5;
+export const SAVE_VERSION = 6;
 
 export function createNewSave(now = Date.now()) {
   return {
@@ -19,7 +19,7 @@ export function createNewSave(now = Date.now()) {
       BALANCE.start.heroes.map((id) => [id, { level: 1, stars: 1, dupes: 0 }])
     ),
     party: [...BALANCE.start.heroes],
-    stage: { chapter: 1, index: 1, kills: 0 },
+    stage: { difficulty: 1, chapter: 1, index: 1, kills: 0 },
     gacha: { pity: 0, total: 0 },
     upgrades: { atk: 0 },                       // 공격 연마 횟수
     stats: { totalKills: 0, totalClears: 0 },   // 누적 처치·돌파
@@ -30,6 +30,9 @@ export function createNewSave(now = Date.now()) {
     tales: { read: [] },                        // 읽은 열전
     bondsMastery: {},                           // 인연 숙련 { 인연id: 우두머리 격파 수 }
     orders: { active: null },                   // 발동 중인 세력 군령
+    attendance: { lastClaim: '', cycleDay: 0, totalDays: 0 }, // 출석 (v6 — UI는 추후)
+    records: {},                                // 개인 최고 기록
+    flags: {},                                  // 온보딩 등 1회성 플래그
   };
 }
 
@@ -63,6 +66,16 @@ const MIGRATIONS = {
     save.bondsMastery = save.bondsMastery ?? {};
     save.orders = save.orders ?? { active: null };
     save.version = 5;
+    return save;
+  },
+  // v5 → v6: 천하통일 개편 — 난이도 필드, 출석·기록·플래그 뼈대 (2026-07-18)
+  // 기존 진행(장·전장·처치 수)은 그대로 이어진다. 새 4장 이후 콘텐츠가 뒤에 붙었을 뿐.
+  6: (save) => {
+    save.stage.difficulty = save.stage.difficulty ?? 1;
+    save.attendance = save.attendance ?? { lastClaim: '', cycleDay: 0, totalDays: 0 };
+    save.records = save.records ?? {};
+    save.flags = save.flags ?? {};
+    save.version = 6;
     return save;
   },
 };

@@ -131,17 +131,27 @@ export function recordKill(coins, { farm = false } = {}) {
   emit('stage:kill', { kills: state.stage.kills, coins, farm });
 }
 
-/** 우두머리를 꺾고 다음 전장으로. 마지막 전장이면 머무른다. */
+/** 전장 돌파 — 다음 전장으로. 20장을 다 돌면 난이도가 오르며 1장부터 다시.
+ *  난이도 20의 마지막 전장이면 머무른다 (진짜 끝). */
 export function clearStage() {
   const chapterCount = CHAPTERS.length;
   const chapter = CHAPTERS[state.stage.chapter - 1];
-  const cleared = { chapter: state.stage.chapter, index: state.stage.index };
+  const cleared = {
+    difficulty: state.stage.difficulty ?? 1,
+    chapter: state.stage.chapter,
+    index: state.stage.index,
+  };
 
   if (state.stage.index < chapter.stages.length) {
     state.stage.index += 1;
   } else if (state.stage.chapter < chapterCount) {
     state.stage.chapter += 1;
     state.stage.index = 1;
+  } else if ((state.stage.difficulty ?? 1) < BALANCE.scenario.difficultyCount) {
+    state.stage.difficulty = (state.stage.difficulty ?? 1) + 1;
+    state.stage.chapter = 1;
+    state.stage.index = 1;
+    emit('difficulty:up', { difficulty: state.stage.difficulty });
   }
   state.stage.kills = 0;
   state.stats.totalClears += 1;

@@ -37,9 +37,39 @@ export function currentChapter(s) {
   return CHAPTERS[Math.min(s.stage.chapter, CHAPTERS.length) - 1];
 }
 
+/** 임의 지점의 전장 전투력 — 곡선(balance.scenario)에서 계산 */
+export function stagePowerAt(difficulty, chapterNo, index) {
+  const SC = BALANCE.scenario;
+  const g = (chapterNo - 1) * 10 + index; // 전역 전장 번호 1~200
+  return SC.basePower * Math.pow(SC.stageGrowth, g - 1) * Math.pow(SC.difficultyPowerMult, (difficulty ?? 1) - 1);
+}
+
+/** 현재 전장 — 이름·우두머리는 데이터, 전투력·엽전은 곡선에서 파생해 돌려준다 */
 export function currentStage(s) {
   const chapter = currentChapter(s);
-  return chapter.stages[Math.min(s.stage.index, chapter.stages.length) - 1];
+  const index = Math.min(s.stage.index, chapter.stages.length);
+  const raw = chapter.stages[index - 1];
+  const SC = BALANCE.scenario;
+  const diff = s.stage.difficulty ?? 1;
+  const basePower = SC.basePower * Math.pow(SC.stageGrowth, (s.stage.chapter - 1) * 10 + index - 1);
+  return {
+    ...raw,
+    enemyPower: Math.round(basePower * Math.pow(SC.difficultyPowerMult, diff - 1)),
+    coinPerKill: Math.max(1, Math.round(basePower * SC.coinRatio * Math.pow(SC.difficultyCoinMult, diff - 1))),
+  };
+}
+
+/** 우두머리가 나오는 전장인가 — 5·10번째만 */
+export function isBossStage(s) {
+  return s.stage.index % 5 === 0;
+}
+
+/** 다음 우두머리 전장의 돌파 필요 전투력 (일반 전장에서는 다가올 보스전 기준을 보여준다) */
+export function nextBossGate(s) {
+  const bossIndex = Math.min(Math.ceil(s.stage.index / 5) * 5, 10);
+  return Math.ceil(
+    stagePowerAt(s.stage.difficulty ?? 1, s.stage.chapter, bossIndex) * BALANCE.battle.bossPowerRatio
+  );
 }
 
 export function isBossPhase(s) {
@@ -50,11 +80,12 @@ export function canBeatBoss(s) {
   return partyPower(s) >= currentStage(s).enemyPower * BALANCE.battle.bossPowerRatio;
 }
 
+/** 진짜 마지막 — 난이도 20의 20장 10전장 */
 export function isFinalStage(s) {
-  const lastChapter = CHAPTERS[CHAPTERS.length - 1];
   return (
+    (s.stage.difficulty ?? 1) >= BALANCE.scenario.difficultyCount &&
     s.stage.chapter === CHAPTERS.length &&
-    s.stage.index === lastChapter.stages.length
+    s.stage.index === CHAPTERS[CHAPTERS.length - 1].stages.length
   );
 }
 
@@ -186,8 +217,8 @@ function rivalHero(s, bossName) {
 function spawnEnemy(s) {
   const chapter = currentChapter(s);
   const stage = currentStage(s);
-  // 우두머리는 이길 수 있을 때만 나온다 — 못 이기는 동안은 일반 적으로 반복 사냥
-  const boss = isBossPhase(s) && canBeatBoss(s);
+  // 우두머리는 5·10전장에서, 이길 수 있을 때만 나온다 — 못 이기는 동안은 일반 적으로 반복 사냥
+  const boss = isBossStage(s) && isBossPhase(s) && canBeatBoss(s);
   const rival = boss ? rivalHero(s, stage.boss) : null;
   const baseHp = enemyMaxHp(stage);
   const E = BALANCE.enemyUnit;
@@ -215,9 +246,14 @@ function resolveDeath(s, wasBoss, wasRival, enemyRivalId) {
   const B = BALANCE.battle;
 
   if (!wasBoss) {
-    const farm = isBossPhase(s);
+    const farm = isBossPhase(s); // 보스 전장에서 관문에 막혀 반복 사냥 중일 때만 참
     const coins = Math.round(stage.coinPerKill * (farm ? B.farmCoinRatio : 1));
     state.recordKill(coins, { farm });
+    // 일반 전장(우두머리 없음)은 정원을 채우면 그대로 돌파 — 보스는 5·10전장에서만
+    if (!isBossStage(s) && s.stage.kills >= B.killsPerStage) {
+      state.addCoin(Math.round(stage.coinPerKill * BALANCE.scenario.stageClearCoinMult));
+      state.clearStage();
+    }
   } else if (canBeatBoss(s)) {
     const rivalMult = wasRival ? B.rivalCoinRatio : 1;
     state.addCoin(Math.round(stage.coinPerKill * B.bossCoinRatio * rivalMult));
