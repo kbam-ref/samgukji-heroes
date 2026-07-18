@@ -32,6 +32,7 @@ export function render(root) {
       <div class="settings-row"><span>돌파한 전장</span><b>${fmt(s.stats?.totalClears ?? 0)}곳</b></div>
       <div class="settings-row"><span>모집 횟수</span><b>${fmt(s.gacha.total)}회</b></div>
       <div class="settings-row"><span>세이브 버전</span><b>v${SAVE_VERSION}</b></div>
+      <div class="settings-row"><span>게임 버전</span><b id="st-build">확인 중…</b></div>
     </div>
 
     <div class="settings-group">

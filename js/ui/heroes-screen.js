@@ -45,7 +45,7 @@ function ownedSorted(s) {
     .sort((a, b) => heroPower(b.id, b.hs) - heroPower(a.id, a.hs));
 }
 
-function rowHtml({ id, def, hs }) {
+function rowHtml({ id, def, hs }, index = 0) {
   const inParty = getState().party.includes(id);
   const maxedLevel = hs.level >= BALANCE.growth.maxLevel;
   const maxedStars = hs.stars >= MAX_STARS;
@@ -53,8 +53,8 @@ function rowHtml({ id, def, hs }) {
   const canStar = !maxedStars && hs.dupes >= dupeCost;
 
   return `
-  <li class="hero-row f-${def.faction}" data-id="${id}">
-    ${portraitHtml(id, 'row-portrait')}
+  <li class="hero-row f-${def.faction}" data-id="${id}" style="--i:${Math.min(index, 8)}">
+    ${portraitHtml(id, `row-portrait frame-r${def.rarity}`)}
     <div class="row-info">
       <div class="row-name">
         <b>${def.name}</b>

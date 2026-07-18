@@ -11,11 +11,12 @@ import { portraitHtml } from './portrait.js';
 
 let unsubs = [];
 
-function cardHtml(hero, owned, s) {
+function cardHtml(hero, owned, s, index = 0) {
+  const stagger = `style="--i:${Math.min(index, 8)}"`;
   if (!owned) {
     // 실루엣 — 진짜 초상을 검게 가려 "저게 누구지" 갈증을 만든다
     return `
-    <div class="codex-card locked">
+    <div class="codex-card locked" ${stagger}>
       ${portraitHtml(hero.id, 'codex-portrait silhouette')}
       <b class="codex-name">${hero.name}</b>
       <em class="codex-rarity r${hero.rarity}">${RARITY[hero.rarity].name}</em>
@@ -23,9 +24,9 @@ function cardHtml(hero, owned, s) {
   }
   const rivalKills = s?.rivalKills?.[hero.id] ?? 0;
   return `
-  <div class="codex-card f-${hero.faction}">
+  <div class="codex-card f-${hero.faction} r${hero.rarity}" ${stagger}>
     <span class="codex-flag f-${hero.faction}">${hero.name}</span>
-    ${portraitHtml(hero.id, 'codex-portrait')}
+    ${portraitHtml(hero.id, `codex-portrait frame-r${hero.rarity}`)}
     <b class="codex-name">${hero.name}</b>
     <span class="codex-title">${hero.title}</span>
     ${rivalKills > 0 ? `<span class="codex-rival">숙적 격파 ${rivalKills}</span>` : ''}
@@ -74,7 +75,7 @@ function bodyHtml(s) {
           <span class="tally">${ownedHere} / ${members.length}</span>
         </header>
         <div class="codex-grid">
-          ${members.map((h) => cardHtml(h, Boolean(s.heroes[h.id]), s)).join('')}
+          ${members.map((h, i) => cardHtml(h, Boolean(s.heroes[h.id]), s, i)).join('')}
         </div>
       </div>`;
     })

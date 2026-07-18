@@ -36,7 +36,7 @@ function alliesHtml() {
       (u) => `
     <div class="ally-unit${u.hp <= 0 ? ' down' : ''}" data-id="${u.id}">
       <div class="unit-hp ally-hp"><i style="width:${(u.hp / u.maxHp) * 100}%"></i></div>
-      <div class="unit-sprite f-${u.faction}">${spriteHtml(u.id, 'unit-face')}</div>
+      <div class="unit-sprite f-${u.faction}" style="--img:url('./assets/heroes-cut/${u.id}.png')">${spriteHtml(u.id, 'unit-face')}</div>
       <span class="ally-unit-name">${u.name}</span>
     </div>`
     )
@@ -83,7 +83,7 @@ function foeFigure(s, enemy) {
   if (enemy?.rival && enemy.rivalId) {
     return {
       key: `rival:${enemy.rivalId}`,
-      html: `<div class="unit-sprite rival-sprite">${spriteHtml(enemy.rivalId, 'unit-face')}</div>`,
+      html: `<div class="unit-sprite rival-sprite" style="--img:url('./assets/heroes-cut/${enemy.rivalId}.png')">${spriteHtml(enemy.rivalId, 'unit-face')}</div>`,
     };
   }
   const stage = battle.currentStage(s);
@@ -91,7 +91,7 @@ function foeFigure(s, enemy) {
   if (art) {
     return {
       key: `art:${art}`,
-      html: `<div class="unit-sprite foe-sprite">${enemySpriteHtml(art, 'unit-face')}</div>`,
+      html: `<div class="unit-sprite foe-sprite" style="--img:url('./assets/enemies-cut/${art}.png')">${enemySpriteHtml(art, 'unit-face')}</div>`,
     };
   }
   return { key: 'shadow', html: foeSvg(chapterBand(s)) };
@@ -119,6 +119,10 @@ function template(s) {
     </header>
 
     <div class="battlefield" id="bs-field">
+      <div class="field-ambience" aria-hidden="true">
+        <i class="fog"></i>
+        ${Array.from({ length: 6 }, (_, i) => `<i class="ember" style="--x:${10 + i * 14}%; --d:-${(i * 2.3).toFixed(1)}s"></i>`).join('')}
+      </div>
       <div class="scroll-strip" aria-hidden="true" id="bs-scroll">${stage.name}</div>
 
       <div class="foe down" id="bs-foe">
@@ -281,7 +285,7 @@ function dashAttack(unit, foeBox) {
   unit.style.setProperty('--dx', `${Math.round(dx)}px`);
   unit.style.setProperty('--dy', `${Math.round(dy)}px`);
   unit.classList.add('dash');
-  setTimeout(() => unit.classList.remove('dash'), 520);
+  setTimeout(() => unit.classList.remove('dash'), 580);
 
   const line = unit.parentElement;
   if (line) {
@@ -291,6 +295,15 @@ function dashAttack(unit, foeBox) {
     line.appendChild(dust);
     setTimeout(() => dust.remove(), 380);
   }
+
+  // 내리치는 순간(전체 0.56s의 48%) 무기 궤적이 캐릭터 옆에서 그려진다
+  setTimeout(() => {
+    if (!unit.isConnected) return;
+    const arc = document.createElement('i');
+    arc.className = 'swing-arc';
+    unit.appendChild(arc);
+    setTimeout(() => arc.remove(), 240);
+  }, 230);
 }
 
 /** 숙적 조우 컷인 — 이름 깃발과 연의체 한마디가 전장을 가로지른다 */
@@ -438,7 +451,10 @@ export function render(root) {
         }
       }, 240);
       const at = foeAnchor();
-      if (at) floatText(at.x + (Math.random() * 26 - 13), at.y + 10, `-${fmt(damage)}`);
+      // 강타(총 화력의 45% 이상 — 협공이나 주력의 한 방)는 크게, 화면도 잠깐 숨을 멈춘다
+      const heavy = damage >= totalDps() * 0.45;
+      if (at) floatText(at.x + (Math.random() * 26 - 13), at.y + 10, `-${fmt(damage)}`, heavy ? 'crit' : '');
+      if (heavy) pulse(field, 'hitstop');
     }),
 
     // 적의 반격 — 적이 몸을 날리고, 맞은 아군이 붉게 휘청인다
@@ -465,8 +481,14 @@ export function render(root) {
       if (at) burst(at.x, at.y + 26, { count: boss ? 12 : 7 });
       if (boss) {
         flash('ember'); // 다홍 승전빛 — 금색은 전설의 것으로 아껴 둔다
-        pulse(field, 'field-shake');
+        pulse(field, 'boss-zoom'); // 카메라 펀치
         vibrate(40);
+        if (fieldEl) {
+          const ray = document.createElement('i');
+          ray.className = 'boss-burst';
+          fieldEl.appendChild(ray);
+          setTimeout(() => ray.remove(), 520);
+        }
       }
       updateFoe();
     }),

@@ -92,18 +92,89 @@
   80% { transform: translate(2px, 0); }
 }
 
-/* 아군 공격 — 움찔(예비동작) → 질주 → 내리침 → 반동 (--dx/--dy는 JS가 계산) */
+/* ── 캐릭터가 "몸으로" 움직이는 모션 (2026-07-18 전면 재작성) ──
+   원칙: 이동은 미끄러지지 않는다 — 뛸 때는 통통 튀고(바운스), 휘두를 때는 몸통이 채찍처럼 돌고,
+   맞으면 찌부러진다(스쿼시&스트레치). 속도는 잔상이 보여준다. */
+
+/* 살아있는 대기 — 호흡(세로 스트레치) + 무게 이동(좌우 기울기) */
+.unit-sprite {
+  position: relative;
+  transform-origin: 50% 100%;
+  animation: idle-live 3s ease-in-out infinite;
+}
+.foe .unit-sprite { animation-duration: 3.6s; }
+@keyframes idle-live {
+  0%, 100% { transform: rotate(-1.4deg) scaleY(1); }
+  25%      { transform: rotate(0deg) scaleY(1.02); }
+  50%      { transform: rotate(1.4deg) scaleY(1.005); }
+  75%      { transform: rotate(0deg) scaleY(1.025); }
+}
+
+/* 돌진 — 웅크림 → 세 걸음 갤럽(뛸 때마다 몸이 눌렸다 펴진다) → 도약 → 내리침 → 반동 → 복귀 점프 */
 .ally-unit.dash {
   z-index: 5;
-  animation: dash-attack 0.5s cubic-bezier(0.3, 0, 0.3, 1);
+  animation: dash-attack 0.56s cubic-bezier(0.3, 0, 0.32, 1);
 }
 @keyframes dash-attack {
   0%   { transform: none; }
-  13%  { transform: translate(-6px, 2px) rotate(-9deg) scale(0.95, 1.05); }  /* 몸을 웅크린다 */
-  42%  { transform: translate(var(--dx, 60px), var(--dy, -30px)) rotate(5deg) scale(1.05, 0.97); }
-  52%  { transform: translate(calc(var(--dx, 60px) + 11px), var(--dy, -30px)) rotate(24deg) scale(1.12, 0.92); } /* 내리침 */
-  64%  { transform: translate(var(--dx, 60px), var(--dy, -30px)) rotate(-3deg); } /* 반동 */
+  10%  { transform: translate(-7px, 2px) rotate(-10deg) scale(0.94, 1.06); }
+  20%  { transform: translate(calc(var(--dx, 60px) * 0.3), calc(var(--dy, -30px) * 0.3 - 10px)) rotate(8deg) scale(1.03, 0.97); }
+  30%  { transform: translate(calc(var(--dx, 60px) * 0.62), calc(var(--dy, -30px) * 0.62)) rotate(4deg) scale(0.97, 1.05); }
+  40%  { transform: translate(var(--dx, 60px), calc(var(--dy, -30px) - 9px)) rotate(11deg) scale(1.04, 0.96); }
+  48%  { transform: translate(calc(var(--dx, 60px) + 12px), var(--dy, -30px)) rotate(30deg) scale(1.14, 0.9); }
+  58%  { transform: translate(calc(var(--dx, 60px) + 4px), var(--dy, -30px)) rotate(-6deg); }
+  76%  { transform: translate(calc(var(--dx, 60px) * 0.4), calc(var(--dy, -30px) * 0.4 - 8px)) rotate(-7deg); }
   100% { transform: none; }
+}
+
+/* 속도의 잔상 — 달리는 동안 몸의 궤적이 뒤에 남는다 (--img는 JS가 스프라이트 경로를 넣는다) */
+.ally-unit.dash .unit-sprite::before,
+.ally-unit.dash .unit-sprite::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--img) center bottom / contain no-repeat;
+  pointer-events: none;
+  opacity: 0;
+  animation: trail-fade 0.56s ease-out;
+}
+.ally-unit.dash .unit-sprite::before { transform: translateX(-12px); filter: blur(1px) brightness(1.25); }
+.ally-unit.dash .unit-sprite::after  { transform: translateX(-24px); filter: blur(2.5px); }
+@keyframes trail-fade {
+  15%  { opacity: 0; }
+  35%  { opacity: 0.4; }
+  70%  { opacity: 0.18; }
+  100% { opacity: 0; }
+}
+
+/* 무기 궤적 — 내리치는 순간 캐릭터 옆에서 호(弧)가 그려진다 */
+.swing-arc {
+  position: absolute;
+  right: -18px;
+  top: 4px;
+  width: 36px;
+  height: 36px;
+  border: 3px solid transparent;
+  border-top-color: rgba(250, 245, 232, 0.9);
+  border-right-color: rgba(250, 245, 232, 0.5);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: swing 0.22s ease-out forwards;
+}
+@keyframes swing {
+  from { transform: rotate(-70deg) scale(0.6); opacity: 0.2; }
+  60%  { opacity: 1; }
+  to   { transform: rotate(125deg) scale(1.15); opacity: 0; }
+}
+
+/* 적 피격 — 몸이 찌부러졌다 펴진다 */
+.foe.hit .unit-sprite {
+  transform-origin: 50% 100%;
+  animation: hit-squash 0.2s ease-out;
+}
+@keyframes hit-squash {
+  35% { transform: scale(1.14, 0.84) rotate(3deg); }
+  70% { transform: scale(0.96, 1.06); }
 }
 
 /* 출발 자리의 흙먼지 */
@@ -122,10 +193,13 @@
   to { transform: translateX(-14px) scale(2.2, 1.4); opacity: 0; }
 }
 
-/* 적의 반격 — 아군 쪽으로 몸을 날린다 */
-.foe.strike { animation: foe-dash 0.3s ease-out; }
+/* 적의 반격 — 도움닫기 후 몸을 날려 덮친다 */
+.foe.strike { animation: foe-dash 0.34s ease-out; }
 @keyframes foe-dash {
-  38% { transform: translateX(-50%) translate(-44px, 12px) scale(1.04); }
+  28% { transform: translateX(calc(-50% - 18px)) translateY(-9px) rotate(-8deg); }
+  50% { transform: translateX(calc(-50% - 46px)) translateY(12px) rotate(-16deg) scale(1.06, 0.94); }
+  72% { transform: translateX(calc(-50% - 12px)) translateY(-4px); }
+  100% { transform: translateX(-50%); }
 }
 
 /* 맞은 아군 — 붉게 번쩍이며 휘청인다 */
@@ -179,6 +253,8 @@
   .pulse,
   .shake,
   .foe.hit,
+  .foe.hit .unit-sprite,
+  .foe.hit .unit-face,
   .foe.strike,
   .foe-corpse,
   .field-tap,
@@ -188,10 +264,23 @@
   .foe-figure,
   .unit-sprite,
   .ally-unit.dash,
+  .ally-unit.dash .unit-sprite::before,
+  .ally-unit.dash .unit-sprite::after,
   .ally-unit.hurt .unit-sprite,
+  .swing-arc,
   .slash,
   .impact-ring,
+  .dash-dust,
   .atk-upgrade.can-buy,
+  .field-ambience .ember,
+  .field-ambience .fog,
+  .codex-card.r5::after,
+  .pull-btn.primary:not(:disabled),
+  .battlefield.hitstop,
+  .battlefield.boss-zoom,
+  .boss-burst,
+  .hero-row,
+  .codex-card,
   .screen,
   .modal-backdrop,
   .modal-panel,
@@ -200,4 +289,12 @@
   }
   .pf-inner { transition: none !important; }
   .float-text { opacity: 1; }
+}
+
+/* 강타 숫자 — 화면이 알아채게 크고 금빛으로 */
+.float-text.crit {
+  font-size: 24px;
+  font-weight: 900;
+  color: #ffd75e;
+  text-shadow: 0 0 10px rgba(228, 197, 92, 0.6), 0 2px 2px rgba(0, 0, 0, 0.5);
 }

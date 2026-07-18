@@ -27,7 +27,7 @@ function flagCardHtml({ hero, dupe }, index) {
     <div class="pf-inner">
       <div class="pf-back"></div>
       <div class="pf-front">
-        ${portraitHtml(hero.id, 'pf-portrait')}
+        ${portraitHtml(hero.id, `pf-portrait frame-r${hero.rarity}`)}
         <em class="pf-rarity">${RARITY[hero.rarity].name}</em>
         <b class="pf-name">${hero.name}</b>
         <span class="pf-tag">${dupe ? '겹침 +1' : '새 장수!'}</span>

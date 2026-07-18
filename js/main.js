@@ -108,6 +108,17 @@ function boot() {
     navigator.serviceWorker.register('./sw.js').catch(() => {
       /* 로컬 file:// 등에서는 조용히 넘어간다 */
     });
+    // 새 버전이 주도권을 잡으면 저장하고 스스로 새로고침 — 유저가 업데이트를 신경 쓸 필요가 없다.
+    // 첫 설치 때의 controllerchange(주도권 최초 획득)로는 새로고침하지 않는다.
+    let hadController = Boolean(navigator.serviceWorker.controller);
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController) {
+        hadController = true;
+        return;
+      }
+      persist(getState());
+      location.reload();
+    });
   }
 }
 
