@@ -5,7 +5,7 @@ import * as stateModule from '../core/state.js';
 import { getState, levelUpHero, starUpHero, togglePartyMember } from '../core/state.js';
 import { heroDef, heroPower, partyPower, levelCost, starUpCost, MAX_STARS, effectiveBondBonus } from '../systems/growth.js';
 import { orderList, toggleOrder } from '../systems/orders.js';
-import { RARITY, FACTIONS } from '../data/heroes.js';
+import { RARITY, FACTIONS, PERK_LABELS } from '../data/heroes.js';
 import { BONDS } from '../data/bonds.js';
 import { BALANCE } from '../data/balance.js';
 import { fmt } from './format.js';
@@ -68,6 +68,7 @@ function rowHtml({ id, def, hs }, index = 0) {
         ‧ 전투력 <b data-role="power">${fmt(heroPower(id, hs))}</b>
         ‧ 겹침 ${hs.dupes}
       </div>
+      ${def.perk ? `<div class="row-perk">출전 시 ${PERK_LABELS[def.perk.kind]} +${def.perk.value}%</div>` : ''}
     </div>
     <div class="row-actions">
       <button class="btn train" data-id="${id}" ${maxedLevel ? 'disabled' : ''}>

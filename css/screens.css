@@ -1226,3 +1226,48 @@
   background: var(--gold-bright);
   box-shadow: 0 0 6px rgba(228, 197, 92, 0.7);
 }
+
+/* 시련의 탑 버튼 — 연마 아래, 벽에 막힌 날의 다른 문 */
+.tower-btn {
+  appearance: none;
+  font-family: inherit;
+  cursor: pointer;
+  margin: 0 18px;
+  min-height: 46px;
+  border: 1px solid var(--ink-600);
+  border-radius: 4px;
+  background: linear-gradient(180deg, #221c24, #171319);
+  color: var(--paper);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+}
+.tower-btn .up-name { font-size: 13px; font-weight: 700; }
+.tower-btn .up-stat { flex: 1; text-align: right; font-size: 11.5px; color: var(--paper-dim); }
+.tower-btn:active { transform: translateY(1px) scale(0.99); }
+
+/* 영웅 고유 패시브 표기 */
+.row-perk { font-size: 10.5px; color: var(--jade); margin-top: 2px; }
+
+/* 빈 파티 슬롯 — 점선 박스 대신 "채우고 싶은 자리" */
+.hero-flag.empty {
+  border: 1px solid var(--ink-600);
+  background:
+    repeating-linear-gradient(45deg, rgba(239, 230, 210, 0.025) 0 6px, transparent 6px 12px),
+    var(--ink-950);
+}
+.hero-flag.empty::after {
+  content: '＋';
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 20px;
+  color: var(--paper-faint);
+}
+.hero-flag.empty .flag-name {
+  position: absolute;
+  bottom: 20px;
+  font-size: 10px;
+}

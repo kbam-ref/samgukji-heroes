@@ -13,6 +13,12 @@ import { fmt } from './format.js';
 import { floatText, pulse, shake, countUp, burst, flash } from './effects.js';
 import { play, vibrate } from './sound.js';
 import { portraitHtml } from './portrait.js';
+import * as tower from '../systems/tower.js';
+import { openTower } from './tower-modal.js';
+
+function towerTriesLeftLabel() {
+  return `${tower.triesLeft()}회`;
+}
 
 let unsubs = [];
 let rafId = 0;
@@ -185,6 +191,11 @@ function template(s) {
       <span class="up-name">공격 연마</span>
       <span class="up-stat">공격 <b id="bs-up-atk">${fmt(totalDps())}</b> <i id="bs-up-next">→ ${fmt(totalDps() + atkPerUpgrade())}</i></span>
       <span class="up-cost" id="bs-up-cost">엽전 ${fmt(upgrades.atkUpgradeCost())}</span>
+    </button>
+
+    <button class="tower-btn" id="bs-tower">
+      <span class="up-name">시련의 탑</span>
+      <span class="up-stat" id="bs-tower-note">최고 ${fmt(s.records?.bestTower ?? 0)}층 ‧ 오늘 ${towerTriesLeftLabel(s)}</span>
     </button>
 
     <div class="party-row" id="bs-party">${partyFlagsHtml(s)}</div>
@@ -388,6 +399,14 @@ export function render(root) {
     e.stopPropagation(); // 전장 터치 보상과 겹치지 않게
     if (!battle.fireCombo()) shake(comboBtn);
   });
+
+  // 시련의 탑
+  document.getElementById('bs-tower').addEventListener('click', () => openTower());
+  const refreshTowerNote = () => {
+    const note = document.getElementById('bs-tower-note');
+    if (note) note.textContent = `최고 ${fmt(getState().records?.bestTower ?? 0)}층 ‧ 오늘 ${towerTriesLeftLabel()}`;
+  };
+  unsubs.push(on('tower:climb', refreshTowerNote));
 
   // 배속 토글 x1 ↔ x2
   const speedBtn = document.getElementById('bs-speed');

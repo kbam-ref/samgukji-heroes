@@ -1,7 +1,7 @@
 // 진입점 — 세이브 불러오기 → 복귀 보상 → 화면 구성 → 게임 루프 시작
 
 import { loadOrCreate, persist } from './core/save.js';
-import { initState, getState, addCoin, addJade, offlineDoubled, markOfflineDoubled, freePullUsed } from './core/state.js';
+import { initState, getState, addCoin, addJade, offlineDoubled, markOfflineDoubled, freePullUsed, setFlag } from './core/state.js';
 import { on } from './core/events.js';
 import { startLoop } from './core/loop.js';
 import * as battle from './systems/battle.js';
@@ -80,9 +80,30 @@ function boot() {
   renderResourceBar(document.getElementById('resource-bar'));
   renderTabs(document.getElementById('tab-bar'), document.getElementById('screen-root'));
 
+  // 첫 접속 온보딩 — 시작 옥구슬로 첫 10연을 돌리게 이끈다 (이탈의 절반은 첫 60초에 난다)
+  function maybeShowFtue() {
+    const s = getState();
+    if (s.flags?.ftue || s.gacha.total > 0) return;
+    setFlag('ftue');
+    persist(getState());
+    showModal({
+      title: '주군, 천하가 부릅니다',
+      body: '지금 가진 옥구슬이면 장수 10명을 한 번에 모을 수 있습니다.\n모집에서 첫 부대를 꾸리고, 전투는 알아서 벌어집니다.',
+      actions: [
+        {
+          label: '10회 모집하러 가기',
+          primary: true,
+          onClick: () => document.querySelector('.tab[data-tab="gacha"]')?.click(),
+        },
+        { label: '나중에' },
+      ],
+    });
+  }
+  on('attendance:claim', () => setTimeout(maybeShowFtue, 400));
+
   const gain = computeOfflineGain(save, awaySeconds);
   if (gain) showOfflineReward(gain);
-  else maybeShowAttendance();
+  else if (!maybeShowAttendance()) maybeShowFtue();
 
   // 전투 배속 — 설정의 speed 배율 (x1/x2). 방치 계산(killRate)은 실측 기준 유지
   const loop = startLoop((dt) => battle.tick(dt * (getState().settings?.speed || 1)));

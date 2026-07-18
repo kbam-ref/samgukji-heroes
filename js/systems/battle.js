@@ -49,6 +49,18 @@ export function weekdayPerk() {
   return BALANCE.weekday[new Date().getDay()] ?? { name: '', coinMult: 1 };
 }
 
+const HERO_BY_ID = Object.fromEntries(HEROES.map((h) => [h.id, h]));
+
+/** 출전 중인 장수들의 고유 패시브 합산(%) — kind: boss/combo/coin/guard */
+export function partyPerk(s, kind) {
+  let sum = 0;
+  for (const id of s.party) {
+    const perk = HERO_BY_ID[id]?.perk;
+    if (perk && perk.kind === kind) sum += perk.value;
+  }
+  return sum;
+}
+
 /** 현재 전장 — 이름·우두머리는 데이터, 전투력·엽전은 곡선에서 파생해 돌려준다 */
 export function currentStage(s) {
   const chapter = currentChapter(s);
@@ -62,7 +74,13 @@ export function currentStage(s) {
     enemyPower: Math.round(basePower * Math.pow(SC.difficultyPowerMult, diff - 1)),
     coinPerKill: Math.max(
       1,
-      Math.round(basePower * SC.coinRatio * Math.pow(SC.difficultyCoinMult, diff - 1) * weekdayPerk().coinMult)
+      Math.round(
+        basePower *
+          SC.coinRatio *
+          Math.pow(SC.difficultyCoinMult, diff - 1) *
+          weekdayPerk().coinMult *
+          (1 + partyPerk(s, 'coin') / 100) // 조조·손책 등의 재물 패시브
+      )
     ),
   };
 }
@@ -183,7 +201,8 @@ function syncUnits(s) {
   }
 
   for (const u of units) {
-    const expected = unitMaxHp(u.id, s);
+    // 조운·하후돈류 수호 패시브 — 전군 체력 +%
+    const expected = Math.round(unitMaxHp(u.id, s) * (1 + partyPerk(s, 'guard') / 100));
     if (expected !== u.maxHp) {
       const ratio = u.hp / u.maxHp;
       u.maxHp = expected;
@@ -292,7 +311,10 @@ function resolveDeath(s, wasBoss, wasRival, enemyRivalId) {
 function applyHit(s, damage, attackerId) {
   if (!enemy || enemy.hp <= 0) return;
 
-  if (enemy.boss) damage = Math.round(damage * orderEffect(s, 'bossDamageMult', 1)); // 군령: 난세의 기세
+  // 군령(난세의 기세) + 여포·관우류 우두머리 특화 패시브
+  if (enemy.boss) {
+    damage = Math.round(damage * orderEffect(s, 'bossDamageMult', 1) * (1 + partyPerk(s, 'boss') / 100));
+  }
   const dead = applyDamage(enemy, damage);
   emit('battle:hit', { damage, hp: enemy.hp, maxHp: enemy.maxHp, attackerId });
   if (!dead) return;
@@ -321,7 +343,8 @@ function strikeBy(unit, s) {
 
   // 협공 충전 — 인연이 발동 중일 때만 쌓인다 (군령: 의기충천이 빠르게 한다)
   if (bondBonus(s) > 0 && comboCharge < BALANCE.combo.strikes) {
-    comboCharge += orderEffect(s, 'comboChargeMult', 1);
+    // 군령(의기충천) + 제갈량·주유류 지략 패시브
+    comboCharge += orderEffect(s, 'comboChargeMult', 1) * (1 + partyPerk(s, 'combo') / 100);
     emit('combo:charge', { progress: comboProgress(), ready: comboReady() });
   }
 }

@@ -33,6 +33,7 @@ export function render(root) {
       <div class="settings-row"><span>모집 횟수</span><b>${fmt(s.gacha.total)}회</b></div>
       <div class="settings-row"><span>최고 전투력</span><b>${fmt(s.records?.bestPower ?? 0)}</b></div>
       <div class="settings-row"><span>최고 도달</span><b>${s.records?.bestStage ?? '난이도 1 ‧ 1장 1전장'}</b></div>
+      <div class="settings-row"><span>시련의 탑</span><b>${fmt(s.records?.bestTower ?? 0)}층</b></div>
       <div class="settings-row"><span>누적 출석</span><b>${fmt(s.attendance?.totalDays ?? 0)}일</b></div>
       <div class="settings-row"><span>세이브 버전</span><b>v${SAVE_VERSION}</b></div>
       <div class="settings-row"><span>게임 버전</span><b id="st-build">확인 중…</b></div>

@@ -159,6 +159,30 @@ export function markOfflineDoubled() {
   ensureDaily().offlineDoubled = true;
 }
 
+/** 1회성 플래그 (온보딩 등) */
+export function setFlag(key) {
+  state.flags = state.flags ?? {};
+  if (!state.flags[key]) {
+    state.flags[key] = true;
+    emit('flag', { key });
+  }
+}
+
+/** 시련의 탑 — 오늘 남은 도전 횟수 */
+export function towerTriesLeft() {
+  return Math.max(0, BALANCE.tower.perDay - (ensureDaily().towerTries ?? 0));
+}
+
+/** 시련의 탑 등반 기록 — 시도 1회 소모, 신기록이면 갱신하고 옥구슬 지급 */
+export function recordTowerClimb(newBest, jade) {
+  const d = ensureDaily();
+  d.towerTries = (d.towerTries ?? 0) + 1;
+  state.records = state.records ?? {};
+  if (newBest > (state.records.bestTower ?? 0)) state.records.bestTower = newBest;
+  if (jade > 0) addJade(jade);
+  emit('tower:climb', { best: state.records.bestTower ?? 0, jade });
+}
+
 /** 전투력 신기록 갱신 — 마일스톤(자릿수 문턱)을 넘기면 알린다 */
 export function noteBestPower(power) {
   state.records = state.records ?? {};
@@ -229,6 +253,7 @@ export function ensureDaily() {
       claimed: [],
       freePullUsed: false,   // 오늘의 무료 모집
       offlineDoubled: false, // 복귀 보상 2배 받기
+      towerTries: 0,         // 오늘 시련의 탑 도전 수
     };
   }
   return state.daily;
