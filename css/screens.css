@@ -179,23 +179,20 @@
   background: rgba(6, 5, 4, 0.45);
   filter: blur(2px);
 }
-/* 아군 스프라이트 — 영웅 초상이 전장에 선다 (세력색 받침) */
+/* 아군 스프라이트 — 배경을 제거한 캐릭터가 틀 없이 전장에 선다 */
 .unit-sprite {
-  width: 52px;
-  height: 60px;
+  width: 56px;
+  height: 68px;
   margin: 0 auto;
-  border-radius: 9px;
-  border: 1px solid rgba(239, 230, 210, 0.14);
-  border-bottom: 3px solid var(--flag-a, var(--ink-600));
-  overflow: hidden;
-  background: var(--ink-950);
   animation: idle-bob 2.8s ease-in-out infinite;
 }
 .unit-face {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: 50% 12%; /* 얼굴 위주로 담는다 */
+  object-fit: contain;
+  object-position: bottom; /* 발이 땅에 닿는다 */
+  background: none; /* .portrait 공통 배경을 끈다 — 투명 누끼가 그대로 보이게 */
+  filter: drop-shadow(0 3px 3px rgba(6, 5, 4, 0.4));
 }
 .ally-unit:nth-child(2n) .unit-sprite { animation-delay: -1.1s; }
 .ally-unit:nth-child(3n) .unit-sprite { animation-delay: -1.9s; }
@@ -216,15 +213,15 @@
 .battlefield.wiped { filter: saturate(0.5) brightness(0.85); }
 .foe.rival .foe-name { color: var(--r4); font-weight: 700; }
 
-/* 숙적 우두머리 — 그림자가 아니라 그 영웅의 얼굴로 나타난다 */
+/* 숙적 우두머리 — 그림자가 아니라 그 영웅의 모습 그대로, 붉은 기운을 두르고 */
 .foe .unit-sprite {
-  width: 66px;
-  height: 76px;
+  width: 72px;
+  height: 86px;
   animation: idle-bob 3.2s ease-in-out infinite;
 }
-.foe .rival-sprite {
-  border-color: rgba(208, 133, 115, 0.55);
-  box-shadow: 0 0 14px rgba(169, 68, 56, 0.35);
+.foe .rival-sprite .unit-face {
+  filter: drop-shadow(0 3px 4px rgba(6, 5, 4, 0.45)) drop-shadow(0 0 10px rgba(169, 68, 56, 0.5));
+  transform: scaleX(-1); /* 아군을 마주 보도록 좌우 반전 */
 }
 
 /* 베기 궤적 — 타격이 눈에 보인다 */

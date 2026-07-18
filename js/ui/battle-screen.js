@@ -12,7 +12,7 @@ import { RIVAL_LINES, RIVAL_LINE_DEFAULT } from '../data/rivals.js';
 import { fmt } from './format.js';
 import { floatText, pulse, shake, countUp, burst, flash } from './effects.js';
 import { play, vibrate } from './sound.js';
-import { portraitHtml } from './portrait.js';
+import { portraitHtml, spriteHtml } from './portrait.js';
 
 let unsubs = [];
 let rafId = 0;
@@ -36,7 +36,7 @@ function alliesHtml() {
       (u) => `
     <div class="ally-unit${u.hp <= 0 ? ' down' : ''}" data-id="${u.id}">
       <div class="unit-hp ally-hp"><i style="width:${(u.hp / u.maxHp) * 100}%"></i></div>
-      <div class="unit-sprite f-${u.faction}">${portraitHtml(u.id, 'unit-face')}</div>
+      <div class="unit-sprite f-${u.faction}">${spriteHtml(u.id, 'unit-face')}</div>
       <span class="ally-unit-name">${u.name}</span>
     </div>`
     )
@@ -187,7 +187,7 @@ function updateFoe() {
       fig.innerHTML =
         key === 'mob'
           ? foeSvg(chapterBand(s))
-          : `<div class="unit-sprite rival-sprite">${portraitHtml(enemy.rivalId, 'unit-face')}</div>`;
+          : `<div class="unit-sprite rival-sprite">${spriteHtml(enemy.rivalId, 'unit-face')}</div>`;
     }
   }
 
