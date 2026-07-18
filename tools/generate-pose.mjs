@@ -57,6 +57,8 @@ const ENEMY_PROMPTS = {
   'dong-soldier':    'brutish soldier in black-and-crimson armor with iron helmet, curved blade, cruel smirk',
   'warlord-soldier': 'rough mercenary in mismatched gray armor with battered shield, wary scowl',
   'yuan-soldier':    'disciplined soldier in silver-gray armor holding a tall banner spear, stern cold face',
+  'wu-soldier':      'river navy soldier in crimson-and-teal light armor with rope and boarding hook, agile stance, sly grin',
+  'nanman-soldier':  'wild southern tribal warrior in rattan armor with feather and bone ornaments, face paint, short curved blade, fierce grin',
   zhangjiao:         'sinister old sorcerer with long gray hair, tattered yellow robe, wooden staff with paper talismans, faint eerie green glow, ominous grin',
 };
 

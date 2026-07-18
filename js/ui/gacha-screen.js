@@ -4,9 +4,11 @@
 import { on } from '../core/events.js';
 import { getState } from '../core/state.js';
 import * as gacha from '../systems/gacha.js';
+import * as shard from '../systems/shard.js';
 import { GACHA_RATES } from '../data/gacha-tables.js';
-import { RARITY } from '../data/heroes.js';
+import { RARITY, HEROES } from '../data/heroes.js';
 import { BALANCE } from '../data/balance.js';
+import { showModal } from './modal.js';
 import { fmt } from './format.js';
 import { shake, floatText } from './effects.js';
 import { play, vibrate } from './sound.js';
@@ -19,6 +21,31 @@ function rateNote() {
   return GACHA_RATES.map(
     (r) => `${RARITY[r.rarity].name} ${Math.round(r.rate * 1000) / 10}%`
   ).join(' ‧ ');
+}
+
+// 명성 전당 — 24명 전원 지정 교환 가능. 미보유는 실루엣이라 "저걸 사겠다"는 목표가 된다.
+function shardGridHtml(s) {
+  return HEROES.map((h) => {
+    const owned = Boolean(s.heroes[h.id]);
+    return `
+    <button class="shard-cell r${h.rarity}" data-id="${h.id}" aria-label="${h.name} 교환">
+      ${portraitHtml(h.id, `frame-r${h.rarity}${owned ? '' : ' silhouette'}`)}
+      <span class="shard-cost">${fmt(shard.exchangeCost(h.id))}</span>
+    </button>`;
+  }).join('');
+}
+
+function refreshShardHall() {
+  const s = getState();
+  const bal = document.getElementById('sh-balance');
+  if (bal) bal.textContent = fmt(s.resources.shard ?? 0);
+  const note = document.getElementById('sh-release-note');
+  if (note) {
+    const total = shard.releasePreview(s).reduce((acc, e) => acc + e.shards, 0);
+    note.textContent = total > 0 ? `지금 +${fmt(total)} 조각` : '방출할 겹침 없음';
+  }
+  const grid = document.getElementById('sh-grid');
+  if (grid) grid.innerHTML = shardGridHtml(s);
 }
 
 function flagCardHtml({ hero, dupe }, index) {
@@ -197,10 +224,66 @@ export function render(root) {
       </div>
       <p class="rate-note">${rateNote()}</p>
     </div>
+
+    <div class="gacha-board shard-hall">
+      <div class="shard-head">
+        <b>명성 전당</b>
+        <span class="shard-balance">조각 <b id="sh-balance">${fmt(s.resources.shard ?? 0)}</b></span>
+      </div>
+      <p class="settings-note">별을 다 채운 장수의 남는 겹침을 조각으로 바꾸고, 조각으로 <b>원하는 장수를 지명해</b> 데려옵니다.</p>
+      <button class="btn" id="sh-release">남는 겹침 방출<span id="sh-release-note"></span></button>
+      <div class="shard-grid" id="sh-grid">${shardGridHtml(s)}</div>
+    </div>
   </section>`
   );
 
   updateBoard();
+  refreshShardHall();
+
+  // 명성 전당 — 방출
+  document.getElementById('sh-release').addEventListener('click', (e) => {
+    const total = shard.releaseAll();
+    if (total <= 0) {
+      shake(e.target.closest('button'));
+      floatText(e.clientX, e.clientY, '별을 다 채운 장수의 겹침만 방출돼요', 'warn');
+      return;
+    }
+    refreshShardHall();
+    floatText(e.clientX, e.clientY, `명성 조각 +${fmt(total)}!`, 'gold');
+    play('clear');
+  });
+
+  // 명성 전당 — 지정 교환
+  document.getElementById('sh-grid').addEventListener('click', (e) => {
+    const cell = e.target.closest('.shard-cell');
+    if (!cell) return;
+    const id = cell.dataset.id;
+    const hero = HEROES.find((h) => h.id === id);
+    const cost = shard.exchangeCost(id);
+    const s = getState();
+    const owned = Boolean(s.heroes[id]);
+
+    showModal({
+      title: `${hero.name} ‧ ${RARITY[hero.rarity].name}`,
+      body: `${hero.title}\n\n조각 ${fmt(cost)}로 ${owned ? '겹침 +1을 얻습니다 (승급 재료)' : '이 장수를 데려옵니다!'}\n보유 조각: ${fmt(s.resources.shard ?? 0)}`,
+      actions: [
+        { label: '그만두기' },
+        {
+          label: '교환하기',
+          primary: true,
+          onClick: () => {
+            const result = shard.exchange(id);
+            if (!result) {
+              floatText(window.innerWidth / 2, window.innerHeight / 2, '조각이 모자라요', 'warn');
+              return;
+            }
+            refreshShardHall();
+            startReveal([{ hero, dupe: result.dupe }]); // 교환도 모집 연출로 — 얻는 맛
+          },
+        },
+      ],
+    });
+  });
 
   document.getElementById('gs-free').addEventListener('click', () => {
     const results = gacha.pullFree();
@@ -228,7 +311,10 @@ export function render(root) {
 
   unsubs.push(
     on('jade', updateBoard),
-    on('gacha:pity', updateBoard)
+    on('gacha:pity', updateBoard),
+    on('shard', refreshShardHall),
+    on('hero:add', refreshShardHall),
+    on('hero:dupe', refreshShardHall)
   );
 }
 

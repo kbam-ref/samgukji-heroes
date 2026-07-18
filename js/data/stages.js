@@ -134,7 +134,7 @@ export const CHAPTERS = [
     ],
   },
   {
-    id: 15, name: '형주의 눈물', foe: '오군', foeArt: 'warlord-soldier',
+    id: 15, name: '형주의 눈물', foe: '오군', foeArt: 'wu-soldier',
     stages: [
       { name: '번성 수공' }, { name: '칠군 수몰' }, { name: '독화살 수술' }, { name: '흰옷의 상인들' },
       { name: '강변 봉화대', boss: '반장' },
@@ -143,7 +143,7 @@ export const CHAPTERS = [
     ],
   },
   {
-    id: 16, name: '이릉대전', foe: '오군', foeArt: 'warlord-soldier',
+    id: 16, name: '이릉대전', foe: '오군', foeArt: 'wu-soldier',
     stages: [
       { name: '복수의 출정' }, { name: '무협 수로' }, { name: '자귀 상륙' }, { name: '효정 선봉전' },
       { name: '오반의 유인대', boss: '주연' },
@@ -152,7 +152,7 @@ export const CHAPTERS = [
     ],
   },
   {
-    id: 17, name: '남만 정벌', foe: '남만군', foeArt: 'yellow-turban',
+    id: 17, name: '남만 정벌', foe: '남만군', foeArt: 'nanman-soldier',
     stages: [
       { name: '노수 도하' }, { name: '독샘 골짜기' }, { name: '첫 번째 사로잡음' }, { name: '등갑군의 숲' },
       { name: '맹획의 부장', boss: '망아장' },

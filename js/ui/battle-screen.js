@@ -162,6 +162,12 @@ function template(s) {
         <div class="unit-name foe-name" id="bs-foe-name">${chapter.foe}</div>
       </div>
 
+      ${chapter.foeArt ? `
+      <div class="foe-backline" aria-hidden="true">
+        <img class="portrait back-mob m1" src="./assets/enemies-cut/${chapter.foeArt}.png" alt="">
+        <img class="portrait back-mob m2" src="./assets/enemies-cut/${chapter.foeArt}.png" alt="">
+      </div>` : ''}
+
       <div class="ally-line" id="bs-allies">${alliesHtml()}</div>
 
       <button class="combo-btn" id="bs-combo" hidden aria-label="협공 발동">

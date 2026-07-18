@@ -4,7 +4,7 @@
 
 import { BALANCE } from '../data/balance.js';
 
-export const SAVE_VERSION = 6;
+export const SAVE_VERSION = 7;
 
 export function createNewSave(now = Date.now()) {
   return {
@@ -14,6 +14,7 @@ export function createNewSave(now = Date.now()) {
     resources: {
       coin: BALANCE.start.coin,
       jade: BALANCE.start.jade,
+      shard: 0, // 명성 조각 — 남는 겹침을 방출해 얻고, 원하는 장수와 교환
     },
     heroes: Object.fromEntries(
       BALANCE.start.heroes.map((id) => [id, { level: 1, stars: 1, dupes: 0 }])
@@ -76,6 +77,12 @@ const MIGRATIONS = {
     save.records = save.records ?? {};
     save.flags = save.flags ?? {};
     save.version = 6;
+    return save;
+  },
+  // v6 → v7: 명성 조각 — 남는 겹침 방출·지정 교환 (2026-07-19)
+  7: (save) => {
+    save.resources.shard = save.resources.shard ?? 0;
+    save.version = 7;
     return save;
   },
 };

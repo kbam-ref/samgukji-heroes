@@ -159,6 +159,29 @@ export function markOfflineDoubled() {
   ensureDaily().offlineDoubled = true;
 }
 
+// ── 명성 조각 ─────────────────────────────────────────
+
+/** 겹침 방출 — 남는 겹침을 비운다 (조각 환산·지급은 systems/shard.js가 한다) */
+export function clearDupes(id) {
+  const hero = state.heroes[id];
+  if (!hero || hero.dupes <= 0) return false;
+  hero.dupes = 0;
+  emit('hero:dupe', { id, dupes: 0 });
+  return true;
+}
+
+export function addShard(n) {
+  state.resources.shard = (state.resources.shard ?? 0) + n;
+  emit('shard', { total: state.resources.shard, gained: n });
+}
+
+export function spendShard(n) {
+  if ((state.resources.shard ?? 0) < n) return false;
+  state.resources.shard -= n;
+  emit('shard', { total: state.resources.shard, gained: -n });
+  return true;
+}
+
 /** 1회성 플래그 (온보딩 등) */
 export function setFlag(key) {
   state.flags = state.flags ?? {};
