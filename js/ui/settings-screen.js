@@ -53,6 +53,21 @@ export function render(root) {
   </section>`
   );
 
+  // 게임 버전 = 지금 이 폰에 설치된 오프라인 캐시 버전 (sw.js CACHE와 일치)
+  if (window.caches?.keys) {
+    caches
+      .keys()
+      .then((keys) => {
+        const el = document.getElementById('st-build');
+        const v = keys.find((k) => k.startsWith('samgukji-'));
+        if (el) el.textContent = v ? v.replace('samgukji-', '') : '캐시 없음';
+      })
+      .catch(() => {});
+  } else {
+    const el = document.getElementById('st-build');
+    if (el) el.textContent = '-';
+  }
+
   root.addEventListener('click', (e) => {
     const toggle = e.target.closest('button.toggle');
     if (!toggle) return;
