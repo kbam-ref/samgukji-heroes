@@ -159,6 +159,8 @@ function updateBoard() {
     const count = Number(btn.dataset.count);
     btn.disabled = s.resources.jade < gacha.pullCost(count);
   }
+  const freeBtn = document.getElementById('gs-free');
+  if (freeBtn) freeBtn.hidden = !gacha.freePullAvailable();
   const pityEl = document.getElementById('gs-pity');
   if (pityEl) pityEl.textContent = gacha.pityRemaining(s);
   const gaugeEl = document.getElementById('gs-pity-fill');
@@ -183,6 +185,9 @@ export function render(root) {
       <p class="pity-line">전설 확정까지 <b id="gs-pity">${gacha.pityRemaining(s)}</b>회</p>
       <div class="pity-gauge"><i id="gs-pity-fill"></i></div>
       <div class="gacha-actions">
+        <button class="btn free-pull" id="gs-free" hidden>
+          오늘의 무료 모집<span>0 옥구슬 ‧ 하루 1회</span>
+        </button>
         <button class="btn pull-btn" data-count="1">
           1회 모집<span>옥구슬 ${fmt(BALANCE.gacha.costSingle)}</span>
         </button>
@@ -196,6 +201,13 @@ export function render(root) {
   );
 
   updateBoard();
+
+  document.getElementById('gs-free').addEventListener('click', () => {
+    const results = gacha.pullFree();
+    if (!results) return;
+    updateBoard();
+    startReveal(results);
+  });
 
   document.querySelector('.gacha-actions').addEventListener('click', (e) => {
     const btn = e.target.closest('.pull-btn');

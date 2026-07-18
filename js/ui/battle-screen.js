@@ -2,7 +2,7 @@
 // 전투 계산은 systems/battle.js가 하고, 이 파일은 이벤트를 구독해 그리기만 한다.
 
 import { on } from '../core/events.js';
-import { getState } from '../core/state.js';
+import { getState, setSetting, noteBestPower } from '../core/state.js';
 import * as battle from '../systems/battle.js';
 import { totalDps, atkPerUpgrade } from '../systems/hero-unit.js';
 import * as upgrades from '../systems/upgrades.js';
@@ -140,6 +140,7 @@ function template(s) {
       <div class="stage-chapter">난이도 ${diff} ‧ ${chapter.id}장 ‧ ${chapter.name}</div>
       <h1 class="stage-name" id="bs-stage-name">${stage.name}</h1>
       <div class="stage-step">${s.stage.index} / ${chapter.stages.length} 전장${battle.isBossStage(s) ? ' ‧ 우두머리전' : ''}</div>
+      <div class="weekday-perk">${battle.weekdayPerk().name} — 오늘 엽전 +${Math.round((battle.weekdayPerk().coinMult - 1) * 100)}%</div>
     </header>
 
     <div class="battlefield" id="bs-field">
@@ -163,6 +164,8 @@ function template(s) {
       </button>
 
       <div class="tap-hint">전장을 두드리면 엽전이 떨어져요</div>
+
+      <button class="speed-btn" id="bs-speed" aria-label="전투 배속">x${s.settings?.speed || 1}</button>
     </div>
 
     <div class="battle-status">
@@ -367,6 +370,7 @@ function refreshGrowthViews() {
   updateFoe();
   updateUpgradeButton();
   updateCombo();
+  noteBestPower(partyPower(getState())); // 마일스톤 감지
 }
 
 export function render(root) {
@@ -383,6 +387,16 @@ export function render(root) {
   comboBtn.addEventListener('click', (e) => {
     e.stopPropagation(); // 전장 터치 보상과 겹치지 않게
     if (!battle.fireCombo()) shake(comboBtn);
+  });
+
+  // 배속 토글 x1 ↔ x2
+  const speedBtn = document.getElementById('bs-speed');
+  speedBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const next = (getState().settings?.speed || 1) >= 2 ? 1 : 2;
+    setSetting('speed', next);
+    speedBtn.textContent = `x${next}`;
+    pulse(speedBtn);
   });
 
   const field = document.getElementById('bs-field');
@@ -575,6 +589,14 @@ export function render(root) {
         rootEl.innerHTML = '';
         render(rootEl);
       }
+    }),
+
+    // 전투력 마일스톤 — 자릿수를 넘겼다
+    on('milestone', ({ value }) => {
+      flash('gold');
+      play('epic');
+      vibrate(30);
+      floatText(window.innerWidth / 2, window.innerHeight / 2 - 60, `전투력 ${fmt(value)} 돌파!`, 'victory');
     }),
 
     // 난이도 상승 — 천하를 한 바퀴 평정했다

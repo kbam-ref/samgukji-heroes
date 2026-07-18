@@ -16,7 +16,9 @@ export function computeOfflineGain(state, elapsedSeconds) {
   const coins = Math.floor(killRatePerSecond(state) * stage.coinPerKill * seconds * O.rate);
   if (coins <= 0) return null;
 
-  return { coins, seconds };
+  // 방치 옥구슬 — "끄고 있어도 모집이 다가온다"
+  const jade = Math.floor((seconds / 3600) * O.jadePerHour);
+  return { coins, jade, seconds };
 }
 
 /** 급습 명령 한 번의 보상 — 30분치를 감산 없이(온라인 요율로) 즉시 지급 */

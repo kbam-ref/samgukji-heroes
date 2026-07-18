@@ -30,21 +30,31 @@ export function pityRemaining(s) {
   return BALANCE.gacha.pityLegend - s.gacha.pity;
 }
 
+function rollOnce() {
+  const rarity = rollRarity(state.getState().gacha.pity);
+  state.bumpPity(rarity === 5);
+  const pool = pools.get(rarity);
+  const hero = pool[Math.floor(Math.random() * pool.length)];
+  const { dupe } = state.grantHero(hero.id);
+  return { hero, dupe };
+}
+
 /**
  * count회 모집. 옥구슬이 모자라면 null.
  * 반환: [{ hero, dupe }]
  */
 export function pull(count) {
   if (!state.spendJade(pullCost(count))) return null;
+  return Array.from({ length: count }, rollOnce);
+}
 
-  const results = [];
-  for (let i = 0; i < count; i++) {
-    const rarity = rollRarity(state.getState().gacha.pity);
-    state.bumpPity(rarity === 5);
-    const pool = pools.get(rarity);
-    const hero = pool[Math.floor(Math.random() * pool.length)];
-    const { dupe } = state.grantHero(hero.id);
-    results.push({ hero, dupe });
-  }
-  return results;
+/** 오늘의 무료 모집 1회 — 이미 썼으면 null */
+export function pullFree() {
+  if (state.freePullUsed()) return null;
+  state.markFreePull();
+  return [rollOnce()];
+}
+
+export function freePullAvailable() {
+  return !state.freePullUsed();
 }

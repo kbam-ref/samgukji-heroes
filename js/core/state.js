@@ -123,6 +123,53 @@ export function togglePartyMember(id) {
   return setParty([...state.party, id]);
 }
 
+// ── 출석·기록·일일 편의 ───────────────────────────────
+
+/** 출석 현황 — claimable이면 오늘 보상을 아직 안 받았다 */
+export function attendanceInfo() {
+  state.attendance = state.attendance ?? { lastClaim: '', cycleDay: 0, totalDays: 0 };
+  return { ...state.attendance, claimable: state.attendance.lastClaim !== todayKey() };
+}
+
+/** 오늘의 출석 보상 수령 — 7일 순환. 성공 시 받은 옥구슬, 이미 받았으면 0 */
+export function claimAttendance() {
+  const a = (state.attendance = state.attendance ?? { lastClaim: '', cycleDay: 0, totalDays: 0 });
+  if (a.lastClaim === todayKey()) return 0;
+  a.cycleDay = (a.cycleDay % BALANCE.attendance.rewards.length) + 1;
+  a.totalDays += 1;
+  a.lastClaim = todayKey();
+  const jade = BALANCE.attendance.rewards[a.cycleDay - 1];
+  addJade(jade);
+  emit('attendance:claim', { day: a.cycleDay, jade, totalDays: a.totalDays });
+  return jade;
+}
+
+export function freePullUsed() {
+  return Boolean(ensureDaily().freePullUsed);
+}
+export function markFreePull() {
+  ensureDaily().freePullUsed = true;
+  emit('gacha:free', {});
+}
+
+export function offlineDoubled() {
+  return Boolean(ensureDaily().offlineDoubled);
+}
+export function markOfflineDoubled() {
+  ensureDaily().offlineDoubled = true;
+}
+
+/** 전투력 신기록 갱신 — 마일스톤(자릿수 문턱)을 넘기면 알린다 */
+export function noteBestPower(power) {
+  state.records = state.records ?? {};
+  const prev = state.records.bestPower ?? 0;
+  if (power <= prev) return;
+  state.records.bestPower = power;
+  for (const m of BALANCE.milestones) {
+    if (prev < m && power >= m) emit('milestone', { value: m, power });
+  }
+}
+
 // ── 전장 ──────────────────────────────────────────────
 
 export function recordKill(coins, { farm = false } = {}) {
@@ -156,6 +203,8 @@ export function clearStage() {
   state.stage.kills = 0;
   state.stats.totalClears += 1;
   ensureDaily().clears += 1;
+  state.records = state.records ?? {};
+  state.records.bestStage = `난이도 ${cleared.difficulty} ‧ ${cleared.chapter}장 ${cleared.index}전장`;
   emit('stage:clear', cleared);
 }
 
@@ -170,7 +219,17 @@ function todayKey(now = new Date()) {
 export function ensureDaily() {
   const key = todayKey();
   if (state.daily.date !== key) {
-    state.daily = { date: key, kills: 0, pulls: 0, clears: 0, raids: 0, bountyDone: false, claimed: [] };
+    state.daily = {
+      date: key,
+      kills: 0,
+      pulls: 0,
+      clears: 0,
+      raids: 0,
+      bountyDone: false,
+      claimed: [],
+      freePullUsed: false,   // 오늘의 무료 모집
+      offlineDoubled: false, // 복귀 보상 2배 받기
+    };
   }
   return state.daily;
 }

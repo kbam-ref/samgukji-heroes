@@ -99,7 +99,8 @@ export function render(root) {
     <p class="screen-sub">장수를 누르면 출전을 넣고 뺄 수 있어요 (최대 5명). 함께 서면 인연이 깨어나요.</p>
     <div class="party-tools">
       <button class="btn" id="hs-best">최강 편성</button>
-      <span>전투력 높은 다섯을 한 번에 세워요</span>
+      <button class="btn" id="hs-train-all">전군 최대 단련</button>
+      <button class="btn" id="hs-star-all">일괄 승급</button>
     </div>
     <div class="bond-list" id="hs-bonds">${bondsHtml(s)}</div>
     <div class="order-list" id="hs-orders">${ordersHtml(s)}</div>
@@ -141,6 +142,56 @@ export function render(root) {
     setParty(best);
     refreshPartyViews();
     floatText(e.clientX, e.clientY, '전열을 다시 짰어요!', 'gold');
+  });
+
+  // 전군 최대 단련 — 가진 엽전이 다할 때까지 강한 순으로 돌아가며 올린다 (수백 번 탭 노동 제거)
+  document.getElementById('hs-train-all').addEventListener('click', (e) => {
+    let ups = 0;
+    let guard = 0;
+    let any = true;
+    while (any && guard < 5000) {
+      any = false;
+      for (const { id } of ownedSorted(getState())) {
+        const hs = getState().heroes[id];
+        if (hs.level >= BALANCE.growth.maxLevel) continue;
+        if (levelUpHero(id, levelCost(hs.level))) {
+          ups += 1;
+          any = true;
+        }
+        if (++guard >= 5000) break;
+      }
+    }
+    if (ups === 0) {
+      shake(e.target.closest('button'));
+      floatText(e.clientX, e.clientY, '엽전이 모자라요', 'warn');
+      return;
+    }
+    refreshPartyViews();
+    const listEl = document.getElementById('hs-list');
+    if (listEl) listEl.innerHTML = listHtml(getState());
+    floatText(e.clientX, e.clientY, `전군 +${ups}레벨!`, 'gold');
+  });
+
+  // 일괄 승급 — 겹침이 차 있는 장수 전원 승급
+  document.getElementById('hs-star-all').addEventListener('click', (e) => {
+    let stars = 0;
+    for (const { id } of ownedSorted(getState())) {
+      let hs = getState().heroes[id];
+      while (hs.stars < MAX_STARS && hs.dupes >= starUpCost(hs.stars)) {
+        if (!starUpHero(id, starUpCost(hs.stars))) break;
+        stars += 1;
+        hs = getState().heroes[id];
+      }
+    }
+    if (stars === 0) {
+      shake(e.target.closest('button'));
+      floatText(e.clientX, e.clientY, '승급할 수 있는 장수가 없어요', 'warn');
+      return;
+    }
+    refreshPartyViews();
+    const listEl = document.getElementById('hs-list');
+    if (listEl) listEl.innerHTML = listHtml(getState());
+    floatText(e.clientX, e.clientY, `별 +${stars}!`, 'gold');
   });
 
   const list = document.getElementById('hs-list');

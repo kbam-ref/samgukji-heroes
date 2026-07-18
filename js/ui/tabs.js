@@ -29,7 +29,7 @@ export function renderTabs(navRoot, screenRoot) {
   navRoot.innerHTML = TABS.map(
     (t) => `
     <button class="tab" data-tab="${t.id}" aria-label="${t.label}">
-      ${ICONS[t.id]}<span>${t.label}</span>
+      ${ICONS[t.id]}<span>${t.label}</span><i class="tab-dot" hidden></i>
     </button>`
   ).join('');
 

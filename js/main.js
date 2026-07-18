@@ -1,7 +1,7 @@
 // 진입점 — 세이브 불러오기 → 복귀 보상 → 화면 구성 → 게임 루프 시작
 
 import { loadOrCreate, persist } from './core/save.js';
-import { initState, getState, addCoin } from './core/state.js';
+import { initState, getState, addCoin, addJade, offlineDoubled, markOfflineDoubled, freePullUsed } from './core/state.js';
 import { on } from './core/events.js';
 import { startLoop } from './core/loop.js';
 import * as battle from './systems/battle.js';
@@ -9,6 +9,7 @@ import { computeOfflineGain } from './systems/offline.js';
 import { renderResourceBar } from './ui/resource-bar.js';
 import { renderTabs } from './ui/tabs.js';
 import { showModal } from './ui/modal.js';
+import { maybeShowAttendance } from './ui/attendance-modal.js';
 import { fmt, formatDuration } from './ui/format.js';
 import { countUp } from './ui/effects.js';
 import { initSound, play, vibrate } from './ui/sound.js';
@@ -19,10 +20,23 @@ const AUTOSAVE_MS = 10000;
 // (모달이 새 모달로 덮여도 보상이 증발하지 않게)
 let pendingGain = null;
 
+function claimPending(mult) {
+  if (!pendingGain) return;
+  addCoin(pendingGain.coins * mult);
+  if (pendingGain.jade > 0) addJade(pendingGain.jade * mult);
+  if (mult > 1) markOfflineDoubled();
+  pendingGain = null;
+  setTimeout(maybeShowAttendance, 350); // 복귀 보상을 거둔 뒤 출석이 이어진다
+}
+
 function showOfflineReward(gain) {
   pendingGain = pendingGain
-    ? { coins: pendingGain.coins + gain.coins, seconds: pendingGain.seconds + gain.seconds }
-    : { coins: gain.coins, seconds: gain.seconds };
+    ? {
+        coins: pendingGain.coins + gain.coins,
+        jade: (pendingGain.jade ?? 0) + (gain.jade ?? 0),
+        seconds: pendingGain.seconds + gain.seconds,
+      }
+    : { coins: gain.coins, jade: gain.jade ?? 0, seconds: gain.seconds };
 
   const estKills = Math.floor(battle.killRatePerSecond(getState()) * pendingGain.seconds * 0.6);
   const body = document.createElement('div');
@@ -30,24 +44,27 @@ function showOfflineReward(gain) {
   body.innerHTML = `
     <p>자리를 비운 <b>${formatDuration(pendingGain.seconds)}</b> 동안<br>병사들이 약 <b>${fmt(estKills)}</b>명을 무찔렀어요.</p>
     <div class="offline-coins"><b id="offline-count">0</b><span>엽전</span></div>
+    ${pendingGain.jade > 0 ? `<p class="offline-sub">옥구슬 <b>+${fmt(pendingGain.jade)}</b>도 함께 굴러들어왔어요</p>` : ''}
     <p class="offline-sub">영웅 탭에서 단련에 쓰면 좋아요</p>`;
 
-  showModal({
-    title: '다녀오셨군요, 주군',
-    body,
-    dismissible: false,
-    actions: [
-      {
-        label: '거두기',
-        primary: true,
-        onClick: () => {
-          if (!pendingGain) return;
-          addCoin(pendingGain.coins);
-          pendingGain = null;
-        },
+  const actions = [];
+  // 하루 1회 — 2배로 거두기 (급습과 별개의 복귀 전용 축포)
+  if (!offlineDoubled()) {
+    actions.push({
+      label: '2배로 거두기 (오늘 1회)',
+      primary: true,
+      onClick: () => {
+        claimPending(2);
+        play('epic');
+        vibrate(30);
       },
-    ],
-  });
+    });
+    actions.push({ label: '그냥 거두기', onClick: () => claimPending(1) });
+  } else {
+    actions.push({ label: '거두기', primary: true, onClick: () => claimPending(1) });
+  }
+
+  showModal({ title: '다녀오셨군요, 주군', body, dismissible: false, actions });
 
   countUp(document.getElementById('offline-count'), 0, pendingGain.coins, {
     duration: 1200,
@@ -65,8 +82,19 @@ function boot() {
 
   const gain = computeOfflineGain(save, awaySeconds);
   if (gain) showOfflineReward(gain);
+  else maybeShowAttendance();
 
-  const loop = startLoop((dt) => battle.tick(dt));
+  // 전투 배속 — 설정의 speed 배율 (x1/x2). 방치 계산(killRate)은 실측 기준 유지
+  const loop = startLoop((dt) => battle.tick(dt * (getState().settings?.speed || 1)));
+
+  // 모집 탭 금점 — 오늘의 무료 모집이 남아 있으면 표시
+  const refreshGachaDot = () => {
+    const dot = document.querySelector('.tab[data-tab="gacha"] .tab-dot');
+    if (dot) dot.hidden = freePullUsed();
+  };
+  refreshGachaDot();
+  on('gacha:free', refreshGachaDot);
+  setInterval(refreshGachaDot, 60000); // 자정 넘김 대비
 
   // 주기 저장 — 탭이 숨겨져 있는 동안엔 lastSeenAt을 전진시키지 않는다
   // (전진시키면 백그라운드에서 죽었을 때 방치 보상이 통째로 사라진다)

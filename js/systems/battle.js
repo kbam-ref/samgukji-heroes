@@ -44,6 +44,11 @@ export function stagePowerAt(difficulty, chapterNo, index) {
   return SC.basePower * Math.pow(SC.stageGrowth, g - 1) * Math.pow(SC.difficultyPowerMult, (difficulty ?? 1) - 1);
 }
 
+/** 오늘의 요일 특전 — 엽전 배율 (data/balance.js weekday) */
+export function weekdayPerk() {
+  return BALANCE.weekday[new Date().getDay()] ?? { name: '', coinMult: 1 };
+}
+
 /** 현재 전장 — 이름·우두머리는 데이터, 전투력·엽전은 곡선에서 파생해 돌려준다 */
 export function currentStage(s) {
   const chapter = currentChapter(s);
@@ -55,7 +60,10 @@ export function currentStage(s) {
   return {
     ...raw,
     enemyPower: Math.round(basePower * Math.pow(SC.difficultyPowerMult, diff - 1)),
-    coinPerKill: Math.max(1, Math.round(basePower * SC.coinRatio * Math.pow(SC.difficultyCoinMult, diff - 1))),
+    coinPerKill: Math.max(
+      1,
+      Math.round(basePower * SC.coinRatio * Math.pow(SC.difficultyCoinMult, diff - 1) * weekdayPerk().coinMult)
+    ),
   };
 }
 
