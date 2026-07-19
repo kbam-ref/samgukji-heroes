@@ -164,6 +164,11 @@ function template(s) {
       </div>
       <div class="scroll-strip" aria-hidden="true" id="bs-scroll">${chapter.name}</div>
 
+      <div class="boss-banner" id="bs-boss-banner" hidden>
+        <span class="bb-name" id="bs-boss-name"></span>
+        <div class="bb-track"><i id="bs-boss-hp" style="width:100%"></i></div>
+      </div>
+
       <div class="foe down" id="bs-foe">
         <div class="unit-hp foe-hp"><i id="bs-foe-hp" style="width:100%"></i></div>
         <div id="bs-foe-figure">${foeFigure(s, null).html}</div>
@@ -171,7 +176,7 @@ function template(s) {
       </div>
 
       ${chapter.foeArt ? `
-      <div class="foe-backline" aria-hidden="true">
+      <div class="foe-backline" aria-hidden="true" id="bs-backline">
         <img class="portrait back-mob m1" src="./assets/enemies-cut/${chapter.foeArt}.png" alt="">
         <img class="portrait back-mob m2" src="./assets/enemies-cut/${chapter.foeArt}.png" alt="">
         <img class="portrait back-mob m3" src="./assets/enemies-cut/${chapter.foeArt}.png" alt="">
@@ -241,6 +246,34 @@ function partyFlagsHtml(s) {
 
 let foeFigureKey = ''; // 지금 그려진 적 모습 ('mob' 또는 rival:영웅id) — 바뀔 때만 다시 그린다
 
+/** 뒤쪽 적 무리 — 남은 처치 수만큼 두텁다. 베어 나갈수록 무리가 줄어 "뚫고 있다"가 보인다 */
+function updateBackline(s = getState()) {
+  const back = document.getElementById('bs-backline');
+  if (!back) return;
+  const left = BALANCE.battle.killsPerStage - s.stage.kills;
+  const want = left >= 7 ? 3 : left >= 4 ? 2 : left >= 2 ? 1 : 0;
+  [...back.children].forEach((mob, i) => mob.classList.toggle('gone', i >= want));
+}
+
+/** 우두머리 체력바 — 결전에는 전장 상단에 대형 바가 걸린다 */
+function updateBossBanner(enemy) {
+  const banner = document.getElementById('bs-boss-banner');
+  if (!banner) return;
+  const show = Boolean(enemy?.boss);
+  if (banner.hidden === !show) {
+    // 상태 그대로 — 체력만 갱신
+  } else {
+    banner.hidden = !show;
+    if (show) pulse(banner, 'bb-in');
+  }
+  if (show) {
+    const nameEl = document.getElementById('bs-boss-name');
+    if (nameEl && nameEl.textContent !== enemy.name) nameEl.textContent = enemy.name;
+    const hpEl = document.getElementById('bs-boss-hp');
+    if (hpEl) hpEl.style.width = `${(enemy.hp / enemy.maxHp) * 100}%`;
+  }
+}
+
 function updateFoe() {
   const s = getState();
   const enemy = battle.currentEnemy();
@@ -251,6 +284,8 @@ function updateFoe() {
   if (!foeBox || !nameEl) return;
 
   foeBox.classList.toggle('down', !enemy);
+  updateBossBanner(enemy);
+  updateBackline(s);
   if (enemy) {
     foeBox.classList.toggle('boss', enemy.boss);
     foeBox.classList.toggle('rival', Boolean(enemy.rival));
@@ -560,6 +595,8 @@ export function render(root) {
     on('battle:hit', ({ damage, hp, maxHp, attackerId }) => {
       const hpEl = document.getElementById('bs-foe-hp');
       if (hpEl) hpEl.style.width = `${(hp / maxHp) * 100}%`;
+      const bossHp = document.getElementById('bs-boss-hp');
+      if (bossHp) bossHp.style.width = `${(hp / maxHp) * 100}%`;
       const foeBox = document.getElementById('bs-foe');
       const striker = document.querySelector(`.ally-unit[data-id="${attackerId}"]`);
       const F = BALANCE.feel;
@@ -591,15 +628,32 @@ export function render(root) {
       }, F.impactMs);
     }),
 
-    // 적의 반격 — 적이 공격 프레임으로 바뀌며 몸을 날리고, 맞은 아군이 붉게 휘청인다
-    on('battle:foeStrike', ({ targetId }) => {
+    // 적의 반격 — 적이 공격 프레임으로 도약하고, 몸이 닿는 순간(도약 정점)에
+    // 아군이 붉게 휘청이며 피해 숫자가 뜬다. 일방적으로 맞기만 하는 적은 없다.
+    on('battle:foeStrike', ({ targetId, damage, boss }) => {
       const foeBox = document.getElementById('bs-foe');
       if (foeBox) {
         pulse(foeBox, 'strike');
         setTimeout(() => poseSwap(foeBox, 300), 100);
       }
-      const victim = document.querySelector(`.ally-unit[data-id="${targetId}"]`);
-      if (victim) pulse(victim, 'hurt');
+      // foe-dash(0.34s)의 정점 ≈ 170ms — 여기에 피격을 정렬한다
+      setTimeout(() => {
+        const victim = document.querySelector(`.ally-unit[data-id="${targetId}"]`);
+        if (!victim) return;
+        pulse(victim, 'hurt');
+        const r = victim.getBoundingClientRect();
+        floatText(
+          r.left + r.width / 2 + (Math.random() * 20 - 10),
+          r.top + Math.random() * 12,
+          `-${fmt(damage)}`,
+          'foe-dmg'
+        );
+        play('foehit');
+        if (boss) {
+          shakeField(field, BALANCE.feel.shakeHit);
+          vibrate(10); // 우두머리의 일격만 손에 전해진다
+        }
+      }, 170);
     }),
 
     on('battle:death', ({ boss }) => {
@@ -661,6 +715,7 @@ export function render(root) {
         lineEl.innerHTML = killLineText(getState());
         pulse(lineEl);
       }
+      updateBackline(); // 베어 나갈수록 뒤 무리가 줄어든다
       const at = foeAnchor();
       if (at) {
         floatText(at.x, at.y - 6, `+${fmt(coins)}`, 'gold');

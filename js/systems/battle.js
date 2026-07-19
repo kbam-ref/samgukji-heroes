@@ -357,7 +357,7 @@ function enemyStrike() {
   const target = units.find((u) => u.hp > 0);
   if (!target) return;
   target.hp = Math.max(0, target.hp - enemy.atk);
-  emit('battle:foeStrike', { targetId: target.id, boss: enemy.boss }); // 반격 연출용
+  emit('battle:foeStrike', { targetId: target.id, boss: enemy.boss, damage: enemy.atk }); // 반격 연출용
   emitAllies();
 
   if (units.every((u) => u.hp <= 0)) {

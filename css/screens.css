@@ -1696,3 +1696,54 @@
 /* 행군 중엔 적 진영 표식을 지운다 */
 .battlefield.marching .foe-backline { opacity: 0; transition: opacity 0.3s; }
 .foe-backline { transition: opacity 0.4s; }
+
+/* ── 교전 실감 (v41) — 적진이 얇아지고, 우두머리에겐 대형 체력바가 걸린다 ── */
+
+/* 남은 적 무리 — 처치할수록 하나씩 스러진다 */
+.back-mob { transition: opacity 0.45s, transform 0.45s; }
+.back-mob.gone { opacity: 0 !important; transform: translateX(26px) scale(0.86); }
+
+/* 우두머리 체력바 — 결전의 무게 */
+.boss-banner {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(78%, 320px);
+  z-index: 6;
+  text-align: center;
+  pointer-events: none;
+}
+.bb-name {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: #ffd9c4;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+  margin-bottom: 4px;
+}
+.bb-track {
+  height: 9px;
+  border-radius: 5px;
+  background: rgba(12, 8, 6, 0.78);
+  border: 1px solid rgba(255, 138, 114, 0.4);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5), inset 0 1px 2px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+.bb-track i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(180deg, #ff9d6f, #c93a2e 55%, #8f2018);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  transition: width 0.18s ease-out;
+}
+.boss-banner.bb-in { animation: bb-in 0.5s var(--ease-out); }
+@keyframes bb-in {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(-14px); }
+  60%  { opacity: 1; transform: translateX(-50%) translateY(3px); }
+  100% { transform: translateX(-50%) translateY(0); }
+}
+/* 대형 바가 걸린 동안 우두머리 머리 위 작은 바는 지운다 */
+.foe.boss .unit-hp { opacity: 0; }

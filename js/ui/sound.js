@@ -272,6 +272,7 @@ export function play(kind) {
   switch (kind) {
     case 'tap':    pluck(SCALE[4 + Math.floor(Math.random() * 3)] * 2, t, 0.06, sfxGain); break;
     case 'hit':    whoosh(t, 0.12, 2200, 500, 0.07); drum(t + 0.02, 0.16, 120, sfxGain); break;
+    case 'foehit': whoosh(t, 0.09, 900, 220, 0.05); drum(t + 0.02, 0.18, 66, sfxGain); break; // 적의 일격 — 둔탁하게
     case 'kill':   whoosh(t, 0.16, 1600, 260, 0.1); drum(t + 0.03, 0.3, 90, sfxGain); break;
     case 'clear':  drum(t, 0.4, 70, sfxGain); pluck(SCALE[2] * 2, t + 0.08, 0.14, sfxGain); pluck(SCALE[4] * 2, t + 0.18, 0.14, sfxGain); pluck(SCALE[6] * 2, t + 0.28, 0.16, sfxGain); break;
     case 'legend': gong(t, 0.24, sfxGain); flute(784, t + 0.12, 0.8, 0.07); pluck(SCALE[6] * 2, t + 0.3, 0.18, sfxGain); break;
