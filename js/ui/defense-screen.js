@@ -20,6 +20,28 @@ const enemyNodes = new Map(); // eid -> {el, hp}
 const unitNodes = new Map(); // uid -> el
 let fieldW = 0;
 let fieldH = 0;
+let saveTick = 0;
+
+// ── 이어하기 세이브 (앱 닫아도 계속) ──
+const RD_KEY = 'samgukji-rd';
+function saveRun() {
+  try {
+    const s = engine.serializeRun(run);
+    if (s) localStorage.setItem(RD_KEY, JSON.stringify(s));
+  } catch { /* private mode 등 */ }
+}
+function loadRun() {
+  try {
+    const raw = localStorage.getItem(RD_KEY);
+    return raw ? engine.deserializeRun(JSON.parse(raw)) : null;
+  } catch { return null; }
+}
+function clearRun() {
+  try { localStorage.removeItem(RD_KEY); } catch { /* noop */ }
+}
+function onHide() {
+  if (document.hidden) saveRun();
+}
 
 function heroCut(id) {
   return `./assets/heroes-cut/${id}.png`;
@@ -56,7 +78,8 @@ function trackRectStyle() {
 
 export function render(root) {
   destroy();
-  run = engine.createRun();
+  // 탭 전환(설정 갔다 오기)·앱 재실행에도 런을 잃지 않는다 — 인메모리 유지 → 없으면 세이브 → 새 런.
+  if (!run || run.gameOver || run.won) run = loadRun() || engine.createRun();
 
   root.insertAdjacentHTML(
     'beforeend',
@@ -137,10 +160,13 @@ export function render(root) {
   });
 
   syncUnits();
+  syncEnemies();
   updateHud();
   last = performance.now();
   rafId = requestAnimationFrame(loop);
   window.addEventListener('resize', measureField);
+  document.addEventListener('visibilitychange', onHide);
+  window.addEventListener('pagehide', saveRun);
 }
 
 function updateHud() {
@@ -279,6 +305,7 @@ function consumeFx() {
 function showOver(won) {
   cancelAnimationFrame(rafId);
   rafId = 0;
+  clearRun(); // 게임오버·승리 = 런 종료 → 이어하기 세이브 삭제(패배 시 처음부터)
   const over = document.getElementById('rd-over');
   if (!over) return;
   play(won ? 'legend' : 'wipe');
@@ -310,15 +337,19 @@ function loop(now) {
   syncEnemies();
   consumeFx();
   updateHud();
+  if (++saveTick >= 180) { saveTick = 0; saveRun(); } // ~3초마다 이어하기 저장
   if (rafId) rafId = requestAnimationFrame(loop);
 }
 
 export function destroy() {
   if (rafId) cancelAnimationFrame(rafId);
   rafId = 0;
+  saveRun(); // 탭 떠날 때 저장 — 설정 갔다 와도 이어진다
   window.removeEventListener('resize', measureField);
+  document.removeEventListener('visibilitychange', onHide);
+  window.removeEventListener('pagehide', saveRun);
   enemyNodes.clear();
   unitNodes.clear();
-  run = null;
   fieldEl = enemyLayer = unitLayer = null;
+  // run은 null로 만들지 않는다 — 탭 전환에도 인메모리로 유지
 }

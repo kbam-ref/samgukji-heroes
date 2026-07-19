@@ -230,6 +230,36 @@ function beginStage(run) {
     : new Set();
 }
 
+// ── 이어하기 세이브 — 런을 평평한 객체로 (bossIdx는 stage에서 재계산, id 시퀀스 보존) ──
+export function serializeRun(run) {
+  if (!run || run.gameOver || run.won) return null;
+  return {
+    v: 1,
+    stage: run.stage, gold: run.gold, elapsed: run.elapsed, freePulls: run.freePulls,
+    spawned: run.spawned, killedThisStage: run.killedThisStage,
+    units: run.units, enemies: run.enemies,
+    unitSeq, enemySeq,
+  };
+}
+export function deserializeRun(o) {
+  if (!o || o.v !== 1) return null;
+  const run = {
+    stage: o.stage, gold: o.gold, elapsed: o.elapsed || 0, freePulls: o.freePulls || 0,
+    units: o.units || [], enemies: o.enemies || [], fx: [],
+    gameOver: false, won: false,
+    spawned: o.spawned || 0, killedThisStage: o.killedThisStage || 0, spawnTimer: 0,
+  };
+  run.bossStage = isBossStage(run.stage);
+  const per = DEFENSE.wave.perStage;
+  run.toSpawn = per;
+  run.bossIdx = run.bossStage
+    ? new Set([Math.floor(per * 0.5), per - 1].slice(0, DEFENSE.wave.boss.count))
+    : new Set();
+  if (o.unitSeq) unitSeq = Math.max(unitSeq, o.unitSeq);
+  if (o.enemySeq) enemySeq = Math.max(enemySeq, o.enemySeq);
+  return run;
+}
+
 export function createRun() {
   const run = {
     stage: 1,
