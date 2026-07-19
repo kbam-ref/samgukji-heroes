@@ -1636,14 +1636,14 @@
 .foe .unit-sprite { width: 96px; height: 116px; }
 .foe::before { width: 76px; }
 
-/* 부대는 왼쪽에 줄 선다 — 행군의 출발선 */
+/* 부대는 왼쪽에 줄 선다 — 행군의 출발선. 적과의 사이는 돌진으로 메운다 */
 .ally-line {
-  left: 3%;
-  right: 34%;
+  left: 2%;
+  right: 44%;
   bottom: 6%;
-  gap: 4px;
+  gap: 2px;
 }
-.foe { left: 70%; bottom: 29%; }
+.foe { left: 72%; bottom: 29%; }
 
 /* 뒷줄 재조정 (확대 비율 유지) */
 .ally-unit:nth-child(2n) { margin-bottom: 30px; }
@@ -1685,8 +1685,8 @@
 .battlefield.marching .unit-sprite { animation: run-cycle 0.38s ease-in-out infinite; }
 .battlefield.marching .ally-unit:nth-child(2n) .unit-sprite { animation-delay: -0.19s; }
 @keyframes run-cycle {
-  0%, 100% { transform: translateY(0) rotate(3deg) scale(1, 1); }
-  50%      { transform: translateY(-8px) rotate(5.5deg) scale(1.02, 0.97); }
+  0%, 100% { transform: translateY(0) rotate(4deg) scale(1, 1); }
+  50%      { transform: translateY(-11px) rotate(7deg) scale(1.03, 0.96); }
 }
 .battlefield.marching .rig-upper { animation: run-arms 0.38s ease-in-out infinite; }
 @keyframes run-arms {
@@ -1700,6 +1700,26 @@
 /* 행군 중엔 적 진영 표식을 지운다 */
 .battlefield.marching .foe-backline { opacity: 0; transition: opacity 0.3s; }
 .foe-backline { transition: opacity 0.4s; }
+
+/* 행군 바람 줄기 — 어느 프레임을 봐도 '달리는 중'이 읽힌다 */
+.battlefield.marching .field-bg::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: -120px;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0 44px,
+    rgba(255, 238, 205, 0.055) 44px 54px
+  );
+  animation: wind-rush 0.54s linear infinite;
+  pointer-events: none;
+}
+@keyframes wind-rush {
+  to { transform: translateX(-108px); }
+}
 
 /* ── 교전 실감 (v41) — 적진이 얇아지고, 우두머리에겐 대형 체력바가 걸린다 ── */
 

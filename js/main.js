@@ -201,16 +201,25 @@ function boot() {
     navigator.serviceWorker.register('./sw.js').catch(() => {
       /* 로컬 file:// 등에서는 조용히 넘어간다 */
     });
-    // 새 버전이 주도권을 잡으면 저장하고 스스로 새로고침 — 유저가 업데이트를 신경 쓸 필요가 없다.
-    // 첫 설치 때의 controllerchange(주도권 최초 획득)로는 새로고침하지 않는다.
+    // 새 버전이 도착해도 게임 도중엔 절대 새로고침하지 않는다 — 플레이 중 타이틀로
+    // 튕기는 건 버그다. 앱을 벗어나는 순간(숨김)에 조용히 적용해, 돌아오면 새 판이다.
+    // 첫 설치 때의 controllerchange(주도권 최초 획득)로는 아무것도 하지 않는다.
     let hadController = Boolean(navigator.serviceWorker.controller);
+    let updateReady = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       if (!hadController) {
         hadController = true;
         return;
       }
+      updateReady = true;
       persist(getState());
-      location.reload();
+      if (document.hidden) location.reload(); // 이미 벗어나 있으면 즉시
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && updateReady) {
+        persist(getState());
+        location.reload();
+      }
     });
   }
 }

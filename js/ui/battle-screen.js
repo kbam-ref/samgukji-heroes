@@ -841,9 +841,9 @@ export function render(root) {
     }
     // 행군 — 부대가 달리는 동안 세상이 왼쪽으로 흐른다
     if (fieldBg && field.classList.contains('marching')) {
-      marchOffset = (marchOffset + 2.4 * (getState().settings?.speed || 1)) % 8192;
+      marchOffset = (marchOffset + 3.4 * (getState().settings?.speed || 1)) % 8192;
       fieldBg.style.backgroundPosition = `${-marchOffset}px 42%`;
-      if (++dustTick >= 18) {
+      if (++dustTick >= 12) {
         dustTick = 0;
         const line = document.getElementById('bs-allies');
         const units = line ? line.children : [];
