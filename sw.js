@@ -1,7 +1,7 @@
 // 서비스워커 — 전체 에셋을 캐시해 비행기 모드에서도 완전히 플레이 가능하게 한다.
 // 에셋이 바뀌면 CACHE 버전을 올린다.
 
-const CACHE = 'samgukji-v27';
+const CACHE = 'samgukji-v28';
 
 // 영웅 초상 — js/data/heroes.js의 id와 일치 (24명)
 const HERO_IDS = [
@@ -15,6 +15,12 @@ const HERO_IDS = [
 // 적 스프라이트 — stages.js의 foeArt/bossArt id와 일치
 const ENEMY_IDS = ['yellow-turban', 'dong-soldier', 'warlord-soldier', 'yuan-soldier', 'wu-soldier', 'nanman-soldier', 'zhangjiao'];
 
+// 배경 그림 — 장(章) 테마 (stages.js env와 일치). 반드시 IMAGE_ASSETS보다 먼저 선언
+const BG_IDS = [
+  'village-plain', 'fortress-gate', 'burning-city', 'river-shore', 'red-cliffs',
+  'mountain-pass', 'palace-court', 'jungle', 'night-camp', 'gacha-sky',
+];
+
 // 이미지 — 하나쯤 빠져도 네트워크 폴백이 있으므로 best-effort로 담는다
 // heroes = 카드용 원본(배경 포함), heroes-cut/enemies-cut = 전장용 누끼(배경 투명)
 const IMAGE_ASSETS = [
@@ -27,12 +33,6 @@ const IMAGE_ASSETS = [
 ];
 
 // 코어(HTML·CSS·JS) — 하나라도 빠지면 앱이 백지가 되므로 원자적으로 담는다
-// 배경 그림 — 장(章) 테마 (stages.js env와 일치)
-const BG_IDS = [
-  'village-plain', 'fortress-gate', 'burning-city', 'river-shore', 'red-cliffs',
-  'mountain-pass', 'palace-court', 'jungle', 'night-camp', 'gacha-sky',
-];
-
 const ASSETS = [
   './',
   './index.html',
@@ -60,6 +60,7 @@ const ASSETS = [
   './js/systems/orders.js',
   './js/systems/tower.js',
   './js/systems/shard.js',
+  './js/systems/gear.js',
   './js/data/balance.js',
   './js/data/heroes.js',
   './js/data/stages.js',

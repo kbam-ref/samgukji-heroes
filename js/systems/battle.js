@@ -21,6 +21,7 @@ import { partyPower, heroPower, bondBonus, activeBonds } from './growth.js';
 import { createHeroUnit, totalDps, unitMaxHp } from './hero-unit.js';
 import { createEnemyUnit, applyDamage } from './enemy-unit.js';
 import { orderEffect } from './orders.js';
+import { gearBonus } from './gear.js';
 import { bountyTarget } from './quests.js';
 
 let units = [];        // 아군 유닛들 (편성과 동기화)
@@ -79,7 +80,8 @@ export function currentStage(s) {
           SC.coinRatio *
           Math.pow(SC.difficultyCoinMult, diff - 1) *
           weekdayPerk().coinMult *
-          (1 + partyPerk(s, 'coin') / 100) // 조조·손책 등의 재물 패시브
+          (1 + partyPerk(s, 'coin') / 100) * // 조조·손책 등의 재물 패시브
+          (1 + gearBonus(s, 'coin')) // 병법서
       )
     ),
   };
@@ -201,8 +203,8 @@ function syncUnits(s) {
   }
 
   for (const u of units) {
-    // 조운·하후돈류 수호 패시브 — 전군 체력 +%
-    const expected = Math.round(unitMaxHp(u.id, s) * (1 + partyPerk(s, 'guard') / 100));
+    // 수호 패시브 + 갑옷 — 전군 체력 +%
+    const expected = Math.round(unitMaxHp(u.id, s) * (1 + partyPerk(s, 'guard') / 100) * (1 + gearBonus(s, 'hp')));
     if (expected !== u.maxHp) {
       const ratio = u.hp / u.maxHp;
       u.maxHp = expected;
@@ -279,6 +281,7 @@ function resolveDeath(s, wasBoss, wasRival, enemyRivalId) {
     // 일반 전장(우두머리 없음)은 정원을 채우면 그대로 돌파 — 보스는 5·10전장에서만
     if (!isBossStage(s) && s.stage.kills >= B.killsPerStage) {
       state.addCoin(Math.round(stage.coinPerKill * BALANCE.scenario.stageClearCoinMult));
+      state.addStone(BALANCE.gear.stoneOnClear); // 보물 강화 재료
       state.clearStage();
     }
   } else if (canBeatBoss(s)) {
@@ -298,6 +301,7 @@ function resolveDeath(s, wasBoss, wasRival, enemyRivalId) {
         state.addCoin(Math.round(stage.coinPerKill * B.chapterClearCoinMult));
       }
       state.addJade(B.jadeOnClear); // 전장 돌파 옥구슬 — 모집이 계속 흐르게
+      state.addStone(BALANCE.gear.stoneOnBoss); // 우두머리는 강화석을 두둑이
       state.clearStage();
     }
   } else {
@@ -383,10 +387,11 @@ export function tick(dt) {
     return;
   }
 
-  // 아군 공격 — 각자 엇갈린 박자로
+  // 아군 공격 — 각자 엇갈린 박자로 (군마가 박자를 당긴다)
+  const speedMult = 1 + gearBonus(s, 'speed');
   for (const u of units) {
     if (u.hp <= 0) continue;
-    u.charge += u.attackSpeed * dt;
+    u.charge += u.attackSpeed * dt * speedMult;
     while (u.charge >= 1 && enemy) {
       u.charge -= 1;
       strikeBy(u, s);

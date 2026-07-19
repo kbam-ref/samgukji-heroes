@@ -2,7 +2,8 @@
 
 import { on } from '../core/events.js';
 import * as stateModule from '../core/state.js';
-import { getState, levelUpHero, starUpHero, togglePartyMember } from '../core/state.js';
+import { getState, levelUpHero, starUpHero, togglePartyMember, upgradeGear } from '../core/state.js';
+import * as gear from '../systems/gear.js';
 import { heroDef, heroPower, partyPower, levelCost, starUpCost, MAX_STARS, effectiveBondBonus } from '../systems/growth.js';
 import { orderList, toggleOrder } from '../systems/orders.js';
 import { RARITY, FACTIONS, PERK_LABELS } from '../data/heroes.js';
@@ -10,6 +11,7 @@ import { BONDS } from '../data/bonds.js';
 import { BALANCE } from '../data/balance.js';
 import { fmt } from './format.js';
 import { countUp, pulse, shake, floatText } from './effects.js';
+import { play } from './sound.js';
 import { portraitHtml } from './portrait.js';
 
 function bondsHtml(s) {
@@ -37,6 +39,27 @@ function ordersHtml(s) {
 }
 
 let unsubs = [];
+
+// 보물 4슬롯 — 무기/갑옷/군마/병법서
+function gearHtml(s) {
+  return BALANCE.gear.slots
+    .map((slot) => {
+      const lv = gear.gearLevel(s, slot.id);
+      const cost = gear.upgradeCost(lv);
+      const pct = Math.round(lv * slot.perLevel * 100);
+      return `
+      <div class="gear-cell">
+        <div class="gear-info">
+          <b>${slot.name}</b>
+          <span>Lv.${lv} ‧ ${slot.blurb} +${pct}%</span>
+        </div>
+        <button class="btn gear-up" data-slot="${slot.id}" data-cost="${cost}" ${(s.resources.stone ?? 0) < cost ? 'disabled' : ''}>
+          강화<span>강화석 ${fmt(cost)}</span>
+        </button>
+      </div>`;
+    })
+    .join('');
+}
 
 function ownedSorted(s) {
   return Object.keys(s.heroes)
@@ -103,6 +126,13 @@ export function render(root) {
       <button class="btn" id="hs-train-all">전군 최대 단련</button>
       <button class="btn" id="hs-star-all">일괄 승급</button>
     </div>
+    <div class="gear-panel">
+      <div class="shard-head">
+        <b>보물</b>
+        <span class="shard-balance">강화석 <b id="gr-stone">${fmt(s.resources.stone ?? 0)}</b></span>
+      </div>
+      <div class="gear-grid" id="gr-grid">${gearHtml(s)}</div>
+    </div>
     <div class="bond-list" id="hs-bonds">${bondsHtml(s)}</div>
     <div class="order-list" id="hs-orders">${ordersHtml(s)}</div>
     <ul class="hero-list" id="hs-list">${listHtml(s)}</ul>
@@ -144,6 +174,29 @@ export function render(root) {
     refreshPartyViews();
     floatText(e.clientX, e.clientY, '전열을 다시 짰어요!', 'gold');
   });
+
+  // 보물 강화
+  const refreshGear = () => {
+    const st = getState();
+    const stoneEl = document.getElementById('gr-stone');
+    if (stoneEl) stoneEl.textContent = fmt(st.resources.stone ?? 0);
+    const grid = document.getElementById('gr-grid');
+    if (grid) grid.innerHTML = gearHtml(st);
+  };
+  document.getElementById('gr-grid').addEventListener('click', (e) => {
+    const btn = e.target.closest('.gear-up');
+    if (!btn) return;
+    if (!upgradeGear(btn.dataset.slot, Number(btn.dataset.cost))) {
+      shake(btn);
+      floatText(e.clientX, e.clientY, '강화석이 모자라요 — 전장 돌파와 탑에서 나와요', 'warn');
+      return;
+    }
+    refreshGear();
+    refreshPartyViews(); // 무기는 전투력을 바로 바꾼다
+    floatText(e.clientX, e.clientY, '보물이 빛난다!', 'gold');
+    play('claim');
+  });
+  unsubs.push(on('stone', refreshGear));
 
   // 전군 최대 단련 — 가진 엽전이 다할 때까지 강한 순으로 돌아가며 올린다 (수백 번 탭 노동 제거)
   document.getElementById('hs-train-all').addEventListener('click', (e) => {

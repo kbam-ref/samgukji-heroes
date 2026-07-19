@@ -182,6 +182,29 @@ export function spendShard(n) {
   return true;
 }
 
+// ── 강화석·보물 ───────────────────────────────────────
+
+export function addStone(n) {
+  state.resources.stone = (state.resources.stone ?? 0) + n;
+  emit('stone', { total: state.resources.stone, gained: n });
+}
+
+export function spendStone(n) {
+  if ((state.resources.stone ?? 0) < n) return false;
+  state.resources.stone -= n;
+  emit('stone', { total: state.resources.stone, gained: -n });
+  return true;
+}
+
+/** 보물 강화 — 비용 검증은 호출자가 gear.upgradeCost로 */
+export function upgradeGear(slotId, cost) {
+  if (!spendStone(cost)) return false;
+  state.gear = state.gear ?? {};
+  state.gear[slotId] = (state.gear[slotId] ?? 0) + 1;
+  emit('gear:up', { slot: slotId, level: state.gear[slotId] });
+  return true;
+}
+
 /** 1회성 플래그 (온보딩 등) */
 export function setFlag(key) {
   state.flags = state.flags ?? {};

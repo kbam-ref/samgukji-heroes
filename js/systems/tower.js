@@ -32,5 +32,6 @@ export function climb() {
   while (power >= floorPower(to + 1) && to - from < 500) to += 1;
   const jade = (to - from) * BALANCE.tower.jadePerFloor;
   state.recordTowerClimb(to, jade);
+  if (to > from) state.addStone((to - from) * BALANCE.gear.stonePerTowerFloor); // 보물 재료도
   return { from, to, jade, nextNeed: floorPower(to + 1) };
 }

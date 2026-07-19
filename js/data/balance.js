@@ -139,6 +139,21 @@ export const BALANCE = {
   // 전투력 마일스톤 — 자릿수를 넘길 때마다 축하한다
   milestones: [100, 300, 1000, 3000, 10000, 30000, 100000, 300000, 1000000, 3000000, 10000000],
 
+  // 보물(장비) — 레벨·별과 병렬인 세 번째 성장축. 강화석은 전장 돌파·우두머리·탑에서 나온다.
+  gear: {
+    slots: [
+      { id: 'weapon', name: '무기',   effect: 'power', perLevel: 0.02, blurb: '파티 전투력' },
+      { id: 'armor',  name: '갑옷',   effect: 'hp',    perLevel: 0.03, blurb: '아군 체력' },
+      { id: 'horse',  name: '군마',   effect: 'speed', perLevel: 0.01, blurb: '공격 속도' },
+      { id: 'book',   name: '병법서', effect: 'coin',  perLevel: 0.02, blurb: '엽전 획득' },
+    ],
+    costBase: 10,          // 첫 강화 강화석
+    costGrowth: 1.22,      // 강화마다 비용 배율
+    stoneOnClear: 2,       // 일반 전장 돌파 시 강화석
+    stoneOnBoss: 10,       // 우두머리 격파 시
+    stonePerTowerFloor: 2, // 탑 신기록 층당
+  },
+
   // 명성 조각 — 최대 승급을 마친 장수의 남는 겹침을 방출해 얻고, 원하는 장수와 지정 교환한다.
   // 천장(60연)의 상위 호환: "언젠가 반드시 그 장수를 얻는다"는 장기 목표.
   shard: {

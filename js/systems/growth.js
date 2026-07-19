@@ -4,6 +4,7 @@ import { HEROES } from '../data/heroes.js';
 import { BONDS } from '../data/bonds.js';
 import { TALES } from '../data/tales.js';
 import { BALANCE } from '../data/balance.js';
+import { gearBonus } from './gear.js';
 
 const TALE_BY_BOND = new Map(TALES.map((t) => [t.bondId, t]));
 
@@ -69,13 +70,15 @@ export function bondBonus(state) {
   return activeBonds(state).reduce((sum, bond) => sum + effectiveBondBonus(state, bond), 0);
 }
 
-/** 출전 편성 전체 전투력 (도감·인연 보너스 포함) */
+/** 출전 편성 전체 전투력 (도감·인연·무기 보너스 포함) */
 export function partyPower(state) {
   let sum = 0;
   for (const id of state.party) {
     sum += heroPower(id, state.heroes[id]);
   }
-  return Math.round(sum * (1 + collectionBonus(state)) * (1 + bondBonus(state)));
+  return Math.round(
+    sum * (1 + collectionBonus(state)) * (1 + bondBonus(state)) * (1 + gearBonus(state, 'power'))
+  );
 }
 
 /** 현재 레벨에서 다음 레벨로 가는 단련 비용(엽전) */

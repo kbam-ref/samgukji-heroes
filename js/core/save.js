@@ -4,7 +4,7 @@
 
 import { BALANCE } from '../data/balance.js';
 
-export const SAVE_VERSION = 7;
+export const SAVE_VERSION = 8;
 
 export function createNewSave(now = Date.now()) {
   return {
@@ -15,7 +15,9 @@ export function createNewSave(now = Date.now()) {
       coin: BALANCE.start.coin,
       jade: BALANCE.start.jade,
       shard: 0, // 명성 조각 — 남는 겹침을 방출해 얻고, 원하는 장수와 교환
+      stone: 0, // 강화석 — 보물(장비) 강화 재료
     },
+    gear: { weapon: 0, armor: 0, horse: 0, book: 0 }, // 보물 강화 단계
     heroes: Object.fromEntries(
       BALANCE.start.heroes.map((id) => [id, { level: 1, stars: 1, dupes: 0 }])
     ),
@@ -83,6 +85,13 @@ const MIGRATIONS = {
   7: (save) => {
     save.resources.shard = save.resources.shard ?? 0;
     save.version = 7;
+    return save;
+  },
+  // v7 → v8: 보물(장비) 4슬롯 + 강화석 (2026-07-19)
+  8: (save) => {
+    save.resources.stone = save.resources.stone ?? 0;
+    save.gear = save.gear ?? { weapon: 0, armor: 0, horse: 0, book: 0 };
+    save.version = 8;
     return save;
   },
 };
