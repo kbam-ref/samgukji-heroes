@@ -155,7 +155,9 @@ function template(s) {
       <div class="weekday-perk">${battle.weekdayPerk().name} — 오늘 엽전 +${Math.round((battle.weekdayPerk().coinMult - 1) * 100)}%</div>
     </header>
 
-    <div class="battlefield" id="bs-field"${chapter.env ? ` style="--bg:url('./assets/bg/${chapter.env}.png')"` : ''}>
+    <div class="battlefield${battle.currentEnemy() ? '' : ' marching'}" id="bs-field">
+      <div class="field-bg" id="bs-field-bg"${chapter.env ? ` style="--bg:url('./assets/bg/${chapter.env}.png')"` : ''}></div>
+      <div class="field-shade" aria-hidden="true"></div>
       <div class="field-ambience" aria-hidden="true">
         <i class="fog"></i>
         ${Array.from({ length: 6 }, (_, i) => `<i class="ember" style="--x:${10 + i * 14}%; --d:-${(i * 2.3).toFixed(1)}s"></i>`).join('')}
@@ -374,7 +376,7 @@ function dashAttack(unit, foeBox) {
   unit.style.setProperty('--dx', `${Math.round(dx)}px`);
   unit.style.setProperty('--dy', `${Math.round(dy)}px`);
   unit.classList.add('dash');
-  setTimeout(() => unit.classList.remove('dash'), 580);
+  setTimeout(() => unit.classList.remove('dash'), 470);
 
   const line = unit.parentElement;
   if (line) {
@@ -393,7 +395,7 @@ function dashAttack(unit, foeBox) {
     arc.className = 'swing-arc';
     unit.appendChild(arc);
     setTimeout(() => arc.remove(), 240);
-  }, 210);
+  }, 170);
 }
 
 /** 숙적 조우 컷인 — 이름 깃발과 연의체 한마디가 전장을 가로지른다 */
@@ -502,6 +504,9 @@ export function render(root) {
   unsubs.push(
     on('battle:spawn', ({ enemy }) => {
       updateFoe();
+      field.classList.remove('marching'); // 적을 만나면 행군을 멈춘다
+      const foeBox = document.getElementById('bs-foe');
+      if (foeBox) pulse(foeBox, 'arrive'); // 행군 끝에서 적이 걸어 들어온다
       setBgmMood(enemy.boss); // 우두머리 앞에선 북이 촘촘해진다
       if (enemy.rival) {
         if (!cutinSeen.has(enemy.rivalId)) {
@@ -560,7 +565,7 @@ export function render(root) {
       const F = BALANCE.feel;
       const heavy = damage >= totalDps() * F.heavyRatio;
 
-      if (striker) jab(striker); // 평타는 짧은 찌르기 — 돌진은 협공 전용
+      if (striker && foeBox) dashAttack(striker, foeBox); // 앞의 적에게 달려들어 벤다
 
       // 검이 닿는 프레임(impactMs)에 모든 확인을 정렬: 섬광·베기·정지·흔들림·숫자·진동
       setTimeout(() => {
@@ -630,6 +635,7 @@ export function render(root) {
         vibrate(12);
       }
       updateFoe();
+      field.classList.add('marching'); // 쓰러뜨렸다 — 다시 앞으로
     }),
     on('battle:allies', () => updateAllies()),
 
@@ -733,10 +739,12 @@ export function render(root) {
     })
   );
 
-  // 전장 게이지 — 처치 수 + 현재 적에게 입힌 피해 비율
-  // 요소 참조는 한 번만 잡고, 값이 변할 때만 쓴다 (저사양 기기 보호)
+  // 전장 게이지 + 행군 스크롤 — 요소 참조는 한 번만 잡는다 (저사양 기기 보호)
   const gaugeFill = document.getElementById('bs-kill-fill');
+  const fieldBg = document.getElementById('bs-field-bg');
   let gaugeLast = -1;
+  let marchOffset = 0;
+  let dustTick = 0;
   function gauge() {
     if (gaugeFill) {
       const s2 = getState();
@@ -746,6 +754,24 @@ export function render(root) {
       if (rounded !== gaugeLast) {
         gaugeLast = rounded;
         gaugeFill.style.width = `${rounded}%`;
+      }
+    }
+    // 행군 — 부대가 달리는 동안 세상이 왼쪽으로 흐른다
+    if (fieldBg && field.classList.contains('marching')) {
+      marchOffset = (marchOffset + 2.4 * (getState().settings?.speed || 1)) % 8192;
+      fieldBg.style.backgroundPosition = `${-marchOffset}px 42%`;
+      if (++dustTick >= 18) {
+        dustTick = 0;
+        const line = document.getElementById('bs-allies');
+        const units = line ? line.children : [];
+        if (units.length) {
+          const u = units[Math.floor(Math.random() * units.length)];
+          const dust = document.createElement('i');
+          dust.className = 'dash-dust';
+          dust.style.left = `${u.offsetLeft + u.offsetWidth / 2}px`;
+          line.appendChild(dust);
+          setTimeout(() => dust.remove(), 380);
+        }
       }
     }
     rafId = requestAnimationFrame(gauge);

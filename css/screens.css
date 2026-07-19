@@ -1626,3 +1626,73 @@
     url('../assets/ui/summon-gate.png') center / cover no-repeat,
     rgba(11, 10, 8, 0.92);
 }
+
+/* ── 전장 행군 연출 (v39) — 부대가 앞으로 나아가고, 앞의 적과 싸운다 ── */
+
+/* 배우 확대 — 모션이 '보이는' 크기 */
+.unit-sprite { width: 76px; height: 92px; }
+.ally-unit { flex: 0 1 80px; }
+.ally-unit::before { width: 52px; bottom: 18px; }
+.foe .unit-sprite { width: 96px; height: 116px; }
+.foe::before { width: 76px; }
+
+/* 부대는 왼쪽에 줄 선다 — 행군의 출발선 */
+.ally-line {
+  left: 3%;
+  right: 34%;
+  bottom: 6%;
+  gap: 4px;
+}
+.foe { left: 70%; bottom: 29%; }
+
+/* 뒷줄 재조정 (확대 비율 유지) */
+.ally-unit:nth-child(2n) { margin-bottom: 30px; }
+.ally-unit:nth-child(2n) .unit-sprite { width: 60px; height: 74px; }
+.ally-unit-name { font-size: 11px; }
+
+/* 원근 잡졸 재배치 */
+.back-mob.m1 { right: 6%; bottom: 54%; }
+.back-mob.m2 { right: 18%; bottom: 58%; }
+.back-mob.m3 { right: 12%; bottom: 62%; }
+.burst-img { left: 70%; }
+
+/* 적 등장 — 진군 끝에서 적이 걸어 들어온다 */
+.foe.arrive { animation: foe-arrive 0.45s var(--ease-out); }
+@keyframes foe-arrive {
+  0%   { opacity: 0; transform: translateX(calc(-50% + 64px)); }
+  60%  { opacity: 1; transform: translateX(calc(-50% - 7px)); }
+  100% { transform: translateX(-50%); }
+}
+
+/* 배경 스크롤 레이어 — 행군 중 세상이 흐른다 (JS가 backgroundPosition을 민다) */
+.field-bg {
+  position: absolute;
+  inset: 0;
+  background-image: var(--bg);
+  background-repeat: repeat-x;
+  background-size: auto 100%;
+  background-position: 0 42%;
+}
+/* 가독성 어둠은 배경 위, 배우 아래 */
+.field-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(11, 10, 8, 0.42), rgba(11, 10, 8, 0.16) 42%, rgba(11, 10, 8, 0.55) 100%);
+  pointer-events: none;
+}
+
+/* 행군 중 — 전원 달리기 사이클, 상체는 팔을 젓는다 */
+.battlefield.marching .unit-sprite { animation: run-cycle 0.38s ease-in-out infinite; }
+.battlefield.marching .ally-unit:nth-child(2n) .unit-sprite { animation-delay: -0.19s; }
+@keyframes run-cycle {
+  0%, 100% { transform: translateY(0) rotate(3deg) scale(1, 1); }
+  50%      { transform: translateY(-8px) rotate(5.5deg) scale(1.02, 0.97); }
+}
+.battlefield.marching .rig-upper { animation: run-arms 0.38s ease-in-out infinite; }
+@keyframes run-arms {
+  0%, 100% { transform: rotate(-5deg); }
+  50%      { transform: rotate(7deg); }
+}
+/* 행군 중엔 적 진영 표식을 지운다 */
+.battlefield.marching .foe-backline { opacity: 0; transition: opacity 0.3s; }
+.foe-backline { transition: opacity 0.4s; }
