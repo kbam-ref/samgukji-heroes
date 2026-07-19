@@ -1446,3 +1446,30 @@
   border-radius: 50%;
   background: rgba(228, 197, 92, 0.5);
 }
+
+/* ── 폴리시 2차 (2026-07-19) ── */
+
+/* 전설 배너 여운 — 스르르 커지며 사라진다 */
+.legend-banner.out { animation: lb-out 0.45s ease-in forwards; }
+@keyframes lb-out {
+  to { opacity: 0; transform: scale(1.08) translateY(-14px); }
+}
+.lb-title { font-family: var(--font-display); }
+
+/* 섹션 미니 헤더 — 정보 계층 */
+.mini-head {
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  color: var(--paper-faint);
+  margin: 12px 2px 6px;
+}
+
+/* 도감 카드 등급 기운 — 전설은 금빛, 영웅은 자줏빛 바탕 */
+.codex-card.r5:not(.locked) { background: linear-gradient(180deg, #2b2313, #1a150f); }
+.codex-card.r4:not(.locked) { background: linear-gradient(180deg, #251b2b, #1a150f); }
+
+/* 스크롤 상단 페이드 — 내용이 자원바 밑으로 자연스럽게 사라진다 */
+#screen-root {
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 12px, #000 100%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 12px, #000 100%);
+}

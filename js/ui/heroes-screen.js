@@ -133,7 +133,9 @@ export function render(root) {
       </div>
       <div class="gear-grid" id="gr-grid">${gearHtml(s)}</div>
     </div>
+    <div class="mini-head">인연 — 함께 서면 강해진다</div>
     <div class="bond-list" id="hs-bonds">${bondsHtml(s)}</div>
+    <div class="mini-head">세력 군령 — 도감을 완성한 세력의 힘</div>
     <div class="order-list" id="hs-orders">${ordersHtml(s)}</div>
     <ul class="hero-list" id="hs-list">${listHtml(s)}</ul>
   </section>`

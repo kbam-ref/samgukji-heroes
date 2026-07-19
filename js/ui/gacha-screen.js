@@ -88,7 +88,8 @@ function showLegendBanner(hero, dupe) {
     </div>
     <p class="lb-title">${dupe ? '별빛이 더 깊어진다 — 승급 재료 +1' : hero.title}</p>`;
   stage.appendChild(banner);
-  setTimeout(() => banner.remove(), 1850);
+  setTimeout(() => banner.classList.add('out'), 1450); // 여운 — 스르르 물러난다
+  setTimeout(() => banner.remove(), 1900);
 }
 
 /** 공개 연출 — 깃발이 순서대로 뒤집힌다. 전설은 1.2초 긴장 뒤에 터진다. 건너뛰기 가능. */
