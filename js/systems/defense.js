@@ -92,19 +92,94 @@ function freeSlot(run) {
   return -1;
 }
 
-/** 소환 1회 — 골드 지불(free면 무료). 빈 칸 없으면 실패. 유닛/실패 반환. */
-export function summon(run, { free = false } = {}) {
-  if (!free && run.gold < DEFENSE.summon.cost) return null;
+/** 소환 1회 — 무료 소환권(freePulls)이 있으면 무료, 없으면 골드 지불. 빈 칸 없으면 실패. */
+export function summon(run) {
   const slot = freeSlot(run);
   if (slot < 0) return null;
-  if (!free) run.gold -= DEFENSE.summon.cost;
+  const useFree = run.freePulls > 0;
+  if (!useFree && run.gold < DEFENSE.summon.cost) return null;
+  if (useFree) run.freePulls -= 1;
+  else run.gold -= DEFENSE.summon.cost;
   const rarity = rollRarity();
   const pool = SUMMON_POOL[rarity];
   const heroId = pool[Math.floor(Math.random() * pool.length)];
   const unit = makeUnit(heroId, slot);
   run.units.push(unit);
-  run.fx.push({ type: 'summon', uid: unit.uid, rarity });
+  run.fx.push({ type: 'summon', uid: unit.uid, rarity, free: useFree });
   return unit;
+}
+
+// ── 단련(업그레이드) ──
+export function upgradeCost(lv) {
+  const u = DEFENSE.unit.upgrade;
+  return Math.round(u.costBase * Math.pow(u.costGrowth, lv));
+}
+function sumUpgradeSpent(lv) {
+  let s = 0;
+  for (let i = 0; i < lv; i++) s += upgradeCost(i);
+  return s;
+}
+export function upgrade(run, uid) {
+  const u = run.units.find((x) => x.uid === uid);
+  if (!u || u.upgradeLv >= DEFENSE.unit.upgrade.maxLevel) return false;
+  const cost = upgradeCost(u.upgradeLv);
+  if (run.gold < cost) return false;
+  run.gold -= cost;
+  u.upgradeLv += 1;
+  run.fx.push({ type: 'upgrade', uid });
+  return true;
+}
+
+// ── 반환(판매) — 등급값 + 단련 골드 50% 환급, 등급값은 소환가 이하 캡(데이터에서 이미 캡) ──
+export function refundValue(u) {
+  const base = DEFENSE.unit.refund.goldByRarity[u.rarity] ?? 0;
+  return Math.round(base + sumUpgradeSpent(u.upgradeLv) * DEFENSE.unit.refund.upgradeReturn);
+}
+export function refund(run, uid) {
+  const i = run.units.findIndex((x) => x.uid === uid);
+  if (i < 0) return 0;
+  const val = refundValue(run.units[i]);
+  run.units.splice(i, 1);
+  run.gold += val;
+  run.fx.push({ type: 'refund', uid, gold: val });
+  return val;
+}
+
+// ── 합성 — 같은 등급 아무 영웅 3장 → 상위 등급 랜덤 1장. 최고 단련 계승 + 나머지 50% 환급 ──
+export function sameRarityCount(run, rarity) {
+  return run.units.filter((u) => u.rarity === rarity).length;
+}
+export function canMerge(run, rarity) {
+  return rarity < 5 && sameRarityCount(run, rarity) >= DEFENSE.merge.need;
+}
+export function merge(run, rarity) {
+  if (!canMerge(run, rarity)) return null;
+  const mats = run.units.filter((u) => u.rarity === rarity).slice(0, DEFENSE.merge.need);
+  const topLv = Math.max(...mats.map((m) => m.upgradeLv));
+  const totalSpent = mats.reduce((s, m) => s + sumUpgradeSpent(m.upgradeLv), 0);
+  const refundGold = Math.round((totalSpent - sumUpgradeSpent(topLv)) * DEFENSE.merge.consumedUpgradeReturn);
+  const slot = mats[0].slot;
+  const matUids = new Set(mats.map((m) => m.uid));
+  run.units = run.units.filter((u) => !matUids.has(u.uid));
+  run.gold += refundGold;
+  const nr = rarity + 1;
+  const pool = SUMMON_POOL[nr];
+  const heroId = pool[Math.floor(Math.random() * pool.length)];
+  const unit = makeUnit(heroId, slot);
+  unit.upgradeLv = topLv; // 최고 단련 계승
+  run.units.push(unit);
+  run.fx.push({ type: 'merge', rarity: nr, uid: unit.uid });
+  return unit;
+}
+
+// ── 도박 — 골드 걸어 랜덤 획득(0이 최빈, 희박 잭팟) ──
+export function gamble(run) {
+  if (run.gold < DEFENSE.gamble.cost) return null;
+  run.gold -= DEFENSE.gamble.cost;
+  const won = pickWeighted(DEFENSE.gamble.outcomes, 'weight').gold;
+  run.gold += won;
+  run.fx.push({ type: 'gamble', won });
+  return won;
 }
 
 // ── 데미지 계산 ──
@@ -168,8 +243,7 @@ export function createRun() {
     freePulls: 0, // 보스 보상 등 무료 소환 대기분
   };
   beginStage(run);
-  // 오프닝 무료 10연차
-  for (let i = 0; i < DEFENSE.summon.openingPulls; i++) summon(run, { free: true });
+  run.freePulls = DEFENSE.summon.openingPulls; // 오프닝 무료 10연차 — 자동 배치 아님, 플레이어가 눌러 뽑는다
   return run;
 }
 
@@ -253,12 +327,6 @@ export function tick(run, dt) {
     run.gameOver = true;
     run.fx.push({ type: 'gameover' });
     return;
-  }
-
-  // 무료 소환 대기분 자동 소진(빈 칸 있으면)
-  while (run.freePulls > 0 && freeSlot(run) >= 0) {
-    run.freePulls -= 1;
-    summon(run, { free: true });
   }
 
   // 스테이지 클리어 — 다 스폰하고 다 잡음

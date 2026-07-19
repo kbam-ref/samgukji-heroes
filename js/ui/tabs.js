@@ -1,9 +1,6 @@
 // 하단 탭 — 전투 · 영웅 · 모집 · 도감 · 설정
 
 import * as defenseScreen from './defense-screen.js';
-import * as heroesScreen from './heroes-screen.js';
-import * as gachaScreen from './gacha-screen.js';
-import * as collectionScreen from './collection-screen.js';
 import * as settingsScreen from './settings-screen.js';
 import { vibrate } from './sound.js';
 
@@ -17,9 +14,6 @@ const ICONS = {
 
 const TABS = [
   { id: 'battle', label: '방어', screen: defenseScreen },
-  { id: 'heroes', label: '영웅', screen: heroesScreen },
-  { id: 'gacha', label: '모집', screen: gachaScreen },
-  { id: 'codex', label: '도감', screen: collectionScreen },
   { id: 'settings', label: '설정', screen: settingsScreen },
 ];
 

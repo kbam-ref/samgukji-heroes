@@ -1,7 +1,7 @@
 // 서비스워커 — 전체 에셋을 캐시해 비행기 모드에서도 완전히 플레이 가능하게 한다.
 // 에셋이 바뀌면 CACHE 버전을 올린다.
 
-const CACHE = 'samgukji-v61';
+const CACHE = 'samgukji-v62';
 
 // 영웅 초상 — js/data/heroes.js의 id와 일치 (24명)
 const HERO_IDS = [

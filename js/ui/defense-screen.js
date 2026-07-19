@@ -2,9 +2,13 @@
 // 성능: 적/유닛 DOM을 id로 재사용하고 transform(translate3d)만 매 프레임 갱신(레이아웃 회피).
 
 import { DEFENSE, ELEMENT_COLOR, ELEMENT_LABEL, SIZE_LABEL } from '../data/defense.js';
+import { HEROES, RARITY } from '../data/heroes.js';
 import * as engine from '../systems/defense.js';
 import { fmt } from './format.js';
+import { floatText } from './effects.js';
 import { play, vibrate } from './sound.js';
+
+const HERO_NAME = new Map(HEROES.map((h) => [h.id, h.name]));
 
 let run = null;
 let rafId = 0;
@@ -65,9 +69,13 @@ export function render(root) {
         <div class="rd-enemies" id="rd-enemies" aria-hidden="true"></div>
         <div class="rd-over" id="rd-over" hidden></div>
       </div>
+      <div class="rd-panel" id="rd-panel" hidden></div>
       <div class="rd-controls">
         <button class="btn primary rd-summon" id="rd-summon">
           <b>소환</b><span>골드 ${DEFENSE.summon.cost}</span>
+        </button>
+        <button class="btn rd-gamble" id="rd-gamble">
+          <b>도박</b><span>골드 ${DEFENSE.gamble.cost}</span>
         </button>
       </div>
     </section>`
@@ -91,6 +99,43 @@ export function render(root) {
     updateHud();
   });
 
+  document.getElementById('rd-gamble').addEventListener('click', (e) => {
+    const won = engine.gamble(run);
+    if (won === null) { vibrate(8); return; }
+    play(won > 0 ? 'claim' : 'foehit');
+    floatText(e.clientX, e.clientY, won > 0 ? `+${fmt(won)} 골드!` : '꽝', won > 0 ? 'gold' : 'warn');
+    updateHud();
+  });
+
+  // 유닛 탭 → 단련/합성/반환 패널
+  unitLayer.addEventListener('click', (e) => {
+    const el = e.target.closest('.rd-unit');
+    if (el) openPanel(Number(el.dataset.uid));
+  });
+
+  const panel = document.getElementById('rd-panel');
+  panel.addEventListener('click', (e) => {
+    if (e.target.closest('#rd-panel-x')) { closePanel(); return; }
+    const act = e.target.closest('.rd-act');
+    if (!act || act.disabled) return;
+    const uid = Number(panel.dataset.uid);
+    const u = run.units.find((x) => x.uid === uid);
+    if (!u) { closePanel(); return; }
+    const r = act.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top;
+    if (act.dataset.act === 'upgrade') {
+      if (engine.upgrade(run, uid)) { play('claim'); floatText(cx, cy, '단련 +1', 'gold'); syncUnits(); openPanel(uid); updateHud(); }
+      else vibrate(8);
+    } else if (act.dataset.act === 'merge') {
+      const nu = engine.merge(run, u.rarity);
+      if (nu) { play('epic'); floatText(cx, cy, `합성! ${RARITY[nu.rarity].name}`, 'gold'); closePanel(); syncUnits(); updateHud(); }
+      else vibrate(8);
+    } else if (act.dataset.act === 'refund') {
+      const v = engine.refund(run, uid);
+      if (v > 0) { play('claim'); floatText(cx, cy, `+${fmt(v)} 골드`, 'jade'); closePanel(); syncUnits(); updateHud(); }
+    }
+  });
+
   syncUnits();
   updateHud();
   last = performance.now();
@@ -109,7 +154,12 @@ function updateHud() {
     a.parentElement.classList.toggle('danger', run.enemies.length >= DEFENSE.wave.loseAt * 0.75);
   }
   const btn = document.getElementById('rd-summon');
-  if (btn) btn.classList.toggle('can-buy', run.gold >= DEFENSE.summon.cost);
+  if (btn) {
+    const free = run.freePulls > 0;
+    btn.querySelector('b').textContent = free ? '무료 소환' : '소환';
+    btn.querySelector('span').textContent = free ? `${run.freePulls}회 남음` : `골드 ${DEFENSE.summon.cost}`;
+    btn.classList.toggle('can-buy', free || run.gold >= DEFENSE.summon.cost);
+  }
 }
 
 function syncUnits() {
@@ -120,6 +170,7 @@ function syncUnits() {
     if (!el) {
       el = document.createElement('div');
       el.className = `rd-unit r${u.rarity}`;
+      el.dataset.uid = u.uid;
       el.innerHTML = `
         <img class="rd-sprite" src="${heroCut(u.heroId)}" alt="" draggable="false">
         <i class="rd-elem" style="background:${ELEMENT_COLOR[u.element]}"></i>`;
@@ -131,6 +182,42 @@ function syncUnits() {
   for (const [uid, el] of unitNodes) {
     if (!seen.has(uid)) { el.remove(); unitNodes.delete(uid); }
   }
+}
+
+function closePanel() {
+  const panel = document.getElementById('rd-panel');
+  if (panel) { panel.hidden = true; panel.removeAttribute('data-uid'); }
+  for (const [, el] of unitNodes) el.classList.remove('picked');
+}
+function openPanel(uid) {
+  const u = run.units.find((x) => x.uid === uid);
+  const panel = document.getElementById('rd-panel');
+  if (!u || !panel) return;
+  for (const [id, el] of unitNodes) el.classList.toggle('picked', id === uid);
+  const upCost = engine.upgradeCost(u.upgradeLv);
+  const maxed = u.upgradeLv >= DEFENSE.unit.upgrade.maxLevel;
+  const refVal = engine.refundValue(u);
+  const mergeable = engine.canMerge(run, u.rarity);
+  const haveN = engine.sameRarityCount(run, u.rarity);
+  panel.hidden = false;
+  panel.dataset.uid = uid;
+  panel.innerHTML = `
+    <div class="rd-panel-head">
+      <b class="rarity r${u.rarity}">${HERO_NAME.get(u.heroId)}</b>
+      <span>${RARITY[u.rarity].name} · ${ELEMENT_LABEL[u.element]} · 단련 ${u.upgradeLv}</span>
+      <button class="rd-panel-x" id="rd-panel-x" aria-label="닫기">✕</button>
+    </div>
+    <div class="rd-panel-acts">
+      <button class="btn rd-act" data-act="upgrade" ${maxed || run.gold < upCost ? 'disabled' : ''}>
+        <b>단련</b><span>${maxed ? '최대' : `골드 ${fmt(upCost)}`}</span>
+      </button>
+      <button class="btn rd-act" data-act="merge" ${mergeable ? '' : 'disabled'}>
+        <b>합성</b><span>${u.rarity >= 5 ? '최고 등급' : `${RARITY[u.rarity].name} ${haveN}/3 → 상위`}</span>
+      </button>
+      <button class="btn rd-act refund" data-act="refund">
+        <b>반환</b><span>+골드 ${fmt(refVal)}</span>
+      </button>
+    </div>`;
 }
 
 function syncEnemies() {
