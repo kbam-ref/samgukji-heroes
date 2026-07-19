@@ -4,10 +4,12 @@
 
 import { getState } from '../core/state.js';
 import { on } from '../core/events.js';
+import { initAudioAssets, hasSample, playSample, startBgm, switchBgm, stopBgm, bgmActive } from './audio.js';
 
 let ctx = null;
 let sfxGain = null;
 let musicGain = null;
+let assetsReady = false; // ElevenLabs 등으로 만든 오디오 파일이 하나라도 로드됐는가
 
 // ── 초기화 ─────────────────────────────────────────────
 
@@ -23,6 +25,14 @@ export function initSound() {
         musicGain = ctx.createGain();
         musicGain.gain.value = 0.55;
         musicGain.connect(ctx.destination);
+        // 번들된 오디오 파일(ElevenLabs 등)이 있으면 불러온다 — 로드되면 합성음 대신 그걸 쓴다.
+        // 비동기라, 로드 끝난 뒤 음악이 켜져 있으면 파일 BGM으로 다시 시작한다.
+        initAudioAssets(ctx, { sfx: sfxGain, music: musicGain })
+          .then((n) => {
+            assetsReady = n > 0;
+            if (assetsReady && musicEnabled()) startMusic(); // 파일 BGM으로 승격
+          })
+          .catch(() => {});
         if (musicEnabled()) startMusic();
       } catch {
         ctx = null;
@@ -287,6 +297,8 @@ export function playHit(profile = 'armor', { heavy = false } = {}) {
   // 초당 여러 타여도 소리벽이 되지 않게 평타는 살짝 솎는다 (강타는 항상)
   if (!heavy && t - lastHitAt < 0.085) return;
   lastHitAt = t;
+  // 파일 효과음(hit-<profile>)이 있으면 그걸 쓴다 — 강타는 조금 크게
+  if (assetsReady && playSample(`hit-${profile}`, { gain: heavy ? 1 : 0.7 })) return;
   const v = heavy ? 1 : 0.5;
   whoosh(t, 0.1 * v, 2100, 420, 0.06); // 칼이 지나는 바람
   switch (profile) {
@@ -303,6 +315,7 @@ export function playHit(profile = 'armor', { heavy = false } = {}) {
 /** 적의 반격 — 아군이 막아내는 둔탁한 충돌(방패·몸받이). 우두머리는 더 묵직하게. */
 export function playFoeStrike(boss = false) {
   if (!ctx || !soundOn()) return;
+  if (assetsReady && playSample('foe-strike', { gain: boss ? 1 : 0.7 })) return;
   const t = ctx.currentTime;
   thud(t, boss ? 0.22 : 0.13, sfxGain);
   if (boss) drum(t + 0.02, 0.2, 52, sfxGain);
@@ -414,7 +427,15 @@ function scheduler() {
 }
 
 export function startMusic() {
-  if (!ctx || musicOn) return;
+  if (!ctx) return;
+  // 파일 BGM이 있으면 그걸 루프한다 (합성 시퀀서는 끈다)
+  if (assetsReady && startBgm(bossMood ? 'bgm-boss' : 'bgm-field')) {
+    if (schedTimer) { clearInterval(schedTimer); schedTimer = null; }
+    musicOn = false;
+    return;
+  }
+  // 폴백 — 합성 국악 시퀀서
+  if (musicOn) return;
   musicOn = true;
   nextNoteTime = ctx.currentTime + 0.15;
   beat = 0;
@@ -425,17 +446,21 @@ export function stopMusic() {
   musicOn = false;
   if (schedTimer) clearInterval(schedTimer);
   schedTimer = null;
+  stopBgm();
 }
 
-/** 보스전 분위기 — 북이 촘촘해지고 걸음이 빨라진다 */
+/** 보스전 분위기 — 파일 BGM이면 곡을 바꾸고, 합성음이면 북을 촘촘하게 */
 export function setBgmMood(boss) {
   bossMood = Boolean(boss);
+  if (bgmActive()) switchBgm(boss ? 'bgm-boss' : 'bgm-field');
 }
 
 // ── 효과음 ─────────────────────────────────────────────
 
 export function play(kind) {
   if (!ctx || !soundOn()) return;
+  // 파일 효과음이 있으면 그걸 우선 (manifest에 있는 kind만 — clear/legend/epic/claim/chapter/rival/wipe)
+  if (assetsReady && playSample(kind)) return;
   const t = ctx.currentTime;
   switch (kind) {
     case 'tap':    pluck(SCALE[4 + Math.floor(Math.random() * 3)] * 2, t, 0.06, sfxGain); break;
