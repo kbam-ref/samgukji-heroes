@@ -168,6 +168,7 @@ function boot() {
   };
   refreshCodexDot();
   on('hero:add', refreshCodexDot);
+  on('hero:refund', refreshCodexDot);
   on('tale:read', refreshCodexDot);
 
   // 영웅 탭 금점 — 승급 가능(중복 참) 또는 보물 강화 가능(강화석)일 때. 엽전 단련은 상시
@@ -179,6 +180,7 @@ function boot() {
   refreshHeroesDot();
   on('hero:dupe', refreshHeroesDot);
   on('hero:add', refreshHeroesDot);
+  on('hero:refund', refreshHeroesDot);
   on('stone', refreshHeroesDot);
 
   // 주기 저장 — 탭이 숨겨져 있는 동안엔 lastSeenAt을 전진시키지 않는다

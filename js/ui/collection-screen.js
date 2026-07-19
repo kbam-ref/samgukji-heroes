@@ -162,7 +162,7 @@ export function render(root) {
     if (body) body.innerHTML = bodyHtml(getState());
   };
 
-  unsubs.push(on('hero:add', refresh), on('tale:read', refresh));
+  unsubs.push(on('hero:add', refresh), on('hero:refund', refresh), on('tale:read', refresh));
 }
 
 export function destroy() {

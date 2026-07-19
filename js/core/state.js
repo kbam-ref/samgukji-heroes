@@ -19,7 +19,10 @@
 
 import { emit } from './events.js';
 import { CHAPTERS } from '../data/stages.js';
+import { HEROES } from '../data/heroes.js';
 import { BALANCE } from '../data/balance.js';
+
+const HERO_RARITY = new Map(HEROES.map((h) => [h.id, h.rarity]));
 
 let state = null;
 
@@ -74,11 +77,41 @@ export function grantHero(id) {
   }
   state.heroes[id] = { level: 1, stars: 1, dupes: 0 };
   emit('hero:add', { id });
-  if (state.party.length < 5 && !state.party.includes(id)) {
-    state.party.push(id);
+  // 메인이 아직 없으면 이 영웅이 첫 메인 (단일 영웅 구조 — 나머지는 도감·반환용)
+  if (state.party.length === 0) {
+    state.party = [id];
     emit('party', { party: [...state.party] });
   }
   return { dupe: false };
+}
+
+/** 지금의 메인 영웅 id (없으면 null) */
+export function mainHero() {
+  return state.party[0] ?? null;
+}
+
+/** 메인 영웅 지정 — 전장에 서는 단 한 명 */
+export function setMain(id) {
+  if (!state.heroes[id]) return false;
+  state.party = [id];
+  emit('party', { party: [...state.party] });
+  return true;
+}
+
+/** 영웅 반환 — 등급별 옥구슬로 되돌려받고 도감에서 사라진다.
+ *  메인이거나 마지막 한 명이면 불가. 반환하면 그 영웅의 수집·인연 버프를 잃는다. */
+export function refundHero(id) {
+  const hero = state.heroes[id];
+  if (!hero) return 0;
+  if (id === mainHero()) return 0;                    // 메인은 반환 불가
+  if (Object.keys(state.heroes).length <= 1) return 0; // 마지막 한 명은 못 뺀다
+  const rarity = HERO_RARITY.get(id) ?? 1;
+  const base = BALANCE.refund.jadeByRarity[rarity] ?? 0;
+  const jade = Math.round(base * (1 + (hero.dupes ?? 0) * BALANCE.refund.perDupe));
+  delete state.heroes[id];
+  emit('hero:refund', { id, jade });
+  addJade(jade);
+  return jade;
 }
 
 /** 단련 — 비용 계산은 systems/growth.js가 담당하고 여기서는 지불과 상승만 한다. */

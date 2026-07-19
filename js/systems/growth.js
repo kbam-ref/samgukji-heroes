@@ -46,15 +46,16 @@ export function collectionBonus(state) {
   return owned * g.collectionBonusPerHero + factionSetsCompleted(state) * g.factionSetBonus;
 }
 
-/** 임의 편성(ids)으로 발동하는 인연들 */
+/** 임의 편성(ids)으로 발동하는 인연들 (레거시 — 편성 탐색용) */
 export function activeBondsFor(partyIds) {
   const set = new Set(partyIds);
   return BONDS.filter((bond) => bond.heroes.every((id) => set.has(id)));
 }
 
-/** 지금 편성으로 발동 중인 인연들 */
+/** 발동 중인 인연들 — 메인 영웅 구조에선 '보유(수집)' 기준: 구성 3인을 다 모으면 발동.
+ *  파티가 아니라 도감으로 인연을 완성하는 수집 목표가 된다. */
 export function activeBonds(state) {
-  return activeBondsFor(state.party);
+  return BONDS.filter((bond) => bond.heroes.every((id) => state.heroes[id]));
 }
 
 /** 임의 편성(ids)의 인연 보너스 합 — 최강 편성 탐색용 */

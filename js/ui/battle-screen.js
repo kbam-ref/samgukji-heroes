@@ -251,23 +251,22 @@ function template(s) {
 }
 
 function partyFlagsHtml(s) {
-  const slots = [];
-  for (let i = 0; i < 5; i++) {
-    const id = s.party[i];
-    if (!id) {
-      slots.push(`<div class="hero-flag empty"><span class="flag-name">빈 자리</span></div>`);
-      continue;
-    }
-    const def = heroDef(id);
-    const hs = s.heroes[id];
-    slots.push(`
-      <div class="hero-flag f-${def.faction}">
-        ${portraitHtml(id, 'flag-portrait')}
-        <span class="flag-name">${def.name}</span>
-        <span class="flag-level">${hs.level}</span>
-      </div>`);
+  // 단일 메인 구조 — 전장에 서는 메인 영웅 하나를 크게 보여준다. 탭하면 영웅 화면으로.
+  const id = s.party[0];
+  if (!id) {
+    return `<div class="hero-flag empty main-flag"><span class="flag-name">메인 영웅을 정하세요</span></div>`;
   }
-  return slots.join('');
+  const def = heroDef(id);
+  const hs = s.heroes[id];
+  return `
+    <div class="hero-flag main-flag f-${def.faction}">
+      ${portraitHtml(id, 'flag-portrait')}
+      <div class="main-flag-info">
+        <span class="flag-role">메인 영웅</span>
+        <span class="flag-name">${def.name}</span>
+        <span class="flag-level">Lv.${hs.level} ‧ ${'★'.repeat(hs.stars)}</span>
+      </div>
+    </div>`;
 }
 
 let foeFigureKey = ''; // 지금 그려진 적 모습 ('mob' 또는 rival:영웅id) — 바뀔 때만 다시 그린다

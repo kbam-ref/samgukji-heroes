@@ -1,23 +1,23 @@
 // 영웅 화면 — 보유 장수 단련(레벨 올리기)
 
 import { on } from '../core/events.js';
-import * as stateModule from '../core/state.js';
-import { getState, levelUpHero, starUpHero, togglePartyMember, upgradeGear } from '../core/state.js';
+import { getState, levelUpHero, starUpHero, setMain, refundHero, upgradeGear } from '../core/state.js';
 import * as gear from '../systems/gear.js';
-import { heroDef, heroPower, partyPower, levelCost, starUpCost, MAX_STARS, effectiveBondBonus, bestParty } from '../systems/growth.js';
+import { heroDef, heroPower, partyPower, levelCost, starUpCost, MAX_STARS, effectiveBondBonus } from '../systems/growth.js';
 import { orderList, toggleOrder } from '../systems/orders.js';
 import { RARITY, FACTIONS, PERK_LABELS } from '../data/heroes.js';
 import { BONDS } from '../data/bonds.js';
 import { BALANCE } from '../data/balance.js';
+import { showModal } from './modal.js';
 import { fmt } from './format.js';
 import { countUp, pulse, shake, floatText } from './effects.js';
 import { play } from './sound.js';
 import { portraitHtml } from './portrait.js';
 
 function bondsHtml(s) {
-  // span → button + data-bond: 모바일엔 hover(title)가 없으니 탭으로 구성 장수를 펼쳐 본다 (2-13)
+  // 인연은 '보유(수집)' 기준 — 구성 3인을 다 모으면 발동해 메인 전투력에 곱해진다.
   return BONDS.map((bond) => {
-    const have = bond.heroes.filter((id) => s.party.includes(id)).length;
+    const have = bond.heroes.filter((id) => s.heroes[id]).length;
     const active = have === bond.heroes.length;
     const pct = Math.round(effectiveBondBonus(s, bond) * 100);
     return `<button class="bond-chip${active ? ' on' : ''}" data-bond="${bond.id}">
@@ -35,9 +35,9 @@ function bondPanelHtml(s, bondId) {
     .map((id) => {
       const def = heroDef(id);
       const owned = Boolean(s.heroes[id]);
-      const onDuty = s.party.includes(id);
-      const cls = onDuty ? 'on-duty' : owned ? 'owned' : 'missing';
-      const tag = onDuty ? '출전 중' : owned ? '보유 · 탭해서 출전' : '미보유 · 모집에서';
+      const isMain = s.party[0] === id;
+      const cls = isMain ? 'on-duty' : owned ? 'owned' : 'missing';
+      const tag = isMain ? '메인' : owned ? '보유 · 탭해서 메인' : '미보유 · 모집에서';
       return `<button class="bond-member ${cls}" data-hero="${owned ? id : ''}">
         <b>${def.name}</b><span>${tag}</span>
       </button>`;
@@ -65,17 +65,10 @@ function ordersHtml(s) {
 
 let unsubs = [];
 let openBond = null;       // 지금 펼쳐 둔 인연 패널 (2-13)
-let lastShownPower = 0;    // 헤더 출전 전투력 카운트업 기준값 (2-8)
+let lastShownPower = 0;    // 헤더 메인 전투력 카운트업 기준값 (2-8)
 let powerRaf = 0;          // 이벤트 폭주 흡수용 병합 플래그
 
-/** 편성 변경 뒤 '새로' 발동한 인연 하나 (없으면 null) — 최강 편성 홍보용 (2-11) */
-function activeBondsAfter(after, before) {
-  const wasOn = (b) => b.heroes.every((id) => before.party.includes(id));
-  const nowOn = (b) => b.heroes.every((id) => after.party.includes(id));
-  return BONDS.find((b) => nowOn(b) && !wasOn(b)) ?? null;
-}
-
-/** 헤더 출전 전투력 — 단련·승급·편성 어느 경로든 카운트업으로 차오르고, 늘면 '+N' (2-8).
+/** 헤더 메인 전투력 — 단련·승급·메인 교체 어느 경로든 카운트업으로 차오르고, 늘면 '+N' (2-8).
  *  전군 단련의 hero:level 수백 회를 rAF로 병합해 countUp 충돌을 막는다. */
 function updatePower() {
   if (powerRaf) return;
@@ -125,25 +118,45 @@ function ownedSorted(s) {
     .sort((a, b) => heroPower(b.id, b.hs) - heroPower(a.id, a.hs));
 }
 
+/** 등급별 반환 옥구슬 (겹침 포함) — 미리보기·확인에 공용 */
+function refundJadeOf(id, hs) {
+  const rarity = heroDef(id)?.rarity ?? 1;
+  const base = BALANCE.refund.jadeByRarity[rarity] ?? 0;
+  return Math.round(base * (1 + (hs.dupes ?? 0) * BALANCE.refund.perDupe));
+}
+
 function rowHtml({ id, def, hs }, index = 0) {
-  const inParty = getState().party.includes(id);
+  const isMain = getState().party[0] === id;
   const maxedLevel = hs.level >= BALANCE.growth.maxLevel;
   const maxedStars = hs.stars >= MAX_STARS;
   const dupeCost = starUpCost(hs.stars);
   const canStar = !maxedStars && hs.dupes >= dupeCost;
   const trainCost = maxedLevel ? 0 : levelCost(hs.level);
-  // 살 수 있으면 은은히 빛난다 — 전투 '공격 연마'와 같은 .can-buy 재사용 (2-9)
   const canTrain = !maxedLevel && getState().resources.coin >= trainCost;
 
+  // 메인은 단련·승급 대상, 나머지는 반환(옥구슬) 대상 — '하나만 잘 키우기' 구조
+  const actions = isMain
+    ? `
+      <button class="btn train${canTrain ? ' can-buy' : ''}" data-id="${id}" data-cost="${trainCost}" ${maxedLevel ? 'disabled' : ''}>
+        단련<span data-role="cost">${maxedLevel ? '최고' : `엽전 ${fmt(trainCost)}`}</span>
+      </button>
+      <button class="btn star-up${canStar ? ' can-buy' : ''}" data-id="${id}" ${canStar ? '' : 'disabled'}>
+        승급<span>${maxedStars ? '최고' : `중복 ${hs.dupes}/${dupeCost}`}</span>
+      </button>`
+    : `
+      <button class="btn refund" data-id="${id}">
+        반환<span>옥구슬 ${fmt(refundJadeOf(id, hs))}</span>
+      </button>`;
+
   return `
-  <li class="hero-row f-${def.faction}${inParty ? ' in-party' : ''}" data-id="${id}" style="--i:${Math.min(index, 8)}">
+  <li class="hero-row f-${def.faction}${isMain ? ' in-party is-main' : ''}" data-id="${id}" style="--i:${Math.min(index, 8)}">
     ${portraitHtml(id, `row-portrait frame-r${def.rarity}`)}
     <div class="row-info">
       <div class="row-name">
         <b>${def.name}</b>
         <i class="stars">${'★'.repeat(hs.stars)}</i>
         <em class="rarity r${def.rarity}">${RARITY[def.rarity].name}</em>
-        ${inParty ? '<i class="on-duty">출전</i>' : ''}
+        ${isMain ? '<i class="on-duty">메인</i>' : ''}
       </div>
       <div class="row-title">${def.title}</div>
       <div class="row-meta">
@@ -151,16 +164,9 @@ function rowHtml({ id, def, hs }, index = 0) {
         ‧ 전투력 <b data-role="power">${fmt(heroPower(id, hs))}</b>
         ‧ 중복 ${hs.dupes}
       </div>
-      ${def.perk ? `<div class="row-perk">출전 시 ${PERK_LABELS[def.perk.kind]} +${def.perk.value}%</div>` : ''}
+      ${def.perk ? `<div class="row-perk">메인일 때 ${PERK_LABELS[def.perk.kind]} +${def.perk.value}%</div>` : ''}
     </div>
-    <div class="row-actions">
-      <button class="btn train${canTrain ? ' can-buy' : ''}" data-id="${id}" data-cost="${trainCost}" ${maxedLevel ? 'disabled' : ''}>
-        단련<span data-role="cost">${maxedLevel ? '최고' : `엽전 ${fmt(trainCost)}`}</span>
-      </button>
-      <button class="btn star-up${canStar ? ' can-buy' : ''}" data-id="${id}" ${canStar ? '' : 'disabled'}>
-        승급<span>${maxedStars ? '최고' : `중복 ${hs.dupes}/${dupeCost}`}</span>
-      </button>
-    </div>
+    <div class="row-actions">${actions}</div>
   </li>`;
 }
 
@@ -186,12 +192,12 @@ export function render(root) {
   <section class="screen heroes-screen">
     <header class="screen-head">
       <h2>영웅</h2>
-      <div class="head-note">출전 전투력 <b id="hs-power">${fmt(partyPower(s))}</b></div>
+      <div class="head-note">메인 전투력 <b id="hs-power">${fmt(partyPower(s))}</b></div>
     </header>
-    <p class="screen-sub">장수를 누르면 출전을 넣고 뺄 수 있어요 (최대 5명). 함께 서면 인연이 깨어나요.</p>
+    <p class="screen-sub">장수를 눌러 <b>메인 영웅</b>으로 세우세요. 메인만 전장에서 싸웁니다. 나머지는 옥구슬로 반환하거나, 도감으로 모아 인연을 완성하면 메인이 강해집니다.</p>
     <div class="party-tools">
-      <button class="btn" id="hs-best">최강 편성</button>
-      <button class="btn" id="hs-train-all">전군 최대 단련</button>
+      <button class="btn" id="hs-best">최강을 메인으로</button>
+      <button class="btn" id="hs-train-all">메인 최대 단련</button>
       <button class="btn" id="hs-star-all">일괄 승급</button>
     </div>
     <div class="gear-panel">
@@ -201,7 +207,7 @@ export function render(root) {
       </div>
       <div class="gear-grid" id="gr-grid">${gearHtml(s)}</div>
     </div>
-    <div class="mini-head">인연 — 함께 서면 강해진다</div>
+    <div class="mini-head">인연 — 모으면 메인이 강해진다</div>
     <div class="bond-list" id="hs-bonds">${bondsHtml(s)}</div>
     <div class="bond-panel-slot" id="hs-bond-panel"></div>
     ${orderList(s).some((e) => e.unlocked)
@@ -245,38 +251,30 @@ export function render(root) {
     const panel = document.getElementById('hs-bond-panel');
     if (panel) panel.innerHTML = openBond ? bondPanelHtml(getState(), openBond) : '';
   });
+  // 인연 패널에서 보유 장수 탭 → 그 장수를 메인으로
   document.getElementById('hs-bond-panel').addEventListener('click', (e) => {
     const mem = e.target.closest('.bond-member[data-hero]');
     const id = mem?.dataset.hero;
     if (!id) return; // 미보유는 데이터 없음 — 조용히
-    const wasIn = getState().party.includes(id);
-    if (!togglePartyMember(id)) {
-      shake(mem);
-      floatText(e.clientX, e.clientY, wasIn ? '마지막 한 명은 못 빼요' : '자리가 다 찼어요', 'warn');
-      return;
-    }
+    if (getState().party[0] === id) return; // 이미 메인
+    setMain(id);
     refreshPartyViews();
-    floatText(e.clientX, e.clientY, wasIn ? '물러남' : '출전!', wasIn ? '' : 'gold');
+    floatText(e.clientX, e.clientY, '메인 영웅 교체!', 'gold');
   });
 
+  // 최강을 메인으로 — 개별 전투력이 가장 높은 장수를 메인으로 세운다
   document.getElementById('hs-best').addEventListener('click', (e) => {
     const st = getState();
-    const beforeParty = { party: [...st.party] }; // 상태는 in-place 변경 — 이전 편성을 복사해 둔다
     const before = partyPower(st);
-    const best = bestParty(st); // 인연 배율까지 반영한 진짜 최강 (2-11)
-    const same = best.length === st.party.length && best.every((id) => st.party.includes(id));
-    if (same) {
-      floatText(e.clientX, e.clientY, '이미 가장 강한 전열이에요');
+    const strongest = ownedSorted(st)[0]?.id;
+    if (!strongest || st.party[0] === strongest) {
+      floatText(e.clientX, e.clientY, '이미 가장 강한 장수가 메인이에요');
       return;
     }
-    const { setParty } = stateModule;
-    setParty(best);
-    // 새로 발동한 인연이 있으면 그 가치를 즉각 보여준다 (중기 목표 홍보)
-    const newBond = activeBondsAfter(getState(), beforeParty);
-    if (newBond) floatText(e.clientX, e.clientY - 22, `${newBond.name} 발동! +${Math.round(effectiveBondBonus(getState(), newBond) * 100)}%`, 'gold');
+    setMain(strongest);
     refreshPartyViews();
     const gained = partyPower(getState()) - before;
-    floatText(e.clientX, e.clientY, gained > 0 ? `전열을 다시 짰어요! +${fmt(gained)}` : '전열을 다시 짰어요!', 'gold');
+    floatText(e.clientX, e.clientY, gained > 0 ? `메인 교체! +${fmt(gained)}` : '메인 교체!', 'gold');
   });
 
   // 보물 강화
@@ -302,43 +300,29 @@ export function render(root) {
   });
   unsubs.push(on('stone', refreshGear));
 
-  // 전군 최대 단련 — 출전 전투력이 실제로 오르게, 출전 5인을 먼저 채운 뒤 벤치로 (2-7).
-  // 기존엔 지수 비용 탓에 남은 엽전이 전부 벤치로 새서 '눌러도 안 강해지는' 경험을 줬다.
+  // 메인 최대 단련 — 가진 엽전이 다할 때까지 메인 영웅만 올린다 (하나만 잘 키우기)
   document.getElementById('hs-train-all').addEventListener('click', (e) => {
+    const main = getState().party[0];
+    if (!main) return;
     const before = partyPower(getState());
     let ups = 0;
     let guard = 0;
-    // idsFn: 이번 단계에서 돌릴 대상. 1단계=출전, 2단계=전체
-    const runPhase = (idsFn) => {
-      let any = true;
-      while (any && guard < 8000) {
-        any = false;
-        for (const id of idsFn()) {
-          const hs = getState().heroes[id];
-          if (!hs || hs.level >= BALANCE.growth.maxLevel) continue;
-          if (levelUpHero(id, levelCost(hs.level))) { ups += 1; any = true; }
-          if (++guard >= 8000) break;
-        }
-      }
-    };
-    // 강한 순으로 — 출전 먼저
-    const sortedIds = () => ownedSorted(getState()).map((h) => h.id);
-    runPhase(() => sortedIds().filter((id) => getState().party.includes(id)));
-    runPhase(sortedIds);
-
+    while (guard < 8000) {
+      const hs = getState().heroes[main];
+      if (!hs || hs.level >= BALANCE.growth.maxLevel) break;
+      if (!levelUpHero(main, levelCost(hs.level))) break; // 엽전 소진
+      ups += 1;
+      guard += 1;
+    }
     if (ups === 0) {
       shake(e.target.closest('button'));
-      floatText(e.clientX, e.clientY, '엽전이 모자라요', 'warn');
+      const hs = getState().heroes[main];
+      floatText(e.clientX, e.clientY, hs && hs.level >= BALANCE.growth.maxLevel ? '이미 최고 레벨이에요' : '엽전이 모자라요', 'warn');
       return;
     }
-    refreshPartyViews(); // hs-list·bonds·헤더(카운트업) 한 번에
+    refreshPartyViews();
     const gained = partyPower(getState()) - before;
-    floatText(
-      e.clientX,
-      e.clientY,
-      gained > 0 ? `출전 전투력 +${fmt(gained)} ‧ 전군 +${ups}레벨!` : `벤치 단련 +${ups} — 출전 장수는 최고 단계`,
-      'gold'
-    );
+    floatText(e.clientX, e.clientY, `메인 +${ups}레벨 ‧ 전투력 +${fmt(gained)}!`, 'gold');
   });
 
   // 일괄 승급 — 겹침이 차 있는 장수 전원 승급
@@ -368,6 +352,32 @@ export function render(root) {
       document.querySelector('.tab[data-tab="gacha"]')?.click();
       return;
     }
+    // 반환 — 등급별 옥구슬로. 도감·인연 버프를 잃으므로 확인을 받는다
+    const refundBtn = e.target.closest('button.refund');
+    if (refundBtn) {
+      const id = refundBtn.dataset.id;
+      const def = heroDef(id);
+      const hs = getState().heroes[id];
+      const jade = refundJadeOf(id, hs);
+      showModal({
+        title: `${def.name} 반환`,
+        body: `${def.name}(${RARITY[def.rarity].name})을(를) 돌려보내고 옥구슬 ${fmt(jade)}을 받습니다.\n\n반환하면 이 장수의 도감·인연 수집 버프를 잃어요. 되돌릴 수 없습니다.`,
+        actions: [
+          { label: '취소' },
+          {
+            label: `반환 (옥구슬 ${fmt(jade)})`,
+            primary: true,
+            onClick: () => {
+              if (refundHero(id) > 0) {
+                play('claim');
+                refreshPartyViews();
+              }
+            },
+          },
+        ],
+      });
+      return;
+    }
     const starBtn = e.target.closest('button.star-up');
     if (starBtn) {
       const id = starBtn.dataset.id;
@@ -387,18 +397,16 @@ export function render(root) {
 
     const btn = e.target.closest('button.train');
     if (!btn) {
-      // 버튼이 아닌 행을 누르면 출전을 넣고 뺀다
+      // 버튼이 아닌 행을 누르면 그 장수를 메인으로 세운다
       const row = e.target.closest('.hero-row');
       if (!row) return;
       const id = row.dataset.id;
-      const wasIn = getState().party.includes(id);
-      if (!togglePartyMember(id)) {
-        shake(row);
-        floatText(e.clientX, e.clientY, wasIn ? '마지막 한 명은 못 빼요' : '자리가 다 찼어요', 'warn');
-        return;
-      }
-      refreshPartyViews(); // hs-list·bonds·헤더(카운트업) + 열린 인연 패널 일괄
-      floatText(e.clientX, e.clientY, wasIn ? '물러남' : '출전!', wasIn ? '' : 'gold');
+      if (getState().party[0] === id) return; // 이미 메인
+      const before = partyPower(getState());
+      setMain(id);
+      refreshPartyViews();
+      const gained = partyPower(getState()) - before;
+      floatText(e.clientX, e.clientY, gained > 0 ? `메인 교체! +${fmt(gained)}` : gained < 0 ? `메인 교체 (전투력 ${fmt(gained)})` : '메인 교체!', gained >= 0 ? 'gold' : 'warn');
       return;
     }
     const id = btn.dataset.id;

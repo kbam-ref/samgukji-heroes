@@ -535,6 +535,44 @@
 .party-row .hero-flag { cursor: pointer; transition: transform 0.08s ease; }
 .party-row .hero-flag:active { transform: translateY(1px) scale(0.97); }
 
+/* 단일 메인 영웅 — 파티 5칸 대신 메인 하나를 가로 카드로 크게 (v53) */
+.hero-flag.main-flag {
+  width: auto;
+  height: auto;
+  max-width: 300px;
+  margin: 0 auto;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 18px 8px 8px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, var(--ink-700), var(--ink-900));
+  border: 1px solid var(--flag-a, var(--ink-600));
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(239, 230, 210, 0.06);
+}
+.hero-flag.main-flag .flag-portrait { width: 52px; height: 60px; }
+.main-flag-info { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.hero-flag.main-flag .flag-role {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: var(--gold);
+  font-weight: 700;
+}
+.hero-flag.main-flag .flag-name {
+  position: static;
+  font-family: var(--font-display);
+  font-size: 17px;
+  color: var(--paper);
+}
+.hero-flag.main-flag .flag-level {
+  position: static;
+  font-size: 11px;
+  color: var(--gold-bright);
+  letter-spacing: 0.02em;
+}
+.hero-flag.empty.main-flag { min-width: 200px; min-height: 60px; justify-content: center; padding: 16px; }
+.hero-flag.empty.main-flag::after { display: none; }
+
 /* ── 영웅 ── */
 
 .hero-list {
@@ -593,6 +631,11 @@
 }
 .btn.train,
 .btn.star-up { min-width: 84px; }
+/* 반환 — 옥구슬로 되돌려받는 액션(비파괴적 톤이되 눈에 띄게) */
+.btn.refund { min-width: 84px; border-color: rgba(127, 169, 142, 0.4); }
+.btn.refund span { color: var(--jade); }
+/* 메인 영웅 행 강조 */
+.hero-row.is-main { border-color: rgba(201, 162, 39, 0.55); box-shadow: 0 0 10px rgba(201, 162, 39, 0.12); }
 
 .stars {
   font-style: normal;

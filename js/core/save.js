@@ -3,8 +3,9 @@
 // 기존 유저의 세이브가 깨지는 일은 절대 없어야 한다.
 
 import { BALANCE } from '../data/balance.js';
+import { HEROES } from '../data/heroes.js';
 
-export const SAVE_VERSION = 8;
+export const SAVE_VERSION = 9;
 
 export function createNewSave(now = Date.now()) {
   return {
@@ -92,6 +93,25 @@ const MIGRATIONS = {
     save.resources.stone = save.resources.stone ?? 0;
     save.gear = save.gear ?? { weapon: 0, armor: 0, horse: 0, book: 0 };
     save.version = 8;
+    return save;
+  },
+  // v8 → v9: 메인 영웅 중심 개편 (2026-07-19) — 5인 파티를 '메인 1명'으로 줄인다.
+  // 기존 party에서 가장 강한 장수를 메인으로 삼는다. 보유 영웅·성장·도감은 그대로 유지.
+  9: (save) => {
+    const base = new Map(HEROES.map((h) => [h.id, h.base]));
+    const owned = Object.keys(save.heroes ?? {});
+    const pool = Array.isArray(save.party) && save.party.length ? save.party : owned;
+    // 원시 전투력(base × 레벨 × 별 근사) 기준으로 가장 강한 하나 — 세부 곡선은 growth가 다시 계산
+    let main = pool[0] ?? owned[0] ?? null;
+    let bestScore = -1;
+    for (const id of pool) {
+      const hs = save.heroes?.[id];
+      if (!hs) continue;
+      const score = (base.get(id) ?? 1) * (1 + 0.08 * (hs.level - 1)) * (hs.stars ?? 1);
+      if (score > bestScore) { bestScore = score; main = id; }
+    }
+    save.party = main ? [main] : [];
+    save.version = 9;
     return save;
   },
 };
