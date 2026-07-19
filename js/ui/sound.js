@@ -322,7 +322,34 @@ let bossMood = false;
 let nextNoteTime = 0;
 let beat = 0;
 let melIdx = 3;
+let fluteIdx = 4;
 let schedTimer = null;
+
+/** 대금풍 topline — 배경음악에 사극의 애수를 얹는 긴 떨림음 (musicGain으로 라우팅) */
+function musicFlute(freq, time, dur = 1.4, vol = 0.06) {
+  if (!ctx || !musicGain) return;
+  const osc = ctx.createOscillator();
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(freq, time);
+  const lfo = ctx.createOscillator();
+  lfo.frequency.value = 4.8;
+  const lfoGain = ctx.createGain();
+  lfoGain.gain.value = freq * 0.011;
+  lfo.connect(lfoGain).connect(osc.frequency);
+  const lp = ctx.createBiquadFilter(); // 숨결처럼 부드럽게
+  lp.type = 'lowpass';
+  lp.frequency.value = 2400;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, time);
+  g.gain.exponentialRampToValueAtTime(vol, time + 0.18); // 천천히 불어 넣고
+  g.gain.setValueAtTime(vol, time + dur * 0.6);
+  g.gain.exponentialRampToValueAtTime(0.0001, time + dur); // 길게 사라진다
+  osc.connect(lp).connect(g).connect(musicGain);
+  osc.start(time);
+  lfo.start(time);
+  osc.stop(time + dur + 0.05);
+  lfo.stop(time + dur + 0.05);
+}
 
 function scheduleBeat(t, b, eighth8) {
   const e = b % 8;
@@ -357,6 +384,18 @@ function scheduleBeat(t, b, eighth8) {
       const next = Math.max(0, Math.min(SCALE.length - 1, melIdx + (Math.random() < 0.5 ? 1 : -1)));
       pluck(SCALE[next], t + eighth8 * 0.5, 0.1); // 반 박 뒤 따라붙는 음
     }
+    // 5음계 화성 — 4도/5도 위 현을 살짝 겹쳐 울림을 두껍게 (세련미)
+    if (Math.random() < 0.22) {
+      const harm = Math.min(SCALE.length - 1, melIdx + (Math.random() < 0.5 ? 2 : 3));
+      pluck(SCALE[harm], t + 0.05, 0.06);
+    }
+  }
+
+  // 대금 topline — 두 마디마다 한 소절, 사극의 애수 (보스전엔 더 자주·팽팽하게)
+  if (e === 0 && bar % (bossMood ? 1 : 2) === 0) {
+    const stepUp = [-1, 0, 0, 1, 1, 2][Math.floor(Math.random() * 6)];
+    fluteIdx = Math.max(2, Math.min(SCALE.length - 1, fluteIdx + stepUp));
+    musicFlute(SCALE[fluteIdx] * (bossMood ? 1 : 0.5) * 2, t + 0.05, bossMood ? 1.1 : 1.7, bossMood ? 0.05 : 0.06);
   }
 
   // 징 — 여덟 마디마다, 보스전엔 네 마디마다
