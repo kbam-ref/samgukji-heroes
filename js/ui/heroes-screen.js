@@ -194,11 +194,21 @@ export function render(root) {
       <h2>영웅</h2>
       <div class="head-note">메인 전투력 <b id="hs-power">${fmt(partyPower(s))}</b></div>
     </header>
-    <p class="screen-sub">장수를 눌러 <b>메인 영웅</b>으로 세우세요. 메인만 전장에서 싸웁니다. 나머지는 옥구슬로 반환하거나, 도감으로 모아 인연을 완성하면 메인이 강해집니다.</p>
+    <p class="screen-sub">장수를 눌러 <b>메인 영웅</b>으로 세우면 그 장수만 전장에서 싸웁니다. 아래 버튼으로 키우세요.</p>
+    ${(() => {
+      // 초보 유도 힌트 — 메인이 아직 저레벨일 때만. 상태 파생값이라 세이브 스키마 변경 없음.
+      const mainHs = s.heroes[s.party[0]];
+      return mainHs && mainHs.level < 5
+        ? `<div class="hs-hint">여기를 눌러 영웅을 키우세요</div>`
+        : '';
+    })()}
+    <button class="btn primary hs-primary" id="hs-train-all">
+      <b>메인 영웅 단련</b>
+      <span>엽전으로 전투력 올리기</span>
+    </button>
     <div class="party-tools">
-      <button class="btn" id="hs-best">최강을 메인으로</button>
-      <button class="btn" id="hs-train-all">메인 최대 단련</button>
-      <button class="btn" id="hs-star-all">일괄 승급</button>
+      <button class="btn" id="hs-best">최강 메인</button>
+      <button class="btn" id="hs-star-all">전체 승급</button>
     </div>
     <div class="gear-panel">
       <div class="shard-head">

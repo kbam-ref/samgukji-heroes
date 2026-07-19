@@ -249,15 +249,19 @@
   60% { transform: translateX(3px); }
 }
 
-/* 연마 가능 — 버튼이 은은히 빛나며 "여길 누르세요" (영웅 단련·승급 버튼도 재사용, 2-9) */
-.atk-upgrade.can-buy,
+/* 살 수 있는 성장 액션 — 주홍 외곽선 + 은은한 맥박. 풀 채움은 .btn.primary 하나만 (v58) */
 .btn.train.can-buy,
 .btn.star-up.can-buy {
-  border-color: rgba(201, 162, 39, 0.5);
+  border-color: var(--cta);
+  color: var(--cta-bright);
+  background: var(--cta-veil);
   animation: can-buy-glow 1.6s ease-in-out infinite;
 }
+.btn.train.can-buy span,
+.btn.star-up.can-buy span { color: var(--cta-bright); }
+.atk-upgrade.can-buy { animation: can-buy-glow 1.6s ease-in-out infinite; }
 @keyframes can-buy-glow {
-  50% { box-shadow: 0 0 14px rgba(201, 162, 39, 0.28); }
+  50% { box-shadow: 0 0 14px var(--cta-tint); }
 }
 
 /* 재 파편 */
@@ -335,6 +339,7 @@
   .battlefield.marching .unit-sprite,
   .battlefield.marching .rig-upper,
   .field-bg,
+  .field-ground::before,
   .boss-banner.bb-in,
   .chapter-card,
   .cc-ink,

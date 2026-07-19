@@ -189,8 +189,8 @@ function template(s) {
 
     <div class="battlefield${battle.currentEnemy() ? '' : ' marching'}" id="bs-field">
       <div class="field-bg" id="bs-field-bg"${chapter.env ? ` style="background-image:url('./assets/bg/${chapter.env}.png')"` : ''}></div>
-      <div class="field-ground" id="bs-field-ground" aria-hidden="true"></div>
       <div class="field-shade" aria-hidden="true"></div>
+      <div class="field-ground" id="bs-field-ground" aria-hidden="true"></div>
       <div class="field-ambience" aria-hidden="true">
         <i class="fog"></i>
         ${Array.from({ length: 6 }, (_, i) => `<i class="ember" style="--x:${10 + i * 14}%; --d:-${(i * 2.3).toFixed(1)}s"></i>`).join('')}
@@ -258,22 +258,21 @@ function template(s) {
 }
 
 function partyFlagsHtml(s) {
-  // 단일 메인 구조 — 전장에 서는 메인 영웅 하나를 크게 보여준다. 탭하면 영웅 화면으로.
+  // 단일 메인 — 전장 스프라이트와 인물 중복을 없앤 초상 없는 슬림 상태칩. 탭하면 영웅 화면으로.
   const id = s.party[0];
   if (!id) {
-    return `<div class="hero-flag empty main-flag"><span class="flag-name">메인 영웅을 정하세요</span></div>`;
+    return `<button class="main-chip empty" type="button"><span class="chip-name">메인 영웅을 정하세요</span><span class="chip-go">→</span></button>`;
   }
   const def = heroDef(id);
   const hs = s.heroes[id];
   return `
-    <div class="hero-flag main-flag f-${def.faction}">
-      ${portraitHtml(id, 'flag-portrait')}
-      <div class="main-flag-info">
-        <span class="flag-role">메인 영웅</span>
-        <span class="flag-name">${def.name}</span>
-        <span class="flag-level">Lv.${hs.level} ‧ ${'★'.repeat(hs.stars)}</span>
-      </div>
-    </div>`;
+    <button class="main-chip f-${def.faction}" type="button">
+      <span class="chip-role">메인</span>
+      <span class="chip-name">${def.name}</span>
+      <span class="chip-meta">Lv.${hs.level} ‧ ${'★'.repeat(hs.stars)}</span>
+      <span class="chip-power">전투력 <b>${fmt(partyPower(s))}</b></span>
+      <span class="chip-go">→</span>
+    </button>`;
 }
 
 let foeFigureKey = ''; // 지금 그려진 적 모습 ('mob' 또는 rival:영웅id) — 바뀔 때만 다시 그린다
@@ -581,12 +580,12 @@ export function render(root) {
   const partyRow = document.getElementById('bs-party');
   if (partyRow) {
     partyRow.addEventListener('click', (e) => {
-      const flag = e.target.closest('.hero-flag');
-      if (!flag) return;
+      const chip = e.target.closest('.main-chip');
+      if (!chip) return;
       vibrate(8);
-      pulse(flag);
-      if (flag.classList.contains('empty')) {
-        const r = flag.getBoundingClientRect();
+      pulse(chip);
+      if (chip.classList.contains('empty')) {
+        const r = chip.getBoundingClientRect();
         floatText(r.left + r.width / 2, r.top, '영웅을 편성하세요', 'gold');
       }
       document.querySelector('.tab[data-tab="heroes"]')?.click();
@@ -952,7 +951,7 @@ export function render(root) {
     // 행군(적 없이 전진)엔 더 잦게 + 말발굽 소리.
     const marching = field.classList.contains('marching');
     const speed = getState().settings?.speed || 1;
-    const period = Math.max(5, Math.round((marching ? 9 : 16) / speed));
+    const period = Math.max(5, Math.round((marching ? 9 : 11) / speed));
     if (++dustTick >= period) {
       dustTick = 0;
       if (marching) playHoof();
