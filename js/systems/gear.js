@@ -21,3 +21,9 @@ export function upgradeCost(level) {
   const G = BALANCE.gear;
   return Math.round(G.costBase * Math.pow(G.costGrowth, level));
 }
+
+/** 지금 강화석으로 강화 가능한 보물 슬롯이 하나라도 있는가 — 영웅 탭 알림 점(2-10) 판정 */
+export function canGearUpAny(s) {
+  const stone = s.resources?.stone ?? 0;
+  return BALANCE.gear.slots.some((slot) => stone >= upgradeCost(gearLevel(s, slot.id)));
+}

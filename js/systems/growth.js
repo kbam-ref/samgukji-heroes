@@ -46,9 +46,20 @@ export function collectionBonus(state) {
   return owned * g.collectionBonusPerHero + factionSetsCompleted(state) * g.factionSetBonus;
 }
 
+/** 임의 편성(ids)으로 발동하는 인연들 */
+export function activeBondsFor(partyIds) {
+  const set = new Set(partyIds);
+  return BONDS.filter((bond) => bond.heroes.every((id) => set.has(id)));
+}
+
 /** 지금 편성으로 발동 중인 인연들 */
 export function activeBonds(state) {
-  return BONDS.filter((bond) => bond.heroes.every((id) => state.party.includes(id)));
+  return activeBondsFor(state.party);
+}
+
+/** 임의 편성(ids)의 인연 보너스 합 — 최강 편성 탐색용 */
+export function bondBonusFor(state, partyIds) {
+  return activeBondsFor(partyIds).reduce((sum, bond) => sum + effectiveBondBonus(state, bond), 0);
 }
 
 /** 인연 하나의 실효 보너스 — 기본 + 열전(+1%p) + 숙련(우두머리 격파 단계) */
@@ -92,4 +103,47 @@ export const MAX_STARS = BALANCE.growth.starMultiplier.length;
 /** 다음 별로 가는 승급에 필요한 겹침 수 (최고 별이면 Infinity) */
 export function starUpCost(stars) {
   return BALANCE.growth.starDupeCost[stars - 1] ?? Infinity;
+}
+
+/** 지금 당장 승급 가능한 장수가 있는가 — 영웅 탭 알림 점(2-10) 판정 (DOM 없음) */
+export function canStarUpAny(state) {
+  return Object.entries(state.heroes).some(([id, hs]) => {
+    if (!byId.has(id)) return false;
+    return hs.stars < MAX_STARS && hs.dupes >= starUpCost(hs.stars);
+  });
+}
+
+/** 인연(도감·열전·숙련 무관, 파티 무관)을 뺀 원시 개별 전투력 상위 정렬 */
+function ownedByPower(state) {
+  return Object.keys(state.heroes)
+    .filter((id) => byId.has(id))
+    .sort((a, b) => heroPower(b, state.heroes[b]) - heroPower(a, state.heroes[a]));
+}
+
+/** 인연 배율까지 반영한 진짜 최강 5인 편성 — C(보유,5) 전탐색 (수 ms).
+ *  도감·무기 보너스는 파티 무관 상수라 비교식에서 생략(모든 후보에 동일 배율). */
+export function bestParty(state) {
+  const ids = ownedByPower(state);
+  if (ids.length <= 5) return ids.slice();
+
+  // 후보를 상위 전투력 순으로 자르면 최적을 놓칠 수 있으나(인연), 전탐색이므로 전체를 쓴다.
+  const powerOf = (id) => heroPower(id, state.heroes[id]);
+  let best = null;
+  let bestScore = -1;
+  const n = ids.length;
+  const pick = [0, 0, 0, 0, 0];
+  for (let a = 0; a < n - 4; a++)
+    for (let b = a + 1; b < n - 3; b++)
+      for (let c = b + 1; c < n - 2; c++)
+        for (let d = c + 1; d < n - 1; d++)
+          for (let e = d + 1; e < n; e++) {
+            pick[0] = ids[a]; pick[1] = ids[b]; pick[2] = ids[c]; pick[3] = ids[d]; pick[4] = ids[e];
+            const raw = powerOf(pick[0]) + powerOf(pick[1]) + powerOf(pick[2]) + powerOf(pick[3]) + powerOf(pick[4]);
+            const score = raw * (1 + bondBonusFor(state, pick));
+            if (score > bestScore) {
+              bestScore = score;
+              best = pick.slice();
+            }
+          }
+  return best ?? ids.slice(0, 5);
 }

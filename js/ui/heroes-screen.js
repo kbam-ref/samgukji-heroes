@@ -4,7 +4,7 @@ import { on } from '../core/events.js';
 import * as stateModule from '../core/state.js';
 import { getState, levelUpHero, starUpHero, togglePartyMember, upgradeGear } from '../core/state.js';
 import * as gear from '../systems/gear.js';
-import { heroDef, heroPower, partyPower, levelCost, starUpCost, MAX_STARS, effectiveBondBonus } from '../systems/growth.js';
+import { heroDef, heroPower, partyPower, levelCost, starUpCost, MAX_STARS, effectiveBondBonus, bestParty } from '../systems/growth.js';
 import { orderList, toggleOrder } from '../systems/orders.js';
 import { RARITY, FACTIONS, PERK_LABELS } from '../data/heroes.js';
 import { BONDS } from '../data/bonds.js';
@@ -15,15 +15,40 @@ import { play } from './sound.js';
 import { portraitHtml } from './portrait.js';
 
 function bondsHtml(s) {
+  // span → button + data-bond: 모바일엔 hover(title)가 없으니 탭으로 구성 장수를 펼쳐 본다 (2-13)
   return BONDS.map((bond) => {
     const have = bond.heroes.filter((id) => s.party.includes(id)).length;
     const active = have === bond.heroes.length;
     const pct = Math.round(effectiveBondBonus(s, bond) * 100);
-    const mastery = s.bondsMastery?.[bond.id] ?? 0;
-    return `<span class="bond-chip${active ? ' on' : ''}" title="${bond.blurb} — ${bond.heroes.map((id) => heroDef(id).name).join(' ‧ ')} ‧ 우두머리 ${mastery}회">
+    return `<button class="bond-chip${active ? ' on' : ''}" data-bond="${bond.id}">
       ${bond.name} ${active ? `+${pct}%` : `${have}/${bond.heroes.length}`}
-    </span>`;
+    </button>`;
   }).join('');
+}
+
+/** 인연 상세 인라인 패널 — 구성 장수별 출전/보유/미보유 + 설명·숙련 (2-13) */
+function bondPanelHtml(s, bondId) {
+  const bond = BONDS.find((b) => b.id === bondId);
+  if (!bond) return '';
+  const mastery = s.bondsMastery?.[bond.id] ?? 0;
+  const members = bond.heroes
+    .map((id) => {
+      const def = heroDef(id);
+      const owned = Boolean(s.heroes[id]);
+      const onDuty = s.party.includes(id);
+      const cls = onDuty ? 'on-duty' : owned ? 'owned' : 'missing';
+      const tag = onDuty ? '출전 중' : owned ? '보유 · 탭해서 출전' : '미보유 · 모집에서';
+      return `<button class="bond-member ${cls}" data-hero="${owned ? id : ''}">
+        <b>${def.name}</b><span>${tag}</span>
+      </button>`;
+    })
+    .join('');
+  return `
+    <div class="bond-detail">
+      <p class="bond-blurb">${bond.blurb}</p>
+      <div class="bond-members">${members}</div>
+      ${mastery > 0 ? `<p class="bond-mastery">우두머리 격파 ${mastery}회 — 인연이 깊어졌다</p>` : ''}
+    </div>`;
 }
 
 function ordersHtml(s) {
@@ -39,6 +64,36 @@ function ordersHtml(s) {
 }
 
 let unsubs = [];
+let openBond = null;       // 지금 펼쳐 둔 인연 패널 (2-13)
+let lastShownPower = 0;    // 헤더 출전 전투력 카운트업 기준값 (2-8)
+let powerRaf = 0;          // 이벤트 폭주 흡수용 병합 플래그
+
+/** 편성 변경 뒤 '새로' 발동한 인연 하나 (없으면 null) — 최강 편성 홍보용 (2-11) */
+function activeBondsAfter(after, before) {
+  const wasOn = (b) => b.heroes.every((id) => before.party.includes(id));
+  const nowOn = (b) => b.heroes.every((id) => after.party.includes(id));
+  return BONDS.find((b) => nowOn(b) && !wasOn(b)) ?? null;
+}
+
+/** 헤더 출전 전투력 — 단련·승급·편성 어느 경로든 카운트업으로 차오르고, 늘면 '+N' (2-8).
+ *  전군 단련의 hero:level 수백 회를 rAF로 병합해 countUp 충돌을 막는다. */
+function updatePower() {
+  if (powerRaf) return;
+  powerRaf = requestAnimationFrame(() => {
+    powerRaf = 0;
+    const el = document.getElementById('hs-power');
+    if (!el) return;
+    const after = partyPower(getState());
+    if (after === lastShownPower) return;
+    countUp(el, lastShownPower, after, { duration: 400, format: fmt });
+    if (after > lastShownPower) {
+      const r = el.getBoundingClientRect();
+      floatText(r.left + r.width / 2, r.top, `+${fmt(after - lastShownPower)}`, 'gold');
+      pulse(el);
+    }
+    lastShownPower = after;
+  });
+}
 
 // 보물 4슬롯 — 무기/갑옷/군마/병법서
 function gearHtml(s) {
@@ -47,13 +102,15 @@ function gearHtml(s) {
       const lv = gear.gearLevel(s, slot.id);
       const cost = gear.upgradeCost(lv);
       const pct = Math.round(lv * slot.perLevel * 100);
+      // 부족해도 disabled로 막지 않는다 — 탭하면 '어디서 얻는지' 안내가 뜨게 (1-5)
+      const short = (s.resources.stone ?? 0) < cost;
       return `
       <div class="gear-cell">
         <div class="gear-info">
           <b>${slot.name}</b>
           <span>Lv.${lv} ‧ ${slot.blurb} +${pct}%</span>
         </div>
-        <button class="btn gear-up" data-slot="${slot.id}" data-cost="${cost}" ${(s.resources.stone ?? 0) < cost ? 'disabled' : ''}>
+        <button class="btn gear-up${short ? ' cant-afford' : ''}" data-slot="${slot.id}" data-cost="${cost}"${short ? ' aria-disabled="true"' : ''}>
           강화<span>강화석 ${fmt(cost)}</span>
         </button>
       </div>`;
@@ -74,6 +131,9 @@ function rowHtml({ id, def, hs }, index = 0) {
   const maxedStars = hs.stars >= MAX_STARS;
   const dupeCost = starUpCost(hs.stars);
   const canStar = !maxedStars && hs.dupes >= dupeCost;
+  const trainCost = maxedLevel ? 0 : levelCost(hs.level);
+  // 살 수 있으면 은은히 빛난다 — 전투 '공격 연마'와 같은 .can-buy 재사용 (2-9)
+  const canTrain = !maxedLevel && getState().resources.coin >= trainCost;
 
   return `
   <li class="hero-row f-${def.faction}${inParty ? ' in-party' : ''}" data-id="${id}" style="--i:${Math.min(index, 8)}">
@@ -94,10 +154,10 @@ function rowHtml({ id, def, hs }, index = 0) {
       ${def.perk ? `<div class="row-perk">출전 시 ${PERK_LABELS[def.perk.kind]} +${def.perk.value}%</div>` : ''}
     </div>
     <div class="row-actions">
-      <button class="btn train" data-id="${id}" ${maxedLevel ? 'disabled' : ''}>
-        단련<span data-role="cost">${maxedLevel ? '최고' : `엽전 ${fmt(levelCost(hs.level))}`}</span>
+      <button class="btn train${canTrain ? ' can-buy' : ''}" data-id="${id}" data-cost="${trainCost}" ${maxedLevel ? 'disabled' : ''}>
+        단련<span data-role="cost">${maxedLevel ? '최고' : `엽전 ${fmt(trainCost)}`}</span>
       </button>
-      <button class="btn star-up" data-id="${id}" ${canStar ? '' : 'disabled'}>
+      <button class="btn star-up${canStar ? ' can-buy' : ''}" data-id="${id}" ${canStar ? '' : 'disabled'}>
         승급<span>${maxedStars ? '최고' : `중복 ${hs.dupes}/${dupeCost}`}</span>
       </button>
     </div>
@@ -117,6 +177,8 @@ function listHtml(s) {
 export function render(root) {
   destroy();
   const s = getState();
+  openBond = null;
+  lastShownPower = partyPower(s); // 카운트업 기준을 현재값으로 — 진입 시 0→X 튀지 않게
 
   root.insertAdjacentHTML(
     'beforeend',
@@ -141,6 +203,7 @@ export function render(root) {
     </div>
     <div class="mini-head">인연 — 함께 서면 강해진다</div>
     <div class="bond-list" id="hs-bonds">${bondsHtml(s)}</div>
+    <div class="bond-panel-slot" id="hs-bond-panel"></div>
     ${orderList(s).some((e) => e.unlocked)
       ? `<div class="mini-head">세력 군령 — 도감을 완성한 세력의 힘</div>
          <div class="order-list" id="hs-orders">${ordersHtml(s)}</div>`
@@ -167,13 +230,40 @@ export function render(root) {
     if (listEl) listEl.innerHTML = listHtml(getState());
     const bondsEl = document.getElementById('hs-bonds');
     if (bondsEl) bondsEl.innerHTML = bondsHtml(getState());
-    const powerEl = document.getElementById('hs-power');
-    if (powerEl) powerEl.textContent = fmt(partyPower(getState()));
+    updatePower(); // 헤더 출전 전투력 — 카운트업 + '+N' (2-8)
+    // 인연 패널이 열려 있으면 상태(출전/보유) 반영해 다시 그린다
+    const panel = document.getElementById('hs-bond-panel');
+    if (panel && openBond) panel.innerHTML = bondPanelHtml(getState(), openBond);
   };
+
+  // 인연 칩 탭 → 아래에 구성 장수 패널 토글. 보유(미출전) 장수를 탭하면 바로 출전 (2-13)
+  document.getElementById('hs-bonds').addEventListener('click', (e) => {
+    const chip = e.target.closest('.bond-chip');
+    if (!chip) return;
+    openBond = openBond === chip.dataset.bond ? null : chip.dataset.bond;
+    for (const c of document.querySelectorAll('.bond-chip')) c.classList.toggle('open', c.dataset.bond === openBond);
+    const panel = document.getElementById('hs-bond-panel');
+    if (panel) panel.innerHTML = openBond ? bondPanelHtml(getState(), openBond) : '';
+  });
+  document.getElementById('hs-bond-panel').addEventListener('click', (e) => {
+    const mem = e.target.closest('.bond-member[data-hero]');
+    const id = mem?.dataset.hero;
+    if (!id) return; // 미보유는 데이터 없음 — 조용히
+    const wasIn = getState().party.includes(id);
+    if (!togglePartyMember(id)) {
+      shake(mem);
+      floatText(e.clientX, e.clientY, wasIn ? '마지막 한 명은 못 빼요' : '자리가 다 찼어요', 'warn');
+      return;
+    }
+    refreshPartyViews();
+    floatText(e.clientX, e.clientY, wasIn ? '물러남' : '출전!', wasIn ? '' : 'gold');
+  });
 
   document.getElementById('hs-best').addEventListener('click', (e) => {
     const st = getState();
-    const best = ownedSorted(st).slice(0, 5).map((h) => h.id);
+    const beforeParty = { party: [...st.party] }; // 상태는 in-place 변경 — 이전 편성을 복사해 둔다
+    const before = partyPower(st);
+    const best = bestParty(st); // 인연 배율까지 반영한 진짜 최강 (2-11)
     const same = best.length === st.party.length && best.every((id) => st.party.includes(id));
     if (same) {
       floatText(e.clientX, e.clientY, '이미 가장 강한 전열이에요');
@@ -181,8 +271,12 @@ export function render(root) {
     }
     const { setParty } = stateModule;
     setParty(best);
+    // 새로 발동한 인연이 있으면 그 가치를 즉각 보여준다 (중기 목표 홍보)
+    const newBond = activeBondsAfter(getState(), beforeParty);
+    if (newBond) floatText(e.clientX, e.clientY - 22, `${newBond.name} 발동! +${Math.round(effectiveBondBonus(getState(), newBond) * 100)}%`, 'gold');
     refreshPartyViews();
-    floatText(e.clientX, e.clientY, '전열을 다시 짰어요!', 'gold');
+    const gained = partyPower(getState()) - before;
+    floatText(e.clientX, e.clientY, gained > 0 ? `전열을 다시 짰어요! +${fmt(gained)}` : '전열을 다시 짰어요!', 'gold');
   });
 
   // 보물 강화
@@ -208,32 +302,43 @@ export function render(root) {
   });
   unsubs.push(on('stone', refreshGear));
 
-  // 전군 최대 단련 — 가진 엽전이 다할 때까지 강한 순으로 돌아가며 올린다 (수백 번 탭 노동 제거)
+  // 전군 최대 단련 — 출전 전투력이 실제로 오르게, 출전 5인을 먼저 채운 뒤 벤치로 (2-7).
+  // 기존엔 지수 비용 탓에 남은 엽전이 전부 벤치로 새서 '눌러도 안 강해지는' 경험을 줬다.
   document.getElementById('hs-train-all').addEventListener('click', (e) => {
+    const before = partyPower(getState());
     let ups = 0;
     let guard = 0;
-    let any = true;
-    while (any && guard < 5000) {
-      any = false;
-      for (const { id } of ownedSorted(getState())) {
-        const hs = getState().heroes[id];
-        if (hs.level >= BALANCE.growth.maxLevel) continue;
-        if (levelUpHero(id, levelCost(hs.level))) {
-          ups += 1;
-          any = true;
+    // idsFn: 이번 단계에서 돌릴 대상. 1단계=출전, 2단계=전체
+    const runPhase = (idsFn) => {
+      let any = true;
+      while (any && guard < 8000) {
+        any = false;
+        for (const id of idsFn()) {
+          const hs = getState().heroes[id];
+          if (!hs || hs.level >= BALANCE.growth.maxLevel) continue;
+          if (levelUpHero(id, levelCost(hs.level))) { ups += 1; any = true; }
+          if (++guard >= 8000) break;
         }
-        if (++guard >= 5000) break;
       }
-    }
+    };
+    // 강한 순으로 — 출전 먼저
+    const sortedIds = () => ownedSorted(getState()).map((h) => h.id);
+    runPhase(() => sortedIds().filter((id) => getState().party.includes(id)));
+    runPhase(sortedIds);
+
     if (ups === 0) {
       shake(e.target.closest('button'));
       floatText(e.clientX, e.clientY, '엽전이 모자라요', 'warn');
       return;
     }
-    refreshPartyViews();
-    const listEl = document.getElementById('hs-list');
-    if (listEl) listEl.innerHTML = listHtml(getState());
-    floatText(e.clientX, e.clientY, `전군 +${ups}레벨!`, 'gold');
+    refreshPartyViews(); // hs-list·bonds·헤더(카운트업) 한 번에
+    const gained = partyPower(getState()) - before;
+    floatText(
+      e.clientX,
+      e.clientY,
+      gained > 0 ? `출전 전투력 +${fmt(gained)} ‧ 전군 +${ups}레벨!` : `벤치 단련 +${ups} — 출전 장수는 최고 단계`,
+      'gold'
+    );
   });
 
   // 일괄 승급 — 겹침이 차 있는 장수 전원 승급
@@ -253,8 +358,6 @@ export function render(root) {
       return;
     }
     refreshPartyViews();
-    const listEl = document.getElementById('hs-list');
-    if (listEl) listEl.innerHTML = listHtml(getState());
     floatText(e.clientX, e.clientY, `별 +${stars}!`, 'gold');
   });
 
@@ -277,6 +380,7 @@ export function render(root) {
       row.outerHTML = rowHtml({ id, def: heroDef(id), hs: getState().heroes[id] });
       const newRow = list.querySelector(`li[data-id="${id}"]`);
       if (newRow) pulse(newRow);
+      updatePower(); // 승급도 전투력을 올린다 (2-8)
       floatText(e.clientX, e.clientY, '별이 하나 더!', 'gold');
       return;
     }
@@ -293,12 +397,7 @@ export function render(root) {
         floatText(e.clientX, e.clientY, wasIn ? '마지막 한 명은 못 빼요' : '자리가 다 찼어요', 'warn');
         return;
       }
-      const listEl = document.getElementById('hs-list');
-      if (listEl) listEl.innerHTML = listHtml(getState());
-      const bondsEl = document.getElementById('hs-bonds');
-      if (bondsEl) bondsEl.innerHTML = bondsHtml(getState());
-      const powerEl = document.getElementById('hs-power');
-      if (powerEl) powerEl.textContent = fmt(partyPower(getState()));
+      refreshPartyViews(); // hs-list·bonds·헤더(카운트업) + 열린 인연 패널 일괄
       floatText(e.clientX, e.clientY, wasIn ? '물러남' : '출전!', wasIn ? '' : 'gold');
       return;
     }
@@ -324,25 +423,37 @@ export function render(root) {
     levelEl.textContent = getState().heroes[id].level;
     countUp(powerEl, before, after, { duration: 400, format: fmt });
     const maxed = getState().heroes[id].level >= BALANCE.growth.maxLevel;
-    costEl.textContent = maxed ? '최고' : `엽전 ${fmt(levelCost(getState().heroes[id].level))}`;
+    const nextCost = maxed ? 0 : levelCost(getState().heroes[id].level);
+    costEl.textContent = maxed ? '최고' : `엽전 ${fmt(nextCost)}`;
+    btn.dataset.cost = nextCost;
     btn.disabled = maxed;
+    updatePower(); // 헤더 출전 전투력도 함께 (2-8)
     pulse(row);
   });
 
-  const refreshPower = () => {
-    const powerEl = document.getElementById('hs-power');
-    if (powerEl) powerEl.textContent = fmt(partyPower(getState()));
+  // 살 수 있는 단련·승급 버튼에 글로우 — 방치 수익이 쌓여 살 수 있게 되면 화면이 반응 (2-9).
+  // coin은 초당 수회 발생하는 핫패스라 innerHTML 재작성 없이 클래스만 토글한다.
+  const refreshBuyGlow = () => {
+    const coin = getState().resources.coin;
+    for (const b of document.querySelectorAll('#hs-list .btn.train')) {
+      if (b.disabled) { b.classList.remove('can-buy'); continue; }
+      b.classList.toggle('can-buy', coin >= Number(b.dataset.cost || 0));
+    }
   };
 
   unsubs.push(
-    on('hero:level', refreshPower),
-    on('hero:star', refreshPower),
+    on('hero:level', updatePower),
+    on('hero:star', updatePower),
+    on('coin', refreshBuyGlow),
     on('hero:add', () => {
       const listEl = document.getElementById('hs-list');
       if (listEl) listEl.innerHTML = listHtml(getState());
-      refreshPower();
+      updatePower();
     })
   );
+
+  // 첫 등장 스태거가 끝나면 스태거를 끈다 — 이후 재렌더는 출렁이지 않는다 (2-12)
+  setTimeout(() => document.getElementById('hs-list')?.classList.add('no-stagger'), 520);
 }
 
 export function destroy() {

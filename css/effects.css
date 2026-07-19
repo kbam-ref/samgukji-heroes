@@ -249,8 +249,10 @@
   60% { transform: translateX(3px); }
 }
 
-/* 연마 가능 — 버튼이 은은히 빛나며 "여길 누르세요" */
-.atk-upgrade.can-buy {
+/* 연마 가능 — 버튼이 은은히 빛나며 "여길 누르세요" (영웅 단련·승급 버튼도 재사용, 2-9) */
+.atk-upgrade.can-buy,
+.btn.train.can-buy,
+.btn.star-up.can-buy {
   border-color: rgba(201, 162, 39, 0.5);
   animation: can-buy-glow 1.6s ease-in-out infinite;
 }
