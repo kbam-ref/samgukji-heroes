@@ -592,6 +592,43 @@ body.modal-open #tab-bar { visibility: hidden; }
   font-family: var(--font-display);
   animation: cta-breathe 2.2s ease-in-out infinite;
 }
+/* 버전 표시 — 최신인지 한눈에 (배포 확인용) */
+.title-version {
+  position: absolute;
+  bottom: calc(8px + env(safe-area-inset-bottom));
+  right: 14px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--paper-faint);
+  opacity: 0.7;
+}
+
+/* 작은 버튼 변형 */
+.btn.small { min-height: 34px; padding: 5px 12px; font-size: 12px; font-weight: 600; }
+
+/* 새 버전 배너 — 도착 즉시 탭 한 번으로 적용 (캐시가 여러 버전 뒤처지지 않게) */
+.sw-update-banner {
+  position: fixed;
+  top: calc(8px + env(safe-area-inset-top));
+  left: 50%;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 8px 20px;
+  border: 1px solid var(--cta-deep);
+  border-radius: 999px;
+  background: linear-gradient(160deg, var(--cta-bright), var(--cta) 60%, var(--cta-deep));
+  color: var(--cta-ink);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  transform: translateX(-50%);
+  animation: sw-drop 0.4s var(--ease-out);
+  cursor: pointer;
+}
+.sw-update-banner b { font-size: 13px; font-weight: 800; }
+.sw-update-banner span { font-size: 11px; opacity: 0.82; }
+@keyframes sw-drop { from { transform: translate(-50%, -22px); opacity: 0; } }
 
 /* ── 그려진 UI 스킨 (v37) ── */
 

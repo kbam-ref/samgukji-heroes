@@ -1,7 +1,7 @@
 {
-  "name": "삼국지 영웅 키우기",
-  "short_name": "삼국영웅",
-  "description": "삼국지 영웅을 모아 키우는 방치형 게임",
+  "name": "삼국지 랜덤 디펜스",
+  "short_name": "삼국디펜스",
+  "description": "삼국지 영웅을 소환해 몰려오는 적을 막는 랜덤 디펜스",
   "lang": "ko",
   "start_url": ".",
   "scope": ".",

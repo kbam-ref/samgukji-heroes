@@ -989,6 +989,31 @@
 }
 @media (prefers-reduced-motion: reduce) { .hs-hint::after { animation: none; } }
 
+/* 로스터 헤더 — 보유 장수 + 일괄 반환 버튼 한 줄 */
+.roster-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 6px 0 8px; }
+.roster-head .mini-head { margin: 0; }
+
+/* 등급 이하 일괄 반환 모달 */
+.bulk-refund { display: flex; flex-direction: column; gap: 8px; }
+.bulk-intro { font-size: 12px; color: var(--paper-dim); line-height: 1.5; margin-bottom: 2px; }
+.bulk-opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--ink-800);
+  color: var(--paper);
+  font-family: inherit;
+  cursor: pointer;
+  transition: transform 0.08s ease, border-color 0.2s ease;
+}
+.bulk-opt b { font-size: 14px; }
+.bulk-opt em { font-size: 12px; font-style: normal; color: var(--jade); }
+.bulk-opt:not(:disabled):active { transform: scale(0.98); border-color: var(--cta); }
+.bulk-opt:disabled { opacity: 0.4; cursor: default; }
+
 /* 인연 */
 .bond-list {
   display: flex;

@@ -1,7 +1,7 @@
 // 영웅 화면 — 보유 장수 단련(레벨 올리기)
 
 import { on } from '../core/events.js';
-import { getState, levelUpHero, starUpHero, setMain, refundHero, upgradeGear } from '../core/state.js';
+import { getState, levelUpHero, starUpHero, setMain, refundHero, bulkRefundBelow, upgradeGear } from '../core/state.js';
 import * as gear from '../systems/gear.js';
 import { heroDef, heroPower, partyPower, levelCost, starUpCost, MAX_STARS, effectiveBondBonus } from '../systems/growth.js';
 import { orderList, toggleOrder } from '../systems/orders.js';
@@ -125,6 +125,59 @@ function refundJadeOf(id, hs) {
   return Math.round(base * (1 + (hs.dupes ?? 0) * BALANCE.refund.perDupe));
 }
 
+/** 등급 이하 일괄 반환 — 임계 등급을 고르면 그 이하 비(非)메인 장수를 한 번에 옥구슬로. */
+function openBulkRefundModal(onDone) {
+  const s = getState();
+  const main = s.party[0];
+  // 전설(5)은 대량 반환에서 제외 — 실수로 귀한 장수를 날리지 않게. 일반~영웅(1~4)만 임계로.
+  const rows = [1, 2, 3, 4].map((r) => {
+    const ids = Object.keys(s.heroes).filter((id) => id !== main && (heroDef(id)?.rarity ?? 1) <= r);
+    const jade = ids.reduce((sum, id) => sum + refundJadeOf(id, s.heroes[id]), 0);
+    return { r, count: ids.length, jade };
+  });
+  const box = document.createElement('div');
+  box.className = 'bulk-refund';
+  box.innerHTML = `
+    <p class="bulk-intro">고른 등급 <b>이하</b> 장수를 한 번에 옥구슬로 되돌립니다. <b>메인 영웅과 전설은 남아요.</b> 되돌린 장수의 도감·인연 수집 버프는 사라집니다.</p>
+    ${rows
+      .map(
+        (row) => `
+      <button class="bulk-opt" data-r="${row.r}" ${row.count === 0 ? 'disabled' : ''}>
+        <b>${RARITY[row.r].name} 이하</b>
+        <em>${row.count}명 · 옥구슬 ${fmt(row.jade)}</em>
+      </button>`
+      )
+      .join('')}`;
+  showModal({ title: '등급 이하 일괄 반환', body: box, actions: [{ label: '닫기' }] });
+  box.addEventListener('click', (e) => {
+    const opt = e.target.closest('.bulk-opt');
+    if (!opt || opt.hasAttribute('disabled')) return;
+    const r = Number(opt.dataset.r);
+    const st = getState();
+    const ids = Object.keys(st.heroes).filter((id) => id !== st.party[0] && (heroDef(id)?.rarity ?? 1) <= r);
+    const jade = ids.reduce((sum, id) => sum + refundJadeOf(id, st.heroes[id]), 0);
+    if (!ids.length) return;
+    showModal({
+      title: `${RARITY[r].name} 이하 반환`,
+      body: `${ids.length}명을 되돌리고 옥구슬 ${fmt(jade)}을 받습니다.\n\n이 장수들의 도감·인연 버프를 잃어요. 되돌릴 수 없습니다.`,
+      actions: [
+        { label: '취소' },
+        {
+          label: `반환 (옥구슬 ${fmt(jade)})`,
+          primary: true,
+          onClick: () => {
+            const res = bulkRefundBelow(r);
+            if (res.count > 0) {
+              play('claim');
+              onDone?.();
+            }
+          },
+        },
+      ],
+    });
+  });
+}
+
 function rowHtml({ id, def, hs }, index = 0) {
   const isMain = getState().party[0] === id;
   const maxedLevel = hs.level >= BALANCE.growth.maxLevel;
@@ -224,6 +277,10 @@ export function render(root) {
       ? `<div class="mini-head">세력 군령 — 도감을 완성한 세력의 힘</div>
          <div class="order-list" id="hs-orders">${ordersHtml(s)}</div>`
       : `<div class="order-empty">세력 군령 0/4 ‧ 한 세력의 도감을 완성하면 열립니다</div>`}
+    <div class="roster-head">
+      <span class="mini-head">보유 장수</span>
+      <button class="btn small" id="hs-bulk-refund">등급 이하 일괄 반환</button>
+    </div>
     <ul class="hero-list" id="hs-list">${listHtml(s)}</ul>
   </section>`
   );
@@ -286,6 +343,9 @@ export function render(root) {
     const gained = partyPower(getState()) - before;
     floatText(e.clientX, e.clientY, gained > 0 ? `메인 교체! +${fmt(gained)}` : '메인 교체!', 'gold');
   });
+
+  // 등급 이하 일괄 반환
+  document.getElementById('hs-bulk-refund')?.addEventListener('click', () => openBulkRefundModal(refreshPartyViews));
 
   // 보물 강화
   const refreshGear = () => {

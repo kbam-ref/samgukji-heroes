@@ -114,6 +114,31 @@ export function refundHero(id) {
   return jade;
 }
 
+/** 일괄 반환 — 지정 등급 이하의 비(非)메인 영웅을 모두 옥구슬로 되돌린다.
+ *  메인 영웅과 마지막 한 명은 항상 남긴다. { count, jade }를 돌려준다. */
+export function bulkRefundBelow(maxRarity) {
+  const main = mainHero();
+  const targets = Object.keys(state.heroes).filter(
+    (id) => id !== main && (HERO_RARITY.get(id) ?? 1) <= maxRarity
+  );
+  let jade = 0;
+  let count = 0;
+  for (const id of targets) {
+    if (Object.keys(state.heroes).length <= 1) break; // 마지막 한 명은 보호
+    const hero = state.heroes[id];
+    const rarity = HERO_RARITY.get(id) ?? 1;
+    const base = BALANCE.refund.jadeByRarity[rarity] ?? 0;
+    jade += Math.round(base * (1 + (hero.dupes ?? 0) * BALANCE.refund.perDupe));
+    delete state.heroes[id];
+    count += 1;
+  }
+  if (count > 0) {
+    emit('hero:refund', { bulk: true, count, jade });
+    addJade(jade);
+  }
+  return { count, jade };
+}
+
 /** 단련 — 비용 계산은 systems/growth.js가 담당하고 여기서는 지불과 상승만 한다. */
 export function levelUpHero(id, cost) {
   const hero = state.heroes[id];

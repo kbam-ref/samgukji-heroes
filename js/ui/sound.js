@@ -50,6 +50,18 @@ export function initSound() {
       else stopMusic();
     }
   });
+
+  // 백그라운드(홈 버튼 등)로 나가면 오디오를 즉시 멈춘다 — 설치형 PWA는 기기에 따라
+  // 백그라운드에서도 소리가 계속 난다. 컨텍스트를 통째로 suspend하면 BGM·효과음이
+  // 그 자리에서 멎고(타이밍도 정지), 돌아오면 이어서 재생된다.
+  document.addEventListener('visibilitychange', () => {
+    if (!ctx) return;
+    if (document.hidden) {
+      if (ctx.state === 'running') ctx.suspend();
+    } else if (ctx.state === 'suspended' && soundOn()) {
+      ctx.resume();
+    }
+  });
 }
 
 function soundOn() {
@@ -459,6 +471,8 @@ export function setBgmMood(boss) {
 
 export function play(kind) {
   if (!ctx || !soundOn()) return;
+  if (ctx.state === 'suspended') ctx.resume(); // 백그라운드 복귀 후 첫 소리에서 안전하게 재개
+
   // 파일 효과음이 있으면 그걸 우선 (manifest에 있는 kind만 — clear/legend/epic/claim/chapter/rival/wipe)
   if (assetsReady && playSample(kind)) return;
   const t = ctx.currentTime;
