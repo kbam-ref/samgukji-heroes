@@ -42,6 +42,7 @@ export function render(root) {
     <div class="settings-group">
       <h3>소리와 떨림</h3>
       ${toggleHtml('sound', '효과음', s.settings?.sound !== false)}
+      ${toggleHtml('music', '배경 음악', s.settings?.music !== false)}
       ${toggleHtml('vibrate', '진동', s.settings?.vibrate !== false)}
     </div>
 

@@ -11,7 +11,7 @@ import { BALANCE } from '../data/balance.js';
 import { RIVAL_LINES, RIVAL_LINE_DEFAULT } from '../data/rivals.js';
 import { fmt } from './format.js';
 import { floatText, pulse, shake, countUp, burst, flash } from './effects.js';
-import { play, vibrate } from './sound.js';
+import { play, vibrate, setBgmMood } from './sound.js';
 import { portraitHtml } from './portrait.js';
 import * as tower from '../systems/tower.js';
 import { openTower } from './tower-modal.js';
@@ -485,6 +485,7 @@ export function render(root) {
   unsubs.push(
     on('battle:spawn', ({ enemy }) => {
       updateFoe();
+      setBgmMood(enemy.boss); // 우두머리 앞에선 북이 촘촘해진다
       if (enemy.rival) {
         if (!cutinSeen.has(enemy.rivalId)) {
           cutinSeen.add(enemy.rivalId);
@@ -552,7 +553,10 @@ export function render(root) {
         shakeField(field, heavy ? F.shakeBig : F.shakeHit, heavy);
         const at = foeAnchor();
         if (at) floatText(at.x + (Math.random() * 26 - 13), at.y + 10, `-${fmt(damage)}`, heavy ? 'crit' : '');
-        if (heavy) vibrate(15);
+        if (heavy) {
+          vibrate(15);
+          play('hit'); // 강타에만 — 평타마다 울리면 피로하다
+        }
       }, F.impactMs);
     }),
 
@@ -581,6 +585,7 @@ export function render(root) {
       }
       const at = foeAnchor();
       if (at) burst(at.x, at.y + 26, { count: boss ? 12 : 7 });
+      if (boss) setBgmMood(false); // 결전이 끝나면 장단도 가라앉는다
       // 모든 처치에 마무리 손맛 — 정지 + (잡몹) 흔들림·짧은 진동
       hitStop(field, boss ? BALANCE.feel.bossStopMs : BALANCE.feel.killStopMs);
       if (boss) {
