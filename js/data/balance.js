@@ -212,7 +212,7 @@ export const BALANCE = {
 
   start: {
     coin: 0,
-    jade: 1600,            // 첫 10회 모집이 가능하도록 지급
+    jade: 8000,            // 시작 옥구슬 — 초반 모집을 넉넉히 (수석 지시 2026-07-19)
     heroes: ['liubei'],
   },
 };

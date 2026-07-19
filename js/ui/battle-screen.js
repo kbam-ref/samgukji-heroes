@@ -188,7 +188,7 @@ function template(s) {
     </header>
 
     <div class="battlefield${battle.currentEnemy() ? '' : ' marching'}" id="bs-field">
-      <div class="field-bg" id="bs-field-bg"${chapter.env ? ` style="background-image:url('./assets/bg/${chapter.env}.png')"` : ''}></div>
+      <div class="field-bg" id="bs-field-bg" aria-hidden="true">${chapter.env ? `<div class="bg-track" style="--bg:${imgVar(`./assets/bg/${chapter.env}.png`)}"><i></i><i></i><i></i><i></i></div>` : ''}</div>
       <div class="field-shade" aria-hidden="true"></div>
       <div class="field-ground" id="bs-field-ground" aria-hidden="true"></div>
       <div class="field-ambience" aria-hidden="true">
