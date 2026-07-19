@@ -97,6 +97,8 @@ export const DEFENSE = {
       4: { range: 26, cooldown: 0.8, dmg: 1.24 },
       5: { range: 30, cooldown: 0.7, dmg: 1.36 },
     },
+    moveSpeed: 46, // 유닛 이동 속도(초당 필드 %) — 드래그한 지점으로 걸어간다(8방향)
+    bounds: { x1: 15, y1: 26, x2: 85, y2: 74 }, // 유닛을 놓을 수 있는 네모 안 경계(필드 %)
     // 단련(업그레이드) — 골드로 개별 유닛 강화 (검증: 비용 완화로 실도달 가능하게)
     upgrade: {
       costBase: 40, // 60→40

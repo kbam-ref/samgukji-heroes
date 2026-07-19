@@ -73,6 +73,7 @@ function randElement() {
 // ── 유닛 생성(소환) ──
 let unitSeq = 1;
 function makeUnit(heroId, slot) {
+  const pos = slotPos(slot);
   return {
     uid: unitSeq++,
     heroId,
@@ -82,7 +83,12 @@ function makeUnit(heroId, slot) {
     sizeRole: HERO_SIZE_ROLE[heroId],
     upgradeLv: 0,
     slot,
-    ...slotPos(slot),
+    x: pos.x,
+    y: pos.y,
+    tx: pos.x, // 목표 위치(드래그로 갱신) — 여기로 걸어간다
+    ty: pos.y,
+    face: 1,
+    moving: false,
     cd: 0,
   };
 }
@@ -292,6 +298,7 @@ function spawnEnemy(run) {
     maxHp: hp,
     prog: Math.random() * 0.02, // 살짝 흩어져 스폰
     hit: 0,
+    face: 1, // 이동 방향으로 좌우 뒤집기
   });
   run.spawned += 1;
 }
@@ -311,14 +318,38 @@ export function tick(run, dt) {
     }
   }
 
-  // 적 이동(트랙 보행)
+  // 적 이동(트랙 보행) — 이동 방향으로 좌우 뒤집기
   for (const e of run.enemies) {
     const sp = w.speed * (e.isBoss ? w.boss.speedMult : w.sizes[e.size].speed);
     e.prog += (sp / 100) * dt;
     if (e.hit > 0) e.hit -= dt;
     const pt = pathPoint(e.prog);
+    const dx = pt.x - e.x;
+    if (dx > 0.03) e.face = 1;
+    else if (dx < -0.03) e.face = -1;
     e.x = pt.x;
     e.y = pt.y;
+  }
+
+  // 유닛 이동 — 드래그한 목표 지점(tx,ty)으로 걸어간다(8방향). 이동 방향으로 좌우 뒤집기.
+  const usp = DEFENSE.unit.moveSpeed;
+  for (const u of run.units) {
+    if (u.tx == null) { u.tx = u.x; u.ty = u.y; } // 구세이브 방어
+    const mdx = u.tx - u.x;
+    const mdy = u.ty - u.y;
+    const md = Math.hypot(mdx, mdy);
+    if (md > 0.5) {
+      const step = Math.min(md, usp * dt);
+      u.x += (mdx / md) * step;
+      u.y += (mdy / md) * step;
+      if (mdx > 0.2) u.face = 1;
+      else if (mdx < -0.2) u.face = -1;
+      u.moving = true;
+    } else {
+      u.x = u.tx;
+      u.y = u.ty;
+      u.moving = false;
+    }
   }
 
   // 전투 — 유닛이 사거리 안 가장 가까운 적을 친다
@@ -337,7 +368,8 @@ export function tick(run, dt) {
       target.hp -= dmg;
       target.hit = 0.18;
       u.cd = DEFENSE.unit.byRarity[u.rarity].cooldown;
-      run.fx.push({ type: 'attack', uid: u.uid, eid: target.eid });
+      u.face = target.x < u.x ? -1 : 1; // 공격 대상 쪽으로 몸을 돌린다
+      run.fx.push({ type: 'attack', uid: u.uid, eid: target.eid, face: u.face });
       if (target.hp <= 0) {
         target.dead = true;
         run.gold += killGold(run.stage, target.size, target.isBoss);

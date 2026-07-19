@@ -21,6 +21,30 @@ const unitNodes = new Map(); // uid -> el
 let fieldW = 0;
 let fieldH = 0;
 let saveTick = 0;
+let drag = null; // { uid, startX, startY, moved }
+
+// 화면 좌표 → 필드 % (드래그 위치 계산)
+function fieldPct(clientX, clientY) {
+  const r = fieldEl.getBoundingClientRect();
+  return { x: ((clientX - r.left) / r.width) * 100, y: ((clientY - r.top) / r.height) * 100 };
+}
+function onDragMove(e) {
+  if (!drag || !run) return;
+  if (!drag.moved && Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) > 6) drag.moved = true;
+  if (!drag.moved) return;
+  const p = fieldPct(e.clientX, e.clientY);
+  const b = DEFENSE.unit.bounds;
+  const u = run.units.find((x) => x.uid === drag.uid);
+  if (u) {
+    u.tx = Math.max(b.x1, Math.min(b.x2, p.x)); // 네모 안으로 제한
+    u.ty = Math.max(b.y1, Math.min(b.y2, p.y));
+  }
+}
+function onDragUp() {
+  window.removeEventListener('pointermove', onDragMove);
+  if (drag && !drag.moved) openPanel(drag.uid); // 안 움직였으면 탭 = 패널
+  drag = null;
+}
 
 // ── 이어하기 세이브 (앱 닫아도 계속) ──
 const RD_KEY = 'samgukji-rd';
@@ -130,10 +154,13 @@ export function render(root) {
     updateHud();
   });
 
-  // 유닛 탭 → 단련/합성/반환 패널
-  unitLayer.addEventListener('click', (e) => {
+  // 유닛: 짧게 탭 = 패널 / 끌기 = 8방향 이동(드래그한 지점으로 걸어간다)
+  unitLayer.addEventListener('pointerdown', (e) => {
     const el = e.target.closest('.rd-unit');
-    if (el) openPanel(Number(el.dataset.uid));
+    if (!el) return;
+    drag = { uid: Number(el.dataset.uid), startX: e.clientX, startY: e.clientY, moved: false };
+    window.addEventListener('pointermove', onDragMove);
+    window.addEventListener('pointerup', onDragUp, { once: true });
   });
 
   const panel = document.getElementById('rd-panel');
@@ -198,12 +225,15 @@ function syncUnits() {
       el.className = `rd-unit r${u.rarity}`;
       el.dataset.uid = u.uid;
       el.innerHTML = `
-        <img class="rd-sprite" src="${heroCut(u.heroId)}" alt="" draggable="false">
+        <div class="rd-body"><img class="rd-sprite" src="${heroCut(u.heroId)}" alt="" draggable="false"></div>
         <i class="rd-elem" style="background:${ELEMENT_COLOR[u.element]}"></i>`;
       unitLayer.appendChild(el);
       unitNodes.set(u.uid, el);
       place(el, u.x, u.y);
     }
+    if (u.face) el.style.setProperty('--face', u.face);
+    el.classList.toggle('moving', !!u.moving);
+    place(el, u.x, u.y); // 이동/드래그 위치 매 프레임 반영
   }
   for (const [uid, el] of unitNodes) {
     if (!seen.has(uid)) { el.remove(); unitNodes.delete(uid); }
@@ -257,13 +287,14 @@ function syncEnemies() {
       el.style.setProperty('--sz', DEFENSE.wave.sizes[e.size].scale * (e.isBoss ? DEFENSE.wave.boss.scale : 1));
       el.innerHTML = `
         <b class="rd-hp"></b>
-        <img class="rd-sprite" src="${enemyCut(e.spriteId)}" alt="" draggable="false">
+        <div class="rd-body"><img class="rd-sprite" src="${enemyCut(e.spriteId)}" alt="" draggable="false"></div>
         <i class="rd-elem" style="background:${ELEMENT_COLOR[e.element]}"></i>`;
       enemyLayer.appendChild(el);
-      node = { el, hp: -1, hitOn: false };
+      node = { el, hp: -1, hitOn: false, face: 1 };
       enemyNodes.set(e.eid, node);
     }
     place(node.el, e.x, e.y);
+    if (e.face !== node.face) { node.el.style.setProperty('--face', e.face); node.face = e.face; }
     const hpShown = Math.max(0, Math.ceil(e.hp));
     if (hpShown !== node.hp) {
       node.el.querySelector('.rd-hp').textContent = fmt(hpShown);
@@ -343,6 +374,7 @@ function loop(now) {
   last = now;
   engine.tick(run, dt);
   syncEnemies();
+  syncUnits(); // 유닛이 이동하므로 매 프레임 위치·방향 갱신
   consumeFx();
   updateHud();
   if (++saveTick >= 180) { saveTick = 0; saveRun(); } // ~3초마다 이어하기 저장
@@ -354,8 +386,10 @@ export function destroy() {
   rafId = 0;
   saveRun(); // 탭 떠날 때 저장 — 설정 갔다 와도 이어진다
   window.removeEventListener('resize', measureField);
+  window.removeEventListener('pointermove', onDragMove);
   document.removeEventListener('visibilitychange', onHide);
   window.removeEventListener('pagehide', saveRun);
+  drag = null;
   enemyNodes.clear();
   unitNodes.clear();
   fieldEl = enemyLayer = unitLayer = null;

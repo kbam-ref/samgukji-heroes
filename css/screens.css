@@ -1933,6 +1933,14 @@
   position: absolute; left: 50%; bottom: 48px; transform: translateX(-50%);
   width: 7px; height: 7px; border-radius: 50%; box-shadow: 0 0 3px rgba(0,0,0,0.6);
 }
+/* 방향 뒤집기 래퍼 — 이동/공격 방향으로 좌우 반전(스프라이트만; 체력·속성점은 안 뒤집힘) */
+.rd-unit .rd-body, .rd-enemy .rd-body {
+  position: absolute; inset: 0;
+  transform: scaleX(var(--face, 1));
+  transform-origin: center;
+}
+/* 이동 중엔 걸음(멈추면 idle, 공격 시 attack이 우선) */
+.rd-unit.moving .rd-sprite { animation: rd-walk 0.42s ease-in-out infinite; }
 .rd-unit.fire .rd-sprite { animation: rd-attack 0.24s ease-out; }
 @keyframes rd-attack {
   25% { transform: translateX(-50%) translateY(-6px) scale(1.14, 0.9) rotate(-4deg); }
