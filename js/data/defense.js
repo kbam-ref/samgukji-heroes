@@ -23,6 +23,7 @@ export const DEFENSE = {
 
   // ── 진행 — 총 50단계, 단계당 적 100 → 총 5000. 50 클리어 = 승리(단, 영구성장 전제) ──
   stages: 50,
+  buildCap: 10, // 현재 플레이 가능 상한(임시) — 신규 적 아트(50+보스) 준비 전까진 10라운드까지만.
 
   wave: {
     perStage: 100, // 스테이지당 적 수 (일반 98 + 보스 스테이지엔 보스 2 포함, 아래 boss 참고)
@@ -177,6 +178,13 @@ export const HERO_SIZE_ROLE = {
   lvbu: 'anti-large', zhangfei: 'anti-large', huaxiong: 'anti-large', zhoucang: 'anti-large',
   chengpu: 'anti-large', guanyu: 'anti-large', caohong: 'anti-large', yujin: 'anti-large',
 };
+
+// 임시 적 아트 — 신규 적 아트(50라운드+보스) 나오기 전, 기존 스프라이트(assets/enemies-cut) 재사용.
+// 스테이지마다 순환 배정, 보스는 별도. (stages.js의 foeArt/bossArt id와 동일)
+export const ENEMY_SPRITES = [
+  'yellow-turban', 'dong-soldier', 'warlord-soldier', 'yuan-soldier', 'wu-soldier', 'nanman-soldier',
+];
+export const BOSS_SPRITE = 'zhangjiao';
 
 // 등급별 소환 후보(영웅 id). 소환·합성 시 등급 안에서 랜덤 1명.
 export const SUMMON_POOL = [1, 2, 3, 4, 5].reduce((pool, r) => {

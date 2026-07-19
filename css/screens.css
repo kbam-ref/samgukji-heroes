@@ -1874,6 +1874,109 @@
     rgba(11, 10, 8, 0.92);
 }
 
+/* ══ 삼국지 랜덤 디펜스 (v61) ══ */
+.rd-screen { display: flex; flex-direction: column; height: 100%; padding: 10px 0 8px; gap: 10px; }
+.rd-hud { display: flex; justify-content: space-around; align-items: center; padding: 0 16px; }
+.rd-stat { display: flex; flex-direction: column; align-items: center; line-height: 1.05; }
+.rd-stat b { font-size: 20px; font-weight: 800; color: var(--paper); font-variant-numeric: tabular-nums; }
+.rd-stat span { font-size: 10px; color: var(--paper-faint); letter-spacing: 0.04em; }
+.rd-stat.rd-gold b { color: var(--gold-bright); }
+.rd-stat.rd-alive.danger b { color: var(--alert); animation: rd-pulse 0.7s ease-in-out infinite; }
+@keyframes rd-pulse { 50% { opacity: 0.5; } }
+
+.rd-field {
+  position: relative;
+  flex: 1;
+  margin: 0 14px;
+  border-radius: 12px;
+  background:
+    radial-gradient(ellipse at 50% 40%, rgba(60, 52, 40, 0.5), rgba(14, 12, 9, 0.9)),
+    var(--ink-950);
+  border: 1px solid var(--ink-600);
+  overflow: hidden;
+  touch-action: none;
+}
+.rd-track {
+  position: absolute;
+  border: 2px dashed rgba(201, 162, 39, 0.34);
+  border-radius: 10px;
+  background: rgba(120, 96, 60, 0.07);
+  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.4);
+}
+.rd-units, .rd-enemies, .rd-over { position: absolute; inset: 0; }
+.rd-units { pointer-events: none; }
+.rd-enemies { pointer-events: none; }
+
+/* 유닛(소환한 영웅) */
+.rd-unit { position: absolute; left: 0; top: 0; width: 0; height: 0; will-change: transform; }
+.rd-unit .rd-sprite {
+  position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
+  width: 34px; height: 42px; object-fit: contain; object-position: bottom;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5));
+}
+.rd-unit.r5 .rd-sprite { filter: drop-shadow(0 0 6px rgba(228, 197, 92, 0.7)) drop-shadow(0 2px 2px rgba(0,0,0,0.5)); }
+.rd-unit.r4 .rd-sprite { filter: drop-shadow(0 0 5px rgba(156, 107, 192, 0.6)) drop-shadow(0 2px 2px rgba(0,0,0,0.5)); }
+.rd-unit .rd-elem {
+  position: absolute; left: 50%; bottom: 40px; transform: translateX(-50%);
+  width: 7px; height: 7px; border-radius: 50%; box-shadow: 0 0 3px rgba(0,0,0,0.6);
+}
+.rd-unit.fire .rd-sprite { animation: rd-fire 0.16s ease-out; }
+@keyframes rd-fire { 40% { transform: translateX(-50%) scale(1.16, 0.9); } }
+
+/* 적 — 트랙을 걸어서 돈다 */
+.rd-enemy { position: absolute; left: 0; top: 0; width: 0; height: 0; will-change: transform; z-index: 2; }
+.rd-enemy .rd-sprite {
+  position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
+  width: calc(30px * var(--sz, 1)); height: calc(38px * var(--sz, 1));
+  object-fit: contain; object-position: bottom;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.55));
+  animation: rd-walk 0.5s ease-in-out infinite;
+}
+.rd-enemy.boss .rd-sprite { filter: drop-shadow(0 0 8px rgba(200, 60, 48, 0.7)) drop-shadow(0 3px 3px rgba(0,0,0,0.6)); }
+@keyframes rd-walk {
+  0%, 100% { transform: translateX(-50%) translateY(0) rotate(-2deg); }
+  50% { transform: translateX(-50%) translateY(-3px) rotate(2deg); }
+}
+/* 머리 위 남은 체력 숫자 */
+.rd-enemy .rd-hp {
+  position: absolute; left: 50%; bottom: calc(38px * var(--sz, 1) + 2px); transform: translateX(-50%);
+  font-size: 9px; font-weight: 800; font-style: normal; white-space: nowrap;
+  color: #ffe9c8; text-shadow: 0 1px 2px #000, 0 0 3px #000;
+  font-variant-numeric: tabular-nums;
+}
+.rd-enemy.boss .rd-hp { font-size: 11px; color: #ffd0c0; }
+/* 속성 점 */
+.rd-enemy .rd-elem {
+  position: absolute; left: 50%; bottom: -2px; transform: translateX(-50%);
+  width: 6px; height: 6px; border-radius: 50%; box-shadow: 0 0 3px rgba(0,0,0,0.7);
+}
+/* 피격 액션 — 번쩍이며 뒤로 움찔 */
+.rd-enemy.hit .rd-sprite { animation: rd-enemy-hit 0.18s ease-out; }
+@keyframes rd-enemy-hit {
+  0% { filter: brightness(2.4) saturate(0.5); }
+  40% { transform: translateX(-50%) scale(1.18, 0.84) rotate(-6deg); filter: brightness(1.9); }
+  100% { transform: translateX(-50%); filter: none; }
+}
+
+/* 컨트롤 */
+.rd-controls { display: flex; justify-content: center; padding: 0 16px; }
+.rd-summon { min-width: 200px; min-height: 54px; gap: 2px; }
+.rd-summon.can-buy { animation: hs-primary-glow 2s var(--ease-out) infinite; }
+.rd-summon b { font-size: 17px; font-weight: 800; }
+.rd-summon.shake { animation: shake 0.3s; }
+
+/* 게임오버·승리 */
+.rd-over {
+  display: flex; align-items: center; justify-content: center; z-index: 20;
+  background: radial-gradient(ellipse at center, rgba(12, 9, 6, 0.82), rgba(6, 5, 4, 0.94));
+  animation: rd-veil 0.3s ease-out;
+}
+@keyframes rd-veil { from { opacity: 0; } }
+.rd-over-card { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; padding: 24px; }
+.rd-over-card b { font-family: var(--font-display); font-size: 30px; color: var(--gold-bright); letter-spacing: 0.06em; }
+.rd-over-card span { font-size: 13px; color: var(--paper-dim); }
+.rd-over-card .btn { margin-top: 8px; min-width: 160px; }
+
 /* ── 전장 대형·크기 (v46) — 캐릭터를 줄이고 V자 웨지로 세워 전장을 넓게 쓴다 ── */
 
 /* 배우 크기 축소 — 화면이 답답하지 않게, 대신 대형과 배경으로 무게를 준다 */
