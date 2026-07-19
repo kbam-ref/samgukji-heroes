@@ -76,7 +76,7 @@ function rowHtml({ id, def, hs }, index = 0) {
   const canStar = !maxedStars && hs.dupes >= dupeCost;
 
   return `
-  <li class="hero-row f-${def.faction}" data-id="${id}" style="--i:${Math.min(index, 8)}">
+  <li class="hero-row f-${def.faction}${inParty ? ' in-party' : ''}" data-id="${id}" style="--i:${Math.min(index, 8)}">
     ${portraitHtml(id, `row-portrait frame-r${def.rarity}`)}
     <div class="row-info">
       <div class="row-name">

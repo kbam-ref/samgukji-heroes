@@ -384,7 +384,9 @@ button, .tab, .hero-row, .codex-card { touch-action: manipulation; } /* 더블�
   from { opacity: 0; }
 }
 @keyframes sheet-up {
-  from { transform: translateY(48px); opacity: 0.4; }
+  0%   { transform: translateY(52px); opacity: 0.3; }
+  72%  { transform: translateY(-5px); opacity: 1; } /* 살짝 지나쳤다가 — 탄성 */
+  100% { transform: translateY(0); }
 }
 
 .modal-title { font-size: 17px; font-weight: 800; margin-bottom: 10px; }

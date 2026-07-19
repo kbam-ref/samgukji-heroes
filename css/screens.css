@@ -1414,3 +1414,35 @@
 .gear-info b { font-size: 13px; }
 .gear-info span { font-size: 10px; color: var(--paper-dim); }
 .gear-up { min-height: 40px; padding: 4px 10px; flex: none; }
+
+/* ── 폴리시 1차 (2026-07-19) ── */
+
+/* 출전 중인 장수 행 — 한눈에 보인다 */
+.hero-row.in-party {
+  border-color: rgba(201, 162, 39, 0.45);
+  background:
+    linear-gradient(90deg, rgba(201, 162, 39, 0.08), transparent 45%),
+    linear-gradient(180deg, #241d15, #1a150f);
+}
+
+/* 모집 깃발 뒷면 — 문양(마름모 금테)으로 기대감 */
+.pf-back::after {
+  content: '';
+  position: absolute;
+  top: calc(50% - 15px);
+  left: calc(50% - 15px);
+  width: 30px;
+  height: 30px;
+  border: 2px solid rgba(201, 162, 39, 0.42);
+  transform: rotate(45deg);
+}
+.pf-back::before {
+  content: '';
+  position: absolute;
+  top: calc(50% - 4px);
+  left: calc(50% - 4px);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(228, 197, 92, 0.5);
+}

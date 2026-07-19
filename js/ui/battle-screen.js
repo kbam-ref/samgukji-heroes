@@ -10,7 +10,7 @@ import { partyPower, heroDef, bondBonus } from '../systems/growth.js';
 import { BALANCE } from '../data/balance.js';
 import { RIVAL_LINES, RIVAL_LINE_DEFAULT } from '../data/rivals.js';
 import { fmt } from './format.js';
-import { floatText, pulse, shake, countUp, burst, flash } from './effects.js';
+import { floatText, pulse, shake, countUp, burst, flash, flyCoins } from './effects.js';
 import { play, vibrate, setBgmMood } from './sound.js';
 import { portraitHtml } from './portrait.js';
 import * as tower from '../systems/tower.js';
@@ -468,7 +468,10 @@ export function render(root) {
     lastTap = now;
     const coins = battle.tapReward();
     play('tap');
-    if (coins > 0) floatText(e.clientX, e.clientY, `+${fmt(coins)}`, 'gold');
+    if (coins > 0) {
+      floatText(e.clientX, e.clientY, `+${fmt(coins)}`, 'gold');
+      flyCoins(e.clientX, e.clientY, 2);
+    }
     pulse(field, 'field-tap');
   });
 
@@ -643,7 +646,10 @@ export function render(root) {
         pulse(lineEl);
       }
       const at = foeAnchor();
-      if (at) floatText(at.x, at.y - 6, `+${fmt(coins)}`, 'gold');
+      if (at) {
+        floatText(at.x, at.y - 6, `+${fmt(coins)}`, 'gold');
+        flyCoins(at.x, at.y + 26, 3); // 엽전이 자원바로 날아간다
+      }
       // 우두머리 직전 — 북이 울린다 (긴장 빌드업)
       if (kills === BALANCE.battle.killsPerStage - 1 && battle.canBeatBoss(getState())) {
         const fieldEl = document.getElementById('bs-field');

@@ -21,6 +21,31 @@ export function floatText(x, y, text, cls = '') {
   setTimeout(() => el.remove(), life);
 }
 
+/** 엽전이 획득 지점에서 상단 자원바로 날아간다 — "벌었다"가 몸으로 느껴지는 연출 */
+export function flyCoins(x, y, n = 4) {
+  if (reducedMotion) return;
+  const layer = fxLayer();
+  const target = document.querySelector('#res-coin svg');
+  if (!layer || !target) return;
+  if (layer.childElementCount > 40) return;
+  const t = target.getBoundingClientRect();
+  for (let i = 0; i < n; i++) {
+    const c = document.createElement('i');
+    c.className = 'fly-coin';
+    const sx = x + (Math.random() * 34 - 17);
+    const sy = y + (Math.random() * 22 - 11);
+    c.style.left = `${sx}px`;
+    c.style.top = `${sy}px`;
+    c.style.setProperty('--tx', `${t.left + t.width / 2 - sx}px`);
+    c.style.setProperty('--ty', `${t.top + t.height / 2 - sy}px`);
+    c.style.animationDelay = `${i * 45}ms`;
+    layer.appendChild(c);
+    setTimeout(() => c.remove(), 720 + i * 45);
+  }
+  // 도착하는 타이밍에 자원바가 살짝 부푼다
+  setTimeout(() => pulse(document.getElementById('res-coin')), 480);
+}
+
 /** 요소의 숫자를 from → to로 굴려 올린다. */
 export function countUp(el, from, to, { duration = 500, format = (v) => String(v) } = {}) {
   if (!el) return;

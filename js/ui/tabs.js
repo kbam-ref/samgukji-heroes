@@ -58,6 +58,12 @@ export function switchTo(id, navRoot, screenRoot, { push = true } = {}) {
   const tab = TABS.find((t) => t.id === id);
   if (!tab || active === id) return;
 
+  // 이동 방향대로 화면이 밀려 들어온다 — 오른쪽 탭이면 오른쪽에서
+  const fromIdx = TABS.findIndex((t) => t.id === active);
+  const toIdx = TABS.findIndex((t) => t.id === id);
+  screenRoot.classList.remove('from-left', 'from-right');
+  if (fromIdx !== -1) screenRoot.classList.add(toIdx > fromIdx ? 'from-right' : 'from-left');
+
   const prev = TABS.find((t) => t.id === active);
   if (prev && prev.screen.destroy) prev.screen.destroy();
 

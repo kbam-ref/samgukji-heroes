@@ -293,6 +293,9 @@
   .shake,
   .battlefield.shake-hit,
   .battlefield.shake-big,
+  .fly-coin,
+  #screen-root.from-right .screen,
+  #screen-root.from-left .screen,
   .ally-unit.jab,
   .rig-upper,
   .ally-unit.jab .rig-upper,
@@ -354,3 +357,26 @@
   height: 5px;
   filter: drop-shadow(0 0 8px rgba(255, 215, 94, 0.8));
 }
+
+/* 날아가는 엽전 — 획득 지점에서 자원바로 (WebAudio 짤랑과 도착 펄스가 짝) */
+.fly-coin {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #f5e08a, #d4af37 55%, #8a6d16);
+  box-shadow: 0 0 6px rgba(228, 197, 92, 0.55);
+  pointer-events: none;
+  animation: fly-coin 0.62s cubic-bezier(0.4, -0.1, 0.6, 1) forwards;
+}
+@keyframes fly-coin {
+  0%   { transform: translate(0, 0) scale(0.5); opacity: 0; }
+  18%  { transform: translate(0, -10px) scale(1.05); opacity: 1; }
+  100% { transform: translate(var(--tx, 0), var(--ty, -300px)) scale(0.45); opacity: 0.9; }
+}
+
+/* 탭 전환 방향성 — 오른쪽 탭으로 가면 오른쪽에서, 왼쪽 탭이면 왼쪽에서 들어온다 */
+#screen-root.from-right .screen { animation: in-right 0.3s var(--ease-out); }
+#screen-root.from-left .screen { animation: in-left 0.3s var(--ease-out); }
+@keyframes in-right { from { opacity: 0; transform: translateX(28px); } }
+@keyframes in-left  { from { opacity: 0; transform: translateX(-28px); } }
