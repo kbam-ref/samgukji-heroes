@@ -105,7 +105,13 @@ function rowHtml({ id, def, hs }, index = 0) {
 }
 
 function listHtml(s) {
-  return ownedSorted(s).map(rowHtml).join('');
+  const rows = ownedSorted(s).map(rowHtml).join('');
+  // 로스터가 휑할 땐 빈 공간에 목적을 준다 — 다음 장수를 모으러 가는 문
+  const ghost =
+    ownedSorted(s).length < 8
+      ? `<li class="hero-row ghost-row"><span>다음 장수를 모집하러 가기 →</span></li>`
+      : '';
+  return rows + ghost;
 }
 
 export function render(root) {
@@ -135,13 +141,15 @@ export function render(root) {
     </div>
     <div class="mini-head">인연 — 함께 서면 강해진다</div>
     <div class="bond-list" id="hs-bonds">${bondsHtml(s)}</div>
-    <div class="mini-head">세력 군령 — 도감을 완성한 세력의 힘</div>
-    <div class="order-list" id="hs-orders">${ordersHtml(s)}</div>
+    ${orderList(s).some((e) => e.unlocked)
+      ? `<div class="mini-head">세력 군령 — 도감을 완성한 세력의 힘</div>
+         <div class="order-list" id="hs-orders">${ordersHtml(s)}</div>`
+      : `<div class="order-empty">세력 군령 0/4 ‧ 한 세력의 도감을 완성하면 열립니다</div>`}
     <ul class="hero-list" id="hs-list">${listHtml(s)}</ul>
   </section>`
   );
 
-  document.getElementById('hs-orders').addEventListener('click', (e) => {
+  document.getElementById('hs-orders')?.addEventListener('click', (e) => {
     const chip = e.target.closest('.order-chip');
     if (!chip) return;
     const wasActive = getState().orders?.active === chip.dataset.order;
@@ -253,6 +261,10 @@ export function render(root) {
   const list = document.getElementById('hs-list');
 
   list.addEventListener('click', (e) => {
+    if (e.target.closest('.ghost-row')) {
+      document.querySelector('.tab[data-tab="gacha"]')?.click();
+      return;
+    }
     const starBtn = e.target.closest('button.star-up');
     if (starBtn) {
       const id = starBtn.dataset.id;

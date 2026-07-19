@@ -18,6 +18,7 @@ function cardHtml(hero, owned, s, index = 0) {
     return `
     <div class="codex-card locked" ${stagger}>
       ${portraitHtml(hero.id, 'codex-portrait silhouette')}
+      <span class="codex-q" aria-hidden="true">?</span>
       <b class="codex-name">${hero.name}</b>
       <em class="codex-rarity r${hero.rarity}">${RARITY[hero.rarity].name}</em>
     </div>`;

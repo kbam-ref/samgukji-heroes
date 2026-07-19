@@ -233,7 +233,10 @@ export function render(root) {
       </div>
       <p class="settings-note">별을 다 채운 장수의 남는 중복을 조각으로 바꾸고, 조각으로 <b>원하는 장수를 지명해</b> 데려옵니다.</p>
       <button class="btn" id="sh-release">중복 장수 방출<span id="sh-release-note"></span></button>
-      <div class="shard-grid" id="sh-grid">${shardGridHtml(s)}</div>
+      <details class="shard-fold"${(s.resources.shard ?? 0) > 0 ? ' open' : ''}>
+        <summary class="mini-head">장수 지명 교환 — 조각으로 원하는 장수를 데려온다</summary>
+        <div class="shard-grid" id="sh-grid">${shardGridHtml(s)}</div>
+      </details>
     </div>
   </section>`
   );

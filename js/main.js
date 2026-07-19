@@ -113,7 +113,17 @@ function boot() {
         {
           label: '10회 모집하러 가기',
           primary: true,
-          onClick: () => document.querySelector('.tab[data-tab="gacha"]')?.click(),
+          onClick: () => {
+            document.querySelector('.tab[data-tab="gacha"]')?.click();
+            // 도착하면 10연 버튼이 빛나며 "여기"라고 알려준다
+            setTimeout(() => {
+              const btn = document.querySelector('.pull-btn[data-count="10"]');
+              if (btn) {
+                btn.classList.add('ftue-glow');
+                setTimeout(() => btn.classList.remove('ftue-glow'), 6000);
+              }
+            }, 420);
+          },
         },
         { label: '나중에' },
       ],

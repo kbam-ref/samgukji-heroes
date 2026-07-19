@@ -380,3 +380,16 @@
 #screen-root.from-left .screen { animation: in-left 0.3s var(--ease-out); }
 @keyframes in-right { from { opacity: 0; transform: translateX(28px); } }
 @keyframes in-left  { from { opacity: 0; transform: translateX(-28px); } }
+
+/* 자원바 — 획득 순간 금빛으로 부푼다 */
+.resource.pulse { animation: pulse-pop 0.3s ease-out, res-glow 0.55s ease-out; }
+@keyframes res-glow {
+  30% { box-shadow: inset 0 1px 0 rgba(239, 230, 210, 0.06), 0 0 14px rgba(228, 197, 92, 0.5); }
+}
+
+/* 온보딩 — 10연 버튼 유도 발광 */
+.ftue-glow {
+  outline: 2px solid rgba(228, 197, 92, 0.55);
+  outline-offset: 3px;
+  animation: cta-breathe 1.2s ease-in-out infinite;
+}

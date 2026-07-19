@@ -3,6 +3,7 @@
 export function showModal({ title, body, actions = [], dismissible = true }) {
   const root = document.getElementById('modal-root');
   root.innerHTML = '';
+  document.body.classList.add('modal-open'); // 모달이 떠 있는 동안 하단 탭을 감춘다 (겹침 방지)
 
   const backdrop = document.createElement('div');
   backdrop.className = 'modal-backdrop';
@@ -25,6 +26,7 @@ export function showModal({ title, body, actions = [], dismissible = true }) {
 
   const close = () => {
     root.innerHTML = '';
+    document.body.classList.remove('modal-open');
   };
 
   if (actions.length > 0) {

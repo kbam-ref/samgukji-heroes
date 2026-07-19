@@ -1473,3 +1473,96 @@
   -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 12px, #000 100%);
   mask-image: linear-gradient(180deg, transparent 0, #000 12px, #000 100%);
 }
+
+/* 미보유 카드 — 세로 낙관풍 '미발견' 도장 */
+.codex-card.locked::after {
+  content: '미발견';
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  writing-mode: vertical-rl;
+  letter-spacing: 0.22em;
+  font-size: 9px;
+  color: rgba(208, 133, 115, 0.55);
+  border: 1px solid rgba(208, 133, 115, 0.3);
+  border-radius: 2px;
+  padding: 5px 2px;
+}
+
+/* ── 출시 심사 반영 (v34) ── */
+
+/* #3 단어 중간 줄바꿈 금지 */
+.gear-info { flex: 1 1 auto; min-width: 0; }
+.gear-info span { word-break: keep-all; line-height: 1.35; }
+
+/* #7 2차 요소 표면 통일 — 헤어라인·하이라이트 토큰 */
+.gear-cell,
+.attend-cell,
+.order-chip,
+.bond-chip,
+.q-row {
+  border-color: #3a3128;
+  box-shadow: inset 0 1px 0 rgba(239, 230, 210, 0.04);
+}
+.bond-chip:not(.on) { border-color: rgba(201, 162, 39, 0.18); }
+
+/* #8 잠긴 군령 요약 */
+.order-empty {
+  font-size: 11px;
+  color: var(--paper-faint);
+  border: 1px dashed var(--ink-600);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 4px;
+}
+
+/* #2 잠금 카드 물음표 — 실루엣이 '깨진 그림'이 아니라 '수수께끼'로 */
+.codex-q {
+  position: absolute;
+  top: 32%;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 800;
+  color: rgba(239, 230, 210, 0.42);
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+}
+
+/* #5 원근 잡졸 셋째 */
+.back-mob.m3 { right: 21%; bottom: 60%; width: 30px; height: 38px; opacity: 0.4; animation-delay: -2.6s; }
+
+/* #9 명성 전당 — 4열로 키워 판독성, 접이식 */
+.shard-grid { grid-template-columns: repeat(4, 1fr); }
+.shard-fold summary { cursor: pointer; list-style: none; }
+.shard-fold summary::-webkit-details-marker { display: none; }
+.shard-fold summary::after { content: ' ▾'; color: var(--paper-faint); }
+.shard-fold[open] summary::after { content: ' ▴'; }
+
+/* #12 게이지 강화·죽은 공백 회수 */
+.kill-bar { height: 8px; }
+.battle-hint { min-height: 0; }
+.battle-screen { gap: 10px; }
+
+/* 유령 모집 행 — 빈 로스터에 목적 */
+.hero-row.ghost-row {
+  justify-content: center;
+  border-style: dashed;
+  background: none;
+  box-shadow: none;
+  color: var(--paper-faint);
+  font-size: 13px;
+  cursor: pointer;
+  min-height: 64px;
+}
+.hero-row.ghost-row:active { color: var(--gold-bright); }
+
+/* 출석 셀 — 재화 단위 명시 */
+.attend-cell span::after {
+  content: '옥';
+  font-size: 8px;
+  margin-left: 1px;
+  color: var(--paper-faint);
+}

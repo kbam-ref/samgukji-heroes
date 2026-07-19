@@ -160,7 +160,7 @@ function template(s) {
         <i class="fog"></i>
         ${Array.from({ length: 6 }, (_, i) => `<i class="ember" style="--x:${10 + i * 14}%; --d:-${(i * 2.3).toFixed(1)}s"></i>`).join('')}
       </div>
-      <div class="scroll-strip" aria-hidden="true" id="bs-scroll">${stage.name}</div>
+      <div class="scroll-strip" aria-hidden="true" id="bs-scroll">${chapter.name}</div>
 
       <div class="foe down" id="bs-foe">
         <div class="unit-hp foe-hp"><i id="bs-foe-hp" style="width:100%"></i></div>
@@ -172,6 +172,7 @@ function template(s) {
       <div class="foe-backline" aria-hidden="true">
         <img class="portrait back-mob m1" src="./assets/enemies-cut/${chapter.foeArt}.png" alt="">
         <img class="portrait back-mob m2" src="./assets/enemies-cut/${chapter.foeArt}.png" alt="">
+        <img class="portrait back-mob m3" src="./assets/enemies-cut/${chapter.foeArt}.png" alt="">
       </div>` : ''}
 
       <div class="ally-line" id="bs-allies">${alliesHtml()}</div>
