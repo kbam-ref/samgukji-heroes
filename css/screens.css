@@ -1821,13 +1821,15 @@
 /* 배경 스크롤 레이어 — 세상이 늘 흐른다 (JS가 backgroundPosition을 민다).
    전투 중엔 아주 느리게, 행군 중엔 빠르게 — 멈춘 세계로 보이지 않게 (v46) */
 /* background-image는 인라인으로 직접 지정한다(템플릿) — 커스텀 속성 안 상대경로 url()을
-   크로미움이 CSS 파일 기준(/css/assets/…)으로 잘못 해석해 404 나던 문제를 근본 수리 (v46) */
+   크로미움이 CSS 파일 기준(/css/assets/…)으로 잘못 해석해 404 나던 문제를 근본 수리 (v46).
+   사진이 이어붙지 않아 repeat-x는 이음새가 보였다 — 한 장으로 꽉 채워 고정하고(cover),
+   '움직이는' 느낌은 이음매 없는 근경 지면 패럴럭스가 담당한다 (v52) */
 .field-bg {
   position: absolute;
   inset: 0;
-  background-repeat: repeat-x;
-  background-size: auto 100%;
-  background-position: 0 42%;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center 38%;
 }
 
 /* 근경 지면 레이어 — 원경(field-bg)보다 빠르게 흘러 원근(패럴럭스) 깊이를 만든다.

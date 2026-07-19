@@ -11,7 +11,7 @@ import { BALANCE } from '../data/balance.js';
 import { RIVAL_LINES, RIVAL_LINE_DEFAULT } from '../data/rivals.js';
 import { fmt } from './format.js';
 import { floatText, pulse, shake, countUp, burst, flash, flyCoins } from './effects.js';
-import { play, vibrate, setBgmMood } from './sound.js';
+import { play, vibrate, setBgmMood, playHit, playFoeStrike, playHoof } from './sound.js';
 import { portraitHtml } from './portrait.js';
 import * as tower from '../systems/tower.js';
 import { openTower } from './tower-modal.js';
@@ -118,6 +118,17 @@ function isBlocked(s) {
 function chapterBand(s = getState()) {
   const chapter = battle.currentChapter(s);
   return ['#C8A93A', '#8A3A34', '#7A6A9E', '#4F6FA0'][(chapter.id - 1) % 4];
+}
+
+/** 적의 갑주에 따른 타격음 프로필 — 역사적 병종에 맞춘 소리 (칼·갑옷·가죽·묵직) */
+function enemyHitProfile(s, enemy) {
+  if (!enemy) return 'armor';
+  if (enemy.rival) return 'blade'; // 숙적 영웅 — 검 대 검
+  if (enemy.boss) return 'heavy';  // 우두머리 — 묵직한 일격
+  const art = battle.currentChapter(s).foeArt;
+  if (art === 'yellow-turban') return 'cloth'; // 황건적 — 농기구·천, 쇳소리 없음
+  if (art === 'nanman-soldier') return 'hide';  // 남만 — 가죽·뼈
+  return 'armor'; // 정규 병사 — 갑옷·검
 }
 
 /** 적의 그림 결정 — 숙적 영웅 > 우두머리 전용 아트 > 장 잡병 아트 > (비상) 그림자 SVG */
@@ -735,10 +746,9 @@ export function render(root) {
             heavy ? 'crit' : 'dmg'
           );
         }
-        if (heavy) {
-          vibrate(15);
-          play('hit'); // 강타에만 — 평타마다 울리면 피로하다
-        }
+        // 적의 갑주에 맞는 타격음 — 검이 닿는 바로 그 프레임에 (싱크). 평타는 내부에서 솎아낸다.
+        playHit(enemyHitProfile(getState(), battle.currentEnemy()), { heavy });
+        if (heavy) vibrate(15);
       }, F.impactMs);
     }),
 
@@ -762,7 +772,7 @@ export function render(root) {
           `-${fmt(damage)}`,
           'foe-dmg'
         );
-        play('foehit');
+        playFoeStrike(boss); // 아군이 막아내는 둔탁한 충돌 — 우두머리는 묵직하게
         if (boss) {
           shakeField(field, BALANCE.feel.shakeHit);
           vibrate(10); // 우두머리의 일격만 손에 전해진다
@@ -914,13 +924,11 @@ export function render(root) {
     })
   );
 
-  // 전장 게이지 + 배경 스크롤 — 요소 참조는 한 번만 잡는다 (저사양 기기 보호)
+  // 전장 게이지 + 근경 패럴럭스 — 요소 참조는 한 번만 잡는다 (저사양 기기 보호)
   const gaugeFill = document.getElementById('bs-kill-fill');
-  const fieldBg = document.getElementById('bs-field-bg');
-  const fieldGround = document.getElementById('bs-field-ground'); // 근경 패럴럭스
+  const fieldGround = document.getElementById('bs-field-ground'); // 근경 지면(이음매 없는 CSS 패턴)
   let gaugeLast = -1;
-  let farOffset = 0;   // 원경(하늘·먼 산) — 느리게
-  let nearOffset = 0;  // 근경(지면) — 원경보다 빠르게 → 깊이감
+  let nearOffset = 0;  // 근경 지면 스크롤 — 나아가는 느낌
   let dustTick = 0;
   function gauge() {
     if (gaugeFill) {
@@ -936,20 +944,18 @@ export function render(root) {
         gaugeFill.style.width = `${rounded}%`;
       }
     }
-    // 세상은 늘 흐른다 — 전투 중엔 미세하게, 행군 중엔 빠르게.
-    // 근경(지면)이 원경(배경)보다 빠르게 흘러 '진짜 나아가는' 원근을 만든다.
+    // 배경 사진(원경)은 이어붙지 않으므로 고정(cover) — 스크롤하면 이음새·빈틈이 보인다.
+    // '움직이는' 느낌은 이음매 없는 근경 지면 패럴럭스가 담당한다. 전투 중엔 미세, 행군 중엔 빠르게.
     const marching = field.classList.contains('marching');
     const speed = getState().settings?.speed || 1;
-    const farStep = (marching ? 3.4 : 0.28) * speed;
-    farOffset = (farOffset + farStep) % 8192;
-    if (fieldBg) fieldBg.style.backgroundPosition = `${-farOffset}px 42%`;
     if (fieldGround) {
-      nearOffset = (nearOffset + farStep * 2.1) % 4096; // 근경은 2.1배 빠르게
+      nearOffset = (nearOffset + (marching ? 6.2 : 0.5) * speed) % 4096;
       fieldGround.style.backgroundPosition = `${-nearOffset}px bottom`;
     }
-    // 행군 중엔 발밑에서 흙먼지가 인다
+    // 행군 중엔 발밑에서 흙먼지가 일고, 말발굽 소리가 저벅저벅 (말을 타고 나아가는 감각)
     if (marching && ++dustTick >= 12) {
       dustTick = 0;
+      playHoof();
       const line = document.getElementById('bs-allies');
       const units = line ? line.children : [];
       if (units.length) {

@@ -185,6 +185,135 @@ function flute(freq, time, dur = 0.7, vol = 0.08) {
   lfo.stop(time + dur + 0.05);
 }
 
+// ── 전투 타격음 — 적의 갑주·무기에 따라 다른 소리 (외부 에셋 없이 합성) ──
+
+/** 쇳소리 — 검이 갑옷·칼에 부딪는 금속 충돌 (여러 배음 + 짧은 노이즈 트랜지언트) */
+function clang(time, vol = 0.16, dest = sfxGain) {
+  if (!ctx || !dest) return;
+  // 금속의 비조화 배음 — 살짝 어긋난 고음들이 '쨍'
+  for (const [f, v, d] of [[2100, 1, 0.18], [3170, 0.6, 0.14], [4300, 0.4, 0.1], [5600, 0.25, 0.08]]) {
+    const osc = ctx.createOscillator();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(f * (1 + (Math.random() - 0.5) * 0.02), time);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, time);
+    g.gain.exponentialRampToValueAtTime(vol * v, time + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, time + d);
+    osc.connect(g).connect(dest);
+    osc.start(time);
+    osc.stop(time + d + 0.02);
+  }
+  // 부딪는 순간의 딱딱한 트랜지언트
+  const src = ctx.createBufferSource();
+  src.buffer = noiseBuffer();
+  const hp = ctx.createBiquadFilter();
+  hp.type = 'highpass';
+  hp.frequency.value = 2600;
+  const ng = ctx.createGain();
+  ng.gain.setValueAtTime(vol * 0.5, time);
+  ng.gain.exponentialRampToValueAtTime(0.0001, time + 0.04);
+  src.connect(hp).connect(ng).connect(dest);
+  src.start(time);
+  src.stop(time + 0.05);
+}
+
+/** 둔탁한 타격 — 천·나무·살(무장 없는 잡졸) : 쇳소리 없이 묵직한 '퍽' */
+function thud(time, vol = 0.18, dest = sfxGain) {
+  if (!ctx || !dest) return;
+  const src = ctx.createBufferSource();
+  src.buffer = noiseBuffer();
+  const lp = ctx.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.value = 420;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(vol, time);
+  g.gain.exponentialRampToValueAtTime(0.0001, time + 0.11);
+  src.connect(lp).connect(g).connect(dest);
+  src.start(time);
+  src.stop(time + 0.12);
+  // 나무 막대가 부딪는 낮은 톡
+  const osc = ctx.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(180, time);
+  osc.frequency.exponentialRampToValueAtTime(90, time + 0.08);
+  const og = ctx.createGain();
+  og.gain.setValueAtTime(vol * 0.7, time);
+  og.gain.exponentialRampToValueAtTime(0.0001, time + 0.1);
+  osc.connect(og).connect(dest);
+  osc.start(time);
+  osc.stop(time + 0.11);
+}
+
+/** 원시적 타격 — 가죽·뼈(남만) : 가죽 북 같은 둔탁함 + 뼈 부딪는 딱 */
+function hideHit(time, vol = 0.18, dest = sfxGain) {
+  if (!ctx || !dest) return;
+  thud(time, vol * 0.8, dest);
+  const osc = ctx.createOscillator();
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(620, time);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, time);
+  g.gain.exponentialRampToValueAtTime(vol * 0.5, time + 0.003);
+  g.gain.exponentialRampToValueAtTime(0.0001, time + 0.05);
+  osc.connect(g).connect(dest);
+  osc.start(time);
+  osc.stop(time + 0.06);
+}
+
+/** 말발굽 — 행군 중 부대가 달리는 저벅저벅 (2연타로 '다그닥') */
+function hoof(time, vol = 0.09, dest = sfxGain) {
+  if (!ctx || !dest) return;
+  for (const off of [0, 0.06]) {
+    const src = ctx.createBufferSource();
+    src.buffer = noiseBuffer();
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = 160;
+    bp.Q.value = 1.4;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(vol * (off ? 0.8 : 1), time + off);
+    g.gain.exponentialRampToValueAtTime(0.0001, time + off + 0.05);
+    src.connect(bp).connect(g).connect(dest);
+    src.start(time + off);
+    src.stop(time + off + 0.06);
+  }
+}
+
+let lastHitAt = 0;
+/** 아군의 타격 — 적의 갑주 종류(profile)에 따라 소리가 다르다. 강타는 크게, 평타는 솎아낸다. */
+export function playHit(profile = 'armor', { heavy = false } = {}) {
+  if (!ctx || !soundOn()) return;
+  const t = ctx.currentTime;
+  // 초당 여러 타여도 소리벽이 되지 않게 평타는 살짝 솎는다 (강타는 항상)
+  if (!heavy && t - lastHitAt < 0.085) return;
+  lastHitAt = t;
+  const v = heavy ? 1 : 0.5;
+  whoosh(t, 0.1 * v, 2100, 420, 0.06); // 칼이 지나는 바람
+  switch (profile) {
+    case 'cloth': thud(t + 0.016, 0.17 * v); break;                                   // 황건적 등 잡졸
+    case 'hide':  hideHit(t + 0.016, 0.19 * v); break;                                // 남만
+    case 'heavy': clang(t + 0.02, 0.17 * v); drum(t + 0.02, 0.22 * v, 58, sfxGain); break; // 우두머리
+    case 'blade': clang(t + 0.014, 0.2 * v); whoosh(t + 0.05, 0.08 * v, 3200, 900, 0.05); break; // 숙적(검 대 검)
+    case 'armor':
+    default:      clang(t + 0.016, 0.16 * v); break;                                  // 갑옷 병사
+  }
+  if (heavy) drum(t + 0.03, 0.12, 118, sfxGain); // 강타엔 무게를 더한다
+}
+
+/** 적의 반격 — 아군이 막아내는 둔탁한 충돌(방패·몸받이). 우두머리는 더 묵직하게. */
+export function playFoeStrike(boss = false) {
+  if (!ctx || !soundOn()) return;
+  const t = ctx.currentTime;
+  thud(t, boss ? 0.22 : 0.13, sfxGain);
+  if (boss) drum(t + 0.02, 0.2, 52, sfxGain);
+}
+
+/** 말발굽 — 행군 중 호출 (battle-screen 먼지 틱과 함께) */
+export function playHoof() {
+  if (!ctx || !soundOn()) return;
+  hoof(ctx.currentTime, 0.08);
+}
+
 // ── BGM 시퀀서 — 계면조 5음계 즉흥 (같은 곡이 두 번 흐르지 않는다) ──
 
 const SCALE = [220, 261.63, 293.66, 329.63, 392, 440, 523.25]; // A3 C4 D4 E4 G4 A4 C5
