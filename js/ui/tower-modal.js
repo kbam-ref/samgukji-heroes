@@ -44,7 +44,7 @@ function showResult(result) {
   const body = document.createElement('div');
   if (!result) {
     body.innerHTML = `<p class="settings-note">오늘의 도전을 모두 썼어요. 내일 다시 오르세요.</p>`;
-    showModal({ title: '시련의 탑', body, actions: [{ label: '알겠어요', primary: true }] });
+    showModal({ title: '시련의 탑', body, actions: [{ label: '확인', primary: true }] });
     return;
   }
 
@@ -54,7 +54,7 @@ function showResult(result) {
       <p class="settings-note">${fmt(result.from + 1)}층의 수문장이 꿈쩍도 하지 않았다…</p>
       <div class="settings-row"><span>필요 전투력</span><b>${fmt(result.nextNeed)}</b></div>
       <p class="settings-note">단련·모집으로 전투력을 키우고 다시 오세요.</p>`;
-    showModal({ title: '등반 실패', body, actions: [{ label: '물러난다', primary: true }] });
+    showModal({ title: '등반 실패', body, actions: [{ label: '확인', primary: true }] });
     return;
   }
 
@@ -62,7 +62,7 @@ function showResult(result) {
     <p class="settings-note">${fmt(result.from)}층 → <b>${fmt(result.to)}층</b>! ${fmt(climbed)}층을 단숨에 올랐다.</p>
     <div class="offline-coins"><b id="tower-jade">0</b><span>옥구슬</span></div>
     <div class="settings-row"><span>다음 층 필요 전투력</span><b>${fmt(result.nextNeed)}</b></div>`;
-  showModal({ title: '등반 성공!', body, actions: [{ label: '거두기', primary: true }] });
+  showModal({ title: '등반 성공!', body, actions: [{ label: '받기', primary: true }] });
   countUp(document.getElementById('tower-jade'), 0, result.jade, { duration: 900, format: fmt });
   flash('gold');
   play('clear');

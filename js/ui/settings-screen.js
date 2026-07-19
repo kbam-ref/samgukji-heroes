@@ -124,7 +124,7 @@ export function render(root) {
       title: '세이브 가져오기',
       body,
       actions: [
-        { label: '그만두기' },
+        { label: '취소' },
         {
           label: '덮어쓰고 이어하기',
           primary: true,
@@ -151,7 +151,7 @@ export function render(root) {
       title: '처음부터 다시 시작할까요?',
       body: '모든 장수와 재화, 전장 진행이 사라져요. 되돌릴 수 없어요.',
       actions: [
-        { label: '그만두기' },
+        { label: '취소' },
         {
           label: '지우고 다시 시작',
           primary: true,

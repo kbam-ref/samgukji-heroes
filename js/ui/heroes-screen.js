@@ -89,7 +89,7 @@ function rowHtml({ id, def, hs }, index = 0) {
       <div class="row-meta">
         ${FACTIONS[def.faction].name} ‧ <span data-role="level">${hs.level}</span>레벨
         ‧ 전투력 <b data-role="power">${fmt(heroPower(id, hs))}</b>
-        ‧ 겹침 ${hs.dupes}
+        ‧ 중복 ${hs.dupes}
       </div>
       ${def.perk ? `<div class="row-perk">출전 시 ${PERK_LABELS[def.perk.kind]} +${def.perk.value}%</div>` : ''}
     </div>
@@ -98,7 +98,7 @@ function rowHtml({ id, def, hs }, index = 0) {
         단련<span data-role="cost">${maxedLevel ? '최고' : `엽전 ${fmt(levelCost(hs.level))}`}</span>
       </button>
       <button class="btn star-up" data-id="${id}" ${canStar ? '' : 'disabled'}>
-        승급<span>${maxedStars ? '최고' : `겹침 ${hs.dupes}/${dupeCost}`}</span>
+        승급<span>${maxedStars ? '최고' : `중복 ${hs.dupes}/${dupeCost}`}</span>
       </button>
     </div>
   </li>`;

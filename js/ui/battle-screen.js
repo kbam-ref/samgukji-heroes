@@ -181,7 +181,7 @@ function template(s) {
         <span class="combo-label">협공</span>
       </button>
 
-      <div class="tap-hint">전장을 두드리면 엽전이 떨어져요</div>
+      <div class="tap-hint">전장을 터치하면 엽전이 떨어져요</div>
 
       <button class="speed-btn" id="bs-speed" aria-label="전투 배속">x${s.settings?.speed || 1}</button>
     </div>

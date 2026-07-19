@@ -42,7 +42,7 @@ function refreshShardHall() {
   const note = document.getElementById('sh-release-note');
   if (note) {
     const total = shard.releasePreview(s).reduce((acc, e) => acc + e.shards, 0);
-    note.textContent = total > 0 ? `지금 +${fmt(total)} 조각` : '방출할 겹침 없음';
+    note.textContent = total > 0 ? `지금 +${fmt(total)} 조각` : '방출할 중복 없음';
   }
   const grid = document.getElementById('sh-grid');
   if (grid) grid.innerHTML = shardGridHtml(s);
@@ -57,7 +57,7 @@ function flagCardHtml({ hero, dupe }, index) {
         ${portraitHtml(hero.id, `pf-portrait frame-r${hero.rarity}`)}
         <em class="pf-rarity">${RARITY[hero.rarity].name}</em>
         <b class="pf-name">${hero.name}</b>
-        <span class="pf-tag">${dupe ? '겹침 +1' : '새 장수!'}</span>
+        <span class="pf-tag">${dupe ? '중복 +1' : '새 장수!'}</span>
       </div>
     </div>
   </div>`;
@@ -86,7 +86,7 @@ function showLegendBanner(hero, dupe) {
       ${portraitHtml(hero.id, 'lb-portrait')}
       <span class="lb-name">${hero.name}</span>
     </div>
-    <p class="lb-title">${dupe ? '별빛이 더 깊어진다 — 승급 겹침 +1' : hero.title}</p>`;
+    <p class="lb-title">${dupe ? '별빛이 더 깊어진다 — 승급 재료 +1' : hero.title}</p>`;
   stage.appendChild(banner);
   setTimeout(() => banner.remove(), 1850);
 }
@@ -117,7 +117,7 @@ function startReveal(results) {
   }
 
   const finish = () => {
-    skipBtn.textContent = '거두기';
+    skipBtn.textContent = '확인';
     skipBtn.classList.add('primary');
   };
 
@@ -230,8 +230,8 @@ export function render(root) {
         <b>명성 전당</b>
         <span class="shard-balance">조각 <b id="sh-balance">${fmt(s.resources.shard ?? 0)}</b></span>
       </div>
-      <p class="settings-note">별을 다 채운 장수의 남는 겹침을 조각으로 바꾸고, 조각으로 <b>원하는 장수를 지명해</b> 데려옵니다.</p>
-      <button class="btn" id="sh-release">남는 겹침 방출<span id="sh-release-note"></span></button>
+      <p class="settings-note">별을 다 채운 장수의 남는 중복을 조각으로 바꾸고, 조각으로 <b>원하는 장수를 지명해</b> 데려옵니다.</p>
+      <button class="btn" id="sh-release">중복 장수 방출<span id="sh-release-note"></span></button>
       <div class="shard-grid" id="sh-grid">${shardGridHtml(s)}</div>
     </div>
   </section>`
@@ -245,7 +245,7 @@ export function render(root) {
     const total = shard.releaseAll();
     if (total <= 0) {
       shake(e.target.closest('button'));
-      floatText(e.clientX, e.clientY, '별을 다 채운 장수의 겹침만 방출돼요', 'warn');
+      floatText(e.clientX, e.clientY, '별을 다 채운 장수의 중복만 방출돼요', 'warn');
       return;
     }
     refreshShardHall();
@@ -265,9 +265,9 @@ export function render(root) {
 
     showModal({
       title: `${hero.name} ‧ ${RARITY[hero.rarity].name}`,
-      body: `${hero.title}\n\n조각 ${fmt(cost)}로 ${owned ? '겹침 +1을 얻습니다 (승급 재료)' : '이 장수를 데려옵니다!'}\n보유 조각: ${fmt(s.resources.shard ?? 0)}`,
+      body: `${hero.title}\n\n조각 ${fmt(cost)}로 ${owned ? '중복 +1을 얻습니다 (승급 재료)' : '이 장수를 데려옵니다!'}\n보유 조각: ${fmt(s.resources.shard ?? 0)}`,
       actions: [
-        { label: '그만두기' },
+        { label: '취소' },
         {
           label: '교환하기',
           primary: true,

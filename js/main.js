@@ -51,7 +51,7 @@ function showOfflineReward(gain) {
   // 하루 1회 — 2배로 거두기 (급습과 별개의 복귀 전용 축포)
   if (!offlineDoubled()) {
     actions.push({
-      label: '2배로 거두기 (오늘 1회)',
+      label: '2배로 받기 (오늘 1회)',
       primary: true,
       onClick: () => {
         claimPending(2);
@@ -59,9 +59,9 @@ function showOfflineReward(gain) {
         vibrate(30);
       },
     });
-    actions.push({ label: '그냥 거두기', onClick: () => claimPending(1) });
+    actions.push({ label: '그냥 받기', onClick: () => claimPending(1) });
   } else {
-    actions.push({ label: '거두기', primary: true, onClick: () => claimPending(1) });
+    actions.push({ label: '받기', primary: true, onClick: () => claimPending(1) });
   }
 
   showModal({ title: '다녀오셨군요, 주군', body, dismissible: false, actions });
