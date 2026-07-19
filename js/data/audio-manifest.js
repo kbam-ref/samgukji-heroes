@@ -32,9 +32,9 @@ export const BGM = [
     kind: 'music',
     lengthMs: 30000,
     prompt:
-      'Majestic Three Kingdoms main title theme, grand and emotional opening, slow build, ' +
-      'gayageum and daegeum over warm orchestral strings and distant war drums, ' +
-      'noble and cinematic, seamless loop, no vocals',
+      'Majestic ancient East Asian epic main theme, grand and emotional opening, slow build, ' +
+      'gayageum zither and bamboo flute over warm orchestral strings and soft taiko drums, ' +
+      'noble, hopeful and cinematic, seamless loop, no vocals',
   },
 ];
 
