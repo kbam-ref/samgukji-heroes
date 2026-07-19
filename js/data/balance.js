@@ -146,6 +146,19 @@ export const BALANCE = {
     costByRarity: [0, 8, 18, 45, 120, 300], // 지정 교환 비용
   },
 
+  // 타격 손맛 — 애니메이션 감사(2026-07-19) 반영. 절제 원칙: 일반 타격은 가볍게, 강타·처치에 몰아준다
+  feel: {
+    heavyRatio: 0.45,   // 총 화력 대비 이 이상이면 '강타'
+    impactMs: 90,       // 잽(찌르기)이 적에 닿는 시점 — 숫자·섬광·정지를 여기 정렬
+    hitStopMs: 60,      // 일반 타격 프레임 정지
+    heavyStopMs: 90,    // 강타 정지
+    killStopMs: 45,     // 잡몹 처치 정지
+    bossStopMs: 110,    // 우두머리 처치 정지
+    shakeHit: '2px',    // 일반 타격 화면 흔들림 진폭
+    shakeBig: '6px',    // 강타·처치
+    shakeBoss: '9px',
+  },
+
   // 시련의 탑 — 벽에 막혔을 때의 "다른 할 일". 하루 3회, 최고층 갱신분만큼 옥구슬
   tower: {
     basePower: 60,     // 1층 필요 전투력

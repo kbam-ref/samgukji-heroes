@@ -303,19 +303,50 @@ function foeAnchor() {
   return { x: rect.left + rect.width / 2, y: rect.top };
 }
 
-/** 베기 궤적 + 충격 링 — 매 타격마다 각도가 조금씩 다른 빛줄기가 적을 긋는다 */
-function spawnSlash(foeBox) {
+/** 베기 궤적 + 충격 링 — 강타는 더 크고 금빛으로. 강타엔 칼의 호(弧)도 적 위에서 그려진다 */
+function spawnSlash(foeBox, heavy = false) {
   const mark = document.createElement('i');
-  mark.className = 'slash';
+  mark.className = heavy ? 'slash heavy' : 'slash';
   mark.style.setProperty('--slash-rot', `${Math.round(-38 + Math.random() * 66)}deg`);
   foeBox.appendChild(mark);
   const ring = document.createElement('i');
   ring.className = 'impact-ring';
   foeBox.appendChild(ring);
+  let arc = null;
+  if (heavy) {
+    arc = document.createElement('i');
+    arc.className = 'swing-arc';
+    foeBox.appendChild(arc);
+  }
   setTimeout(() => {
     mark.remove();
     ring.remove();
+    if (arc) arc.remove();
   }, 320);
+}
+
+const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+/** 히트스톱 — 검이 닿는 프레임에 전장의 애니메이션을 잠깐 얼린다 */
+function hitStop(field, ms) {
+  if (reducedMotion || !field) return;
+  field.classList.add('freeze');
+  setTimeout(() => field.classList.remove('freeze'), ms);
+}
+
+/** 카메라 셰이크 — 진폭을 정하고 감쇠 흔들림 */
+function shakeField(field, amp, big = false) {
+  if (reducedMotion || !field) return;
+  field.style.setProperty('--amp', amp);
+  pulse(field, big ? 'shake-big' : 'shake-hit');
+}
+
+/** 평타 잽 — 짧은 찌르기. 초당 여러 타에서도 모션이 밀리지 않는다 */
+function jab(unit) {
+  if (!unit || unit.classList.contains('jab')) return;
+  poseSwap(unit.querySelector('.unit-face'), 180);
+  unit.classList.add('jab');
+  setTimeout(() => unit.classList.remove('jab'), 200);
 }
 
 /** 돌진 공격 — 움찔(예비동작) → 적의 코앞까지 질주 → 내리치고 → 반동으로 복귀.
@@ -507,19 +538,22 @@ export function render(root) {
       if (hpEl) hpEl.style.width = `${(hp / maxHp) * 100}%`;
       const foeBox = document.getElementById('bs-foe');
       const striker = document.querySelector(`.ally-unit[data-id="${attackerId}"]`);
-      if (striker && foeBox) dashAttack(striker, foeBox);
-      // 피격 연출은 공격자가 도착해 내리치는 타이밍(돌진 0.5s의 절반)에 맞춘다
+      const F = BALANCE.feel;
+      const heavy = damage >= totalDps() * F.heavyRatio;
+
+      if (striker) jab(striker); // 평타는 짧은 찌르기 — 돌진은 협공 전용
+
+      // 검이 닿는 프레임(impactMs)에 모든 확인을 정렬: 섬광·베기·정지·흔들림·숫자·진동
       setTimeout(() => {
-        if (foeBox && foeBox.isConnected) {
-          pulse(foeBox, 'hit');
-          spawnSlash(foeBox);
-        }
-      }, 240);
-      const at = foeAnchor();
-      // 강타(총 화력의 45% 이상 — 협공이나 주력의 한 방)는 크게, 화면도 잠깐 숨을 멈춘다
-      const heavy = damage >= totalDps() * 0.45;
-      if (at) floatText(at.x + (Math.random() * 26 - 13), at.y + 10, `-${fmt(damage)}`, heavy ? 'crit' : '');
-      if (heavy) pulse(field, 'hitstop');
+        if (!(foeBox && foeBox.isConnected)) return;
+        pulse(foeBox, 'hit');
+        spawnSlash(foeBox, heavy);
+        hitStop(field, heavy ? F.heavyStopMs : F.hitStopMs);
+        shakeField(field, heavy ? F.shakeBig : F.shakeHit, heavy);
+        const at = foeAnchor();
+        if (at) floatText(at.x + (Math.random() * 26 - 13), at.y + 10, `-${fmt(damage)}`, heavy ? 'crit' : '');
+        if (heavy) vibrate(15);
+      }, F.impactMs);
     }),
 
     // 적의 반격 — 적이 공격 프레임으로 바뀌며 몸을 날리고, 맞은 아군이 붉게 휘청인다
@@ -547,9 +581,11 @@ export function render(root) {
       }
       const at = foeAnchor();
       if (at) burst(at.x, at.y + 26, { count: boss ? 12 : 7 });
+      // 모든 처치에 마무리 손맛 — 정지 + (잡몹) 흔들림·짧은 진동
+      hitStop(field, boss ? BALANCE.feel.bossStopMs : BALANCE.feel.killStopMs);
       if (boss) {
         flash('ember'); // 다홍 승전빛 — 금색은 전설의 것으로 아껴 둔다
-        pulse(field, 'boss-zoom'); // 카메라 펀치
+        pulse(field, 'boss-zoom'); // 카메라 펀치 (셰이크와 겹치지 않게 줌만)
         vibrate(40);
         if (fieldEl) {
           const ray = document.createElement('i');
@@ -557,6 +593,9 @@ export function render(root) {
           fieldEl.appendChild(ray);
           setTimeout(() => ray.remove(), 520);
         }
+      } else {
+        shakeField(field, '3px', true);
+        vibrate(12);
       }
       updateFoe();
     }),
