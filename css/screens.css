@@ -1808,16 +1808,16 @@
 .foe .unit-sprite { width: 78px; height: 94px; }
 .foe::before { width: 62px; }
 
-/* 부대는 왼쪽에 V자(웨지)로 선다 — 가운데가 앞(아래), 양 날개가 뒤(위).
-   dash 애니메이션이 .ally-unit의 transform을 쓰므로 대형 오프셋은 margin-bottom으로 준다(충돌 방지). */
+/* 단일 메인 영웅 — 아군과 적을 '같은 지면선'에 세워 정면 대치(v57).
+   아군은 왼쪽, 적은 오른쪽, 발이 같은 땅에 닿는다. 공격 시 아군이 적에게 다가가 친다(dash). */
 .ally-line {
-  left: 3%;
+  left: 8%;
   right: 46%;
-  bottom: 5%;
+  bottom: 13%;
   gap: 3px;
   align-items: flex-end;
 }
-.foe { left: 74%; bottom: 28%; }
+.foe { left: 72%; bottom: 13%; }
 
 /* 지그재그(2열) 규칙 무효화 + 기본은 평평(1~2인은 대형이랄 게 없음) */
 .ally-unit:nth-child(2n) { margin-bottom: 0; }
@@ -1867,35 +1867,30 @@
    크로미움이 CSS 파일 기준(/css/assets/…)으로 잘못 해석해 404 나던 문제를 근본 수리 (v46).
    사진이 이어붙지 않아 repeat-x는 이음새가 보였다 — 한 장으로 꽉 채워 고정하고(cover),
    '움직이는' 느낌은 이음매 없는 근경 지면 패럴럭스가 담당한다 (v52) */
+/* 배경 사진 — 살짝 크게 깔고 아주 느린 카메라 드리프트로 '살아있는' 장면을 만든다.
+   이어붙지 않는 사진이라 스크롤은 이음새가 보이므로, 오버사이즈+미세 팬으로 이음매 없이 움직인다 (v57) */
 .field-bg {
   position: absolute;
-  inset: 0;
+  inset: -4% -7%;
   background-repeat: no-repeat;
   background-size: cover;
   background-position: center 38%;
+  animation: bg-drift 16s ease-in-out infinite alternate;
+}
+@keyframes bg-drift {
+  from { transform: translateX(-2.5%) scale(1.02); }
+  to   { transform: translateX(2.5%) scale(1.04); }
 }
 
-/* 근경 지면 레이어 — 원경(field-bg)보다 빠르게 흘러 원근(패럴럭스) 깊이를 만든다.
-   에셋 없이 CSS로 그린 흙먼지·자갈 결. 배경 사진과 겹쳐도 겉돌지 않게 낮은 명도. */
+/* 근경 지면 — 발밑이 땅에 닿는 부드러운 접지 그림자만. (줄무늬 패턴은 '검은 점'처럼 보여 폐기 v57) */
 .field-ground {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
-  height: 34%;
+  height: 26%;
   pointer-events: none;
-  background-repeat: repeat-x;
-  background-size: 240px 100%;
-  background-position: 0 bottom;
-  background-image:
-    linear-gradient(180deg, transparent, rgba(6, 5, 4, 0.28) 70%, rgba(6, 5, 4, 0.5)),
-    repeating-linear-gradient(84deg,
-      rgba(46, 38, 28, 0) 0 34px,
-      rgba(28, 22, 15, 0.42) 34px 41px,
-      rgba(64, 54, 40, 0.22) 41px 48px);
-  opacity: 0.7;
-  mask-image: linear-gradient(180deg, transparent, #000 55%);
-  -webkit-mask-image: linear-gradient(180deg, transparent, #000 55%);
+  background: linear-gradient(180deg, transparent, rgba(6, 5, 4, 0.34) 72%, rgba(6, 5, 4, 0.5));
 }
 /* 가독성 어둠은 배경 위, 배우 아래 */
 .field-shade {
@@ -1905,22 +1900,26 @@
   pointer-events: none;
 }
 
-/* 행군 중 — 전원 달리기 사이클, 상체는 팔을 젓는다 */
-.battlefield.marching .unit-sprite { animation: run-cycle 0.38s ease-in-out infinite; }
-.battlefield.marching .ally-unit:nth-child(2n) .unit-sprite { animation-delay: -0.19s; }
+/* 아군은 '늘 달린다' — 전장의 주인공이 멈춰 있지 않게. 몸이 통통 뛰고 상체가 팔을 젓는다 (v57).
+   공격 순간엔 dash로 적에게 다가가 친다(별도 .dash 애니메이션). */
+.ally-unit .unit-sprite { animation: run-cycle 0.42s ease-in-out infinite; }
+.ally-unit .rig-upper { animation: run-arms 0.42s ease-in-out infinite; }
+/* 행군(적 없이 전진)엔 더 힘차게 */
+.battlefield.marching .ally-unit .unit-sprite,
+.battlefield.marching .ally-unit .rig-upper { animation-duration: 0.34s; }
 @keyframes run-cycle {
-  0%, 100% { transform: translateY(0) rotate(4deg) scale(1, 1); }
-  50%      { transform: translateY(-11px) rotate(7deg) scale(1.03, 0.96); }
+  0%, 100% { transform: translateY(0) rotate(3deg) scale(1, 1); }
+  50%      { transform: translateY(-9px) rotate(6deg) scale(1.03, 0.96); }
 }
-.battlefield.marching .rig-upper { animation: run-arms 0.38s ease-in-out infinite; }
 @keyframes run-arms {
-  0%, 100% { transform: rotate(-5deg); }
-  50%      { transform: rotate(7deg); }
+  0%, 100% { transform: rotate(-6deg); }
+  50%      { transform: rotate(8deg); }
 }
-/* 배속 x2 — 세상이 2배로 흐르면 다리도 2배로 젓는다 */
-.battlefield.speed2.marching .unit-sprite,
-.battlefield.speed2.marching .rig-upper { animation-duration: 0.26s; }
-.battlefield.speed2.marching .ally-unit:nth-child(2n) .unit-sprite { animation-delay: -0.13s; }
+/* 배속 x2 — 다리도 2배로 젓는다 */
+.battlefield.speed2 .ally-unit .unit-sprite,
+.battlefield.speed2 .ally-unit .rig-upper { animation-duration: 0.3s; }
+.battlefield.speed2.marching .ally-unit .unit-sprite,
+.battlefield.speed2.marching .ally-unit .rig-upper { animation-duration: 0.24s; }
 /* 행군 중엔 적 진영 표식을 지운다 */
 .battlefield.marching .foe-backline { opacity: 0; transition: opacity 0.3s; }
 .foe-backline { transition: opacity 0.4s; }

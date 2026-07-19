@@ -45,6 +45,13 @@ function unitImg(idleSrc, atkSrc) {
   return `<div class="rig">${img('rig-lower')}${img('rig-upper')}</div>`;
 }
 
+// 인라인 커스텀 속성(--img) 안의 상대 url()은 크로미움이 '그 값을 쓰는 CSS 파일'(css/) 기준으로
+// 해석해 /css/assets/... 404가 난다(돌진 잔상용 --img). 문서 기준 절대 URL로 박아 근본 차단한다.
+// baseURI를 쓰므로 GitHub Pages 하위경로 배포에서도 안전.
+function imgVar(path) {
+  return `url('${new URL(path, document.baseURI).href}')`;
+}
+
 /** 포즈 전환 — 리그의 두 층을 함께 공격 프레임으로 바꿨다가 되돌린다 */
 function poseSwap(root, ms = 330) {
   const imgs = root?.querySelectorAll?.('.unit-face');
@@ -65,7 +72,7 @@ function alliesHtml() {
       (u) => `
     <div class="ally-unit${u.hp <= 0 ? ' down' : ''}" data-id="${u.id}">
       <div class="unit-hp ally-hp"><i style="width:${(u.hp / u.maxHp) * 100}%"></i></div>
-      <div class="unit-sprite f-${u.faction}" style="--img:url('./assets/heroes-cut/${u.id}.png')">
+      <div class="unit-sprite f-${u.faction}" style="--img:${imgVar(`./assets/heroes-cut/${u.id}.png`)}">
         ${unitImg(`./assets/heroes-cut/${u.id}.png`, `./assets/heroes-atk-cut/${u.id}.png`)}
       </div>
       <span class="ally-unit-name">${u.name}</span>
@@ -136,7 +143,7 @@ function foeFigure(s, enemy) {
   if (enemy?.rival && enemy.rivalId) {
     return {
       key: `rival:${enemy.rivalId}`,
-      html: `<div class="unit-sprite rival-sprite" style="--img:url('./assets/heroes-cut/${enemy.rivalId}.png')">
+      html: `<div class="unit-sprite rival-sprite" style="--img:${imgVar(`./assets/heroes-cut/${enemy.rivalId}.png`)}">
         ${unitImg(`./assets/heroes-cut/${enemy.rivalId}.png`, `./assets/heroes-atk-cut/${enemy.rivalId}.png`)}
       </div>`,
     };
@@ -146,7 +153,7 @@ function foeFigure(s, enemy) {
   if (art) {
     return {
       key: `art:${art}`,
-      html: `<div class="unit-sprite foe-sprite" style="--img:url('./assets/enemies-cut/${art}.png')">
+      html: `<div class="unit-sprite foe-sprite" style="--img:${imgVar(`./assets/enemies-cut/${art}.png`)}">
         ${unitImg(`./assets/enemies-cut/${art}.png`, `./assets/enemies-atk-cut/${art}.png`)}
       </div>`,
     };
@@ -923,11 +930,9 @@ export function render(root) {
     })
   );
 
-  // 전장 게이지 + 근경 패럴럭스 — 요소 참조는 한 번만 잡는다 (저사양 기기 보호)
+  // 전장 게이지 + 전진 먼지 — 요소 참조는 한 번만 잡는다 (저사양 기기 보호)
   const gaugeFill = document.getElementById('bs-kill-fill');
-  const fieldGround = document.getElementById('bs-field-ground'); // 근경 지면(이음매 없는 CSS 패턴)
   let gaugeLast = -1;
-  let nearOffset = 0;  // 근경 지면 스크롤 — 나아가는 느낌
   let dustTick = 0;
   function gauge() {
     if (gaugeFill) {
@@ -943,27 +948,22 @@ export function render(root) {
         gaugeFill.style.width = `${rounded}%`;
       }
     }
-    // 배경 사진(원경)은 이어붙지 않으므로 고정(cover) — 스크롤하면 이음새·빈틈이 보인다.
-    // '움직이는' 느낌은 이음매 없는 근경 지면 패럴럭스가 담당한다. 전투 중엔 미세, 행군 중엔 빠르게.
+    // 아군은 늘 전진한다 — 발밑에서 흙먼지가 뒤로 흩날려 '달려 나아가는' 감각을 만든다.
+    // 행군(적 없이 전진)엔 더 잦게 + 말발굽 소리.
     const marching = field.classList.contains('marching');
     const speed = getState().settings?.speed || 1;
-    if (fieldGround) {
-      nearOffset = (nearOffset + (marching ? 6.2 : 0.5) * speed) % 4096;
-      fieldGround.style.backgroundPosition = `${-nearOffset}px bottom`;
-    }
-    // 행군 중엔 발밑에서 흙먼지가 일고, 말발굽 소리가 저벅저벅 (말을 타고 나아가는 감각)
-    if (marching && ++dustTick >= 12) {
+    const period = Math.max(5, Math.round((marching ? 9 : 16) / speed));
+    if (++dustTick >= period) {
       dustTick = 0;
-      playHoof();
+      if (marching) playHoof();
       const line = document.getElementById('bs-allies');
-      const units = line ? line.children : [];
-      if (units.length) {
-        const u = units[Math.floor(Math.random() * units.length)];
+      const u = line?.firstElementChild; // 단일 메인 영웅
+      if (u) {
         const dust = document.createElement('i');
         dust.className = 'dash-dust';
         dust.style.left = `${u.offsetLeft + u.offsetWidth / 2}px`;
         line.appendChild(dust);
-        setTimeout(() => dust.remove(), 380);
+        setTimeout(() => dust.remove(), 420);
       }
     }
     rafId = requestAnimationFrame(gauge);
