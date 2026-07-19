@@ -1693,6 +1693,10 @@
   0%, 100% { transform: rotate(-5deg); }
   50%      { transform: rotate(7deg); }
 }
+/* 배속 x2 — 세상이 2배로 흐르면 다리도 2배로 젓는다 */
+.battlefield.speed2.marching .unit-sprite,
+.battlefield.speed2.marching .rig-upper { animation-duration: 0.26s; }
+.battlefield.speed2.marching .ally-unit:nth-child(2n) .unit-sprite { animation-delay: -0.13s; }
 /* 행군 중엔 적 진영 표식을 지운다 */
 .battlefield.marching .foe-backline { opacity: 0; transition: opacity 0.3s; }
 .foe-backline { transition: opacity 0.4s; }

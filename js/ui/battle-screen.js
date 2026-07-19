@@ -516,17 +516,19 @@ export function render(root) {
   };
   unsubs.push(on('tower:climb', refreshTowerNote));
 
-  // 배속 토글 x1 ↔ x2
+  const field = document.getElementById('bs-field');
+  field.classList.toggle('speed2', (s.settings?.speed || 1) >= 2);
+
+  // 배속 토글 x1 ↔ x2 — 다리도 세상 흐름만큼 빨라진다
   const speedBtn = document.getElementById('bs-speed');
   speedBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     const next = (getState().settings?.speed || 1) >= 2 ? 1 : 2;
     setSetting('speed', next);
     speedBtn.textContent = `x${next}`;
+    field.classList.toggle('speed2', next >= 2);
     pulse(speedBtn);
   });
-
-  const field = document.getElementById('bs-field');
   field.addEventListener('click', (e) => {
     const now = Date.now();
     if (now - lastTap < BALANCE.battle.tapCooldownMs) return;

@@ -12,7 +12,7 @@ import { showModal } from './ui/modal.js';
 import { maybeShowAttendance } from './ui/attendance-modal.js';
 import { showTitle } from './ui/title-screen.js';
 import { fmt, formatDuration } from './ui/format.js';
-import { countUp } from './ui/effects.js';
+import { countUp, flyCoins } from './ui/effects.js';
 import { initSound, play, vibrate } from './ui/sound.js';
 
 const AUTOSAVE_MS = 10000;
@@ -23,10 +23,18 @@ let pendingGain = null;
 
 function claimPending(mult) {
   if (!pendingGain) return;
+  // 엽전이 손에서 자원바로 날아든다 — '받았다'가 손에 잡히는 순간
+  const counter = document.getElementById('offline-count');
+  if (counter) {
+    const r = counter.getBoundingClientRect();
+    flyCoins(r.left + r.width / 2, r.top + r.height / 2, mult > 1 ? 8 : 5);
+  }
   addCoin(pendingGain.coins * mult);
   if (pendingGain.jade > 0) addJade(pendingGain.jade * mult);
   if (mult > 1) markOfflineDoubled();
   pendingGain = null;
+  play(mult > 1 ? 'epic' : 'claim');
+  vibrate(mult > 1 ? 30 : 15);
   setTimeout(maybeShowAttendance, 350); // 복귀 보상을 거둔 뒤 출석이 이어진다
 }
 
@@ -54,11 +62,7 @@ function showOfflineReward(gain) {
     actions.push({
       label: '2배로 받기 (오늘 1회)',
       primary: true,
-      onClick: () => {
-        claimPending(2);
-        play('epic');
-        vibrate(30);
-      },
+      onClick: () => claimPending(2),
     });
     actions.push({ label: '그냥 받기', onClick: () => claimPending(1) });
   } else {
