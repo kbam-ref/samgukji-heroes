@@ -195,34 +195,51 @@ let beat = 0;
 let melIdx = 3;
 let schedTimer = null;
 
-function scheduleBeat(t, b) {
-  const eighth = b % 8;
+function scheduleBeat(t, b, eighth8) {
+  const e = b % 8;
+  const bar = Math.floor(b / 8);
 
-  // 북 장단 — 기본 덩-쿵, 보스전엔 더 촘촘히
-  if (eighth === 0) drum(t, 0.4, 66);
-  if (eighth === 5) drum(t, 0.2, 66);
-  if (bossMood && eighth === 3) drum(t, 0.26, 82);
-  if (bossMood && eighth === 6) drum(t, 0.18, 82);
+  // 북 장단 — 몰아치는 기본 박 (자진모리처럼 끊기지 않는 드라이브)
+  if (e === 0) drum(t, 0.5, 62);
+  if (e === 3) drum(t, 0.26, 88);
+  if (e === 4) drum(t, 0.4, 64);
+  if (e === 6) drum(t, 0.24, 88);
+  if (bossMood && (e === 1 || e === 5)) drum(t, 0.16, 104); // 보스전 — 겹박
 
-  // 가야금 선율 — 5음계 무작위 걸음 + 가끔 시김새(꾸밈음)
-  if (b % 2 === 0 && Math.random() < (bossMood ? 0.66 : 0.5)) {
-    const step = [-2, -1, -1, 0, 1, 1, 2][Math.floor(Math.random() * 7)];
-    melIdx = Math.max(0, Math.min(SCALE.length - 1, melIdx + step));
-    if (Math.random() < 0.18 && melIdx > 0) pluck(SCALE[melIdx - 1], t, 0.07); // 꾸밈음
-    pluck(SCALE[melIdx], t + 0.05, 0.13);
-    if (Math.random() < 0.12) pluck(SCALE[Math.max(0, melIdx - 2)], t + 0.05, 0.06); // 낮은 현 동반
+  // 4마디마다 몰아붙이는 잔가락 (따다닥)
+  if (bar % 4 === 3 && e === 7) {
+    drum(t, 0.26, 92);
+    drum(t + eighth8 * 0.5, 0.3, 84);
+    drum(t + eighth8 * 0.75, 0.36, 70);
   }
 
-  // 징 — 여덟 마디마다 은은하게
-  if (b % 64 === 0 && b > 0) gong(t, 0.1);
+  // 저음 현 — 심장 박동처럼 근음이 계속 뛴다
+  if (e === 0) pluck(110, t, 0.17);
+  if (e === 4) pluck(bar % 2 ? 130.81 : 110, t, 0.14);
+  if (bossMood && e === 2) pluck(82.41, t, 0.12); // 보스전 — 더 낮은 현까지
+
+  // 가야금 선율 — 촘촘한 걸음 + 시김새, 가끔 두 음 몰아치기
+  if ((e === 2 || e === 5 || e === 7) && Math.random() < (bossMood ? 0.85 : 0.7)) {
+    const step = [-2, -1, -1, 0, 1, 1, 2][Math.floor(Math.random() * 7)];
+    melIdx = Math.max(0, Math.min(SCALE.length - 1, melIdx + step));
+    if (Math.random() < 0.2 && melIdx > 0) pluck(SCALE[melIdx - 1], t, 0.07); // 꾸밈음
+    pluck(SCALE[melIdx], t + 0.04, 0.14);
+    if (Math.random() < 0.3) {
+      const next = Math.max(0, Math.min(SCALE.length - 1, melIdx + (Math.random() < 0.5 ? 1 : -1)));
+      pluck(SCALE[next], t + eighth8 * 0.5, 0.1); // 반 박 뒤 따라붙는 음
+    }
+  }
+
+  // 징 — 여덟 마디마다, 보스전엔 네 마디마다
+  if (b > 0 && b % (bossMood ? 32 : 64) === 0) gong(t, 0.11);
 }
 
 function scheduler() {
   if (!ctx || !musicOn) return;
-  const tempo = bossMood ? 80 : 66;
+  const tempo = bossMood ? 118 : 96;
   const half = 60 / tempo / 2; // 8분음표
   while (nextNoteTime < ctx.currentTime + 0.5) {
-    scheduleBeat(nextNoteTime, beat);
+    scheduleBeat(nextNoteTime, beat, half);
     nextNoteTime += half;
     beat += 1;
   }

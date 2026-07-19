@@ -38,6 +38,7 @@
   white-space: nowrap;
   animation: float-up 0.9s ease-out forwards;
 }
+.float-text.dmg { font-size: 12px; opacity: 0.95; animation: float-up 0.7s ease-out forwards; } /* 일반 타격 — 작고 짧게 */
 .float-text.gold { color: var(--gold-bright); }
 .float-text.warn { color: var(--alert); font-size: 12.5px; }
 .float-text.victory {
@@ -293,6 +294,10 @@
   .battlefield.shake-hit,
   .battlefield.shake-big,
   .ally-unit.jab,
+  .rig-upper,
+  .ally-unit.jab .rig-upper,
+  .ally-unit.dash .rig-upper,
+  .foe.strike .rig-upper,
   .foe.hit,
   .foe.hit .unit-sprite,
   .foe.hit .unit-face,

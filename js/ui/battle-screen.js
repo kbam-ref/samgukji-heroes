@@ -34,17 +34,23 @@ function foeSvg(bandColor) {
   </svg>`;
 }
 
-// 프레임 애니메이션 — 대기/공격 두 포즈를 가진 유닛 이미지 (내리칠 때 src가 공격 프레임으로 바뀐다)
+// 프레임 애니메이션 + 의사 리깅 — 같은 스프라이트를 허리에서 상·하체 두 층으로 잘라
+// 상체가 따로 흔들리고(대기), 공격 순간 크게 휘두른다. 진짜 관절이 있는 것처럼 보인다.
 function unitImg(idleSrc, atkSrc) {
-  return `<img class="portrait unit-face" src="${idleSrc}" data-idle="${idleSrc}" data-atk="${atkSrc}" alt="" loading="lazy" draggable="false">`;
+  const img = (cls) =>
+    `<img class="portrait unit-face ${cls}" src="${idleSrc}" data-idle="${idleSrc}" data-atk="${atkSrc}" alt="" loading="lazy" draggable="false">`;
+  return `<div class="rig">${img('rig-lower')}${img('rig-upper')}</div>`;
 }
 
-/** 포즈 전환 — 공격 프레임으로 바꿨다가 되돌린다 */
-function poseSwap(img, ms = 330) {
-  if (!img || !img.dataset.atk) return;
-  img.src = img.dataset.atk;
+/** 포즈 전환 — 리그의 두 층을 함께 공격 프레임으로 바꿨다가 되돌린다 */
+function poseSwap(root, ms = 330) {
+  const imgs = root?.querySelectorAll?.('.unit-face');
+  if (!imgs || imgs.length === 0) return;
+  for (const img of imgs) if (img.dataset.atk) img.src = img.dataset.atk;
   setTimeout(() => {
-    if (img.isConnected) img.src = img.dataset.idle;
+    for (const img of imgs) {
+      if (img.isConnected && img.dataset.idle) img.src = img.dataset.idle;
+    }
   }, ms);
 }
 
@@ -344,7 +350,7 @@ function shakeField(field, amp, big = false) {
 /** 평타 잽 — 짧은 찌르기. 초당 여러 타에서도 모션이 밀리지 않는다 */
 function jab(unit) {
   if (!unit || unit.classList.contains('jab')) return;
-  poseSwap(unit.querySelector('.unit-face'), 180);
+  poseSwap(unit, 180);
   unit.classList.add('jab');
   setTimeout(() => unit.classList.remove('jab'), 200);
 }
@@ -374,7 +380,7 @@ function dashAttack(unit, foeBox) {
   // 내리치는 순간(전체 0.56s의 48%) — 공격 프레임으로 전환 + 무기 궤적
   setTimeout(() => {
     if (!unit.isConnected) return;
-    poseSwap(unit.querySelector('.unit-face'), 330);
+    poseSwap(unit, 330);
     const arc = document.createElement('i');
     arc.className = 'swing-arc';
     unit.appendChild(arc);
@@ -552,7 +558,15 @@ export function render(root) {
         hitStop(field, heavy ? F.heavyStopMs : F.hitStopMs);
         shakeField(field, heavy ? F.shakeBig : F.shakeHit, heavy);
         const at = foeAnchor();
-        if (at) floatText(at.x + (Math.random() * 26 - 13), at.y + 10, `-${fmt(damage)}`, heavy ? 'crit' : '');
+        // 숫자는 넓게 흩뿌려 겹침을 줄인다 — 일반은 작게(dmg), 강타만 크게(crit)
+        if (at) {
+          floatText(
+            at.x + (Math.random() * 56 - 28),
+            at.y + Math.random() * 24 - 10,
+            `-${fmt(damage)}`,
+            heavy ? 'crit' : 'dmg'
+          );
+        }
         if (heavy) {
           vibrate(15);
           play('hit'); // 강타에만 — 평타마다 울리면 피로하다
@@ -565,7 +579,7 @@ export function render(root) {
       const foeBox = document.getElementById('bs-foe');
       if (foeBox) {
         pulse(foeBox, 'strike');
-        setTimeout(() => poseSwap(foeBox.querySelector('.unit-face'), 300), 100);
+        setTimeout(() => poseSwap(foeBox, 300), 100);
       }
       const victim = document.querySelector(`.ally-unit[data-id="${targetId}"]`);
       if (victim) pulse(victim, 'hurt');

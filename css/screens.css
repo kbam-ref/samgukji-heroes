@@ -216,18 +216,65 @@
   height: 86px;
   animation: idle-bob 3.2s ease-in-out infinite;
 }
-.foe .foe-sprite .unit-face {
+/* 반전·확대는 리그 바깥 껍데기에 — 상체 관절 애니메이션과 충돌하지 않게 */
+.foe .foe-sprite .rig {
   transform: scaleX(-1); /* 아군을 마주 보도록 좌우 반전 */
 }
-.foe.boss .foe-sprite .unit-face {
+.foe.boss .foe-sprite .rig {
   transform: scaleX(-1.16) scaleY(1.16); /* 우두머리는 덩치가 크다 */
   transform-origin: bottom center;
 }
-.foe .rival-sprite .unit-face {
+.foe .rival-sprite .rig {
   filter: drop-shadow(0 3px 4px rgba(6, 5, 4, 0.45)) drop-shadow(0 0 10px rgba(169, 68, 56, 0.5));
   transform: scaleX(-1.16) scaleY(1.16); /* 숙적도 우두머리 — 크게, 붉은 기운 */
   transform-origin: bottom center;
 }
+
+/* ── 의사 리깅 — 상·하체 분리 관절 (2026-07-19) ── */
+.rig {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 3px 3px rgba(6, 5, 4, 0.4)); /* 그림자는 합쳐진 몸 전체에 */
+}
+.rig .unit-face {
+  position: absolute;
+  inset: 0;
+  filter: none; /* 반쪽마다 그림자가 생기면 허리에 이음새가 보인다 */
+}
+.rig-lower { clip-path: inset(48% 0 0 0); } /* 하반신 (2% 겹침으로 이음새 방지) */
+.rig-upper {
+  clip-path: inset(0 0 50% 0); /* 상체 */
+  transform-origin: 50% 52%;   /* 허리 관절 */
+  animation: torso-sway 2.8s ease-in-out infinite;
+}
+@keyframes torso-sway {
+  0%, 100% { transform: rotate(-2deg); }
+  50%      { transform: rotate(2.4deg); }
+}
+/* 공격 — 상체가 뒤로 감았다가 크게 휘두른다 */
+.ally-unit.jab .rig-upper { animation: torso-swing 0.18s ease-out; }
+.ally-unit.dash .rig-upper { animation: torso-swing 0.3s ease-out 0.2s; }
+.foe.strike .rig-upper { animation: torso-swing 0.3s ease-out 0.08s; }
+@keyframes torso-swing {
+  25%  { transform: rotate(-16deg); } /* 백스윙 */
+  60%  { transform: rotate(24deg); }  /* 휘두름 */
+  100% { transform: rotate(0deg); }
+}
+
+/* ── 지그재그 2열 진형 — 겹침 해소 + 원근 (짝수 번째가 뒷줄) ── */
+.ally-line { gap: 7px; right: 27%; }
+.ally-unit:nth-child(2n) {
+  margin-bottom: 24px; /* 뒷줄 — 위(멀리)로 */
+  z-index: 1;
+}
+.ally-unit:nth-child(2n) .unit-sprite {
+  width: 46px;
+  height: 56px;
+  opacity: 0.94;
+}
+.ally-unit:nth-child(2n) .ally-unit-name { font-size: 9px; color: var(--paper-dim); }
+.ally-unit:nth-child(2n + 1) { z-index: 3; }
 
 /* 베기 궤적 — 타격이 눈에 보인다 */
 .slash {
