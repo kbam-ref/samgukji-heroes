@@ -511,6 +511,7 @@ export function render(root) {
         const at = foeAnchor();
         if (at) floatText(at.x, at.y - 10, '우두머리 등장!', 'alarm');
         pulse(field, 'field-shake');
+        pulse(field, 'boss-vignette'); // 화면 가장자리가 붉게 조여든다
       }
     }),
 
@@ -666,6 +667,14 @@ export function render(root) {
     }),
 
     on('stage:clear', (cleared) => {
+      // 전장이 넘어가는 금빛 스윕 — "다음 장으로" 쪽넘김의 감각
+      const layer = document.getElementById('fx-layer');
+      if (layer) {
+        const sweep = document.createElement('i');
+        sweep.className = 'stage-sweep';
+        layer.appendChild(sweep);
+        setTimeout(() => sweep.remove(), 520);
+      }
       const fieldEl = document.getElementById('bs-field');
       if (fieldEl) {
         const rect = fieldEl.getBoundingClientRect();

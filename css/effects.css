@@ -393,3 +393,26 @@
   outline-offset: 3px;
   animation: cta-breathe 1.2s ease-in-out infinite;
 }
+
+/* 전장 돌파 — 금빛 스윕이 화면을 쓸고 지나간다 */
+.stage-sweep {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: -40%;
+  width: 34%;
+  background: linear-gradient(100deg, transparent, rgba(228, 197, 92, 0.16), rgba(250, 245, 232, 0.22), rgba(228, 197, 92, 0.16), transparent);
+  transform: skewX(-12deg);
+  pointer-events: none;
+  animation: sweep-across 0.5s ease-in-out forwards;
+}
+@keyframes sweep-across {
+  to { left: 110%; }
+}
+
+/* 우두머리 등장 — 가장자리가 붉게 조여든다 */
+.battlefield.boss-vignette { animation: boss-vig 0.7s ease-out; }
+@keyframes boss-vig {
+  30% { box-shadow: inset 0 0 64px rgba(169, 68, 56, 0.65); }
+  100% { box-shadow: inset 0 0 44px rgba(6, 5, 4, 0.6); }
+}
