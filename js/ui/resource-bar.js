@@ -2,7 +2,8 @@
 
 import { on } from '../core/events.js';
 import { getState } from '../core/state.js';
-import { hasClaimable } from '../systems/quests.js';
+import { claimableCount } from '../systems/quests.js';
+import { freePullAvailable } from '../systems/gacha.js';
 import { openGoals } from './goals-modal.js';
 import { fmt } from './format.js';
 import { countUp, pulse } from './effects.js';
@@ -53,20 +54,25 @@ export function renderResourceBar(root) {
   `;
 
   document.getElementById('goals-btn').addEventListener('click', openGoals);
-  // ＋ → 모집 탭으로 — "재화가 모자라면 여기서 얻는다"는 길 안내
+  // ＋ → 실제 획득처로 데려간다: 오늘 무료 모집이 남았으면 모집, 아니면 목표(급습·보상) (2-14)
   document.getElementById('res-plus').addEventListener('click', () => {
-    document.querySelector('.tab[data-tab="gacha"]')?.click();
+    if (freePullAvailable()) document.querySelector('.tab[data-tab="gacha"]')?.click();
+    else openGoals();
   });
 
+  // 배지는 점이 아니라 '지금 할 일' 개수 — 수령 가능 보상 + 남은 급습 (2-15, G3)
   const refreshBadge = () => {
     const badge = document.getElementById('goals-badge');
-    if (badge) badge.hidden = !hasClaimable();
+    if (!badge) return;
+    const n = claimableCount();
+    badge.textContent = n > 0 ? String(n) : '';
+    badge.hidden = n === 0;
   };
   refreshBadge();
 
   on('coin', ({ total }) => update('coin', total));
   on('jade', ({ total }) => update('jade', total));
-  for (const type of ['stats:kill', 'stage:clear', 'gacha:pity', 'hero:add', 'quest:claim']) {
+  for (const type of ['stats:kill', 'stage:clear', 'gacha:pity', 'hero:add', 'quest:claim', 'raid:used']) {
     on(type, refreshBadge);
   }
 }

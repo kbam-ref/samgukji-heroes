@@ -107,7 +107,9 @@ export function render(root) {
   </section>`
   );
 
-  root.addEventListener('click', (e) => {
+  // 리스너는 화면 섹션에 — 탭 전환 시 함께 사라져 누적되지 않는다 (1-2)
+  const section = root.lastElementChild;
+  section.addEventListener('click', (e) => {
     const btn = e.target.closest('.tale-open');
     if (!btn) return;
     const entry = taleList(getState()).find((x) => x.tale.id === btn.dataset.tale);

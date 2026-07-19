@@ -6,6 +6,9 @@ import { on } from './core/events.js';
 import { startLoop } from './core/loop.js';
 import * as battle from './systems/battle.js';
 import { computeOfflineGain } from './systems/offline.js';
+import { canStarUpAny } from './systems/growth.js';
+import { canGearUpAny } from './systems/gear.js';
+import { hasUnreadTale } from './systems/tales.js';
 import { renderResourceBar } from './ui/resource-bar.js';
 import { renderTabs } from './ui/tabs.js';
 import { showModal } from './ui/modal.js';
@@ -109,8 +112,6 @@ function boot() {
   function maybeShowFtue() {
     const s = getState();
     if (s.flags?.ftue || s.gacha.total > 0) return;
-    setFlag('ftue');
-    persist(getState());
     showModal({
       title: '주군, 천하가 부릅니다',
       body: '지금 가진 옥구슬이면 장수 10명을 한 번에 모을 수 있습니다.\n모집에서 첫 부대를 꾸리고, 전투는 알아서 벌어집니다.',
@@ -119,6 +120,9 @@ function boot() {
           label: '10회 모집하러 가기',
           primary: true,
           onClick: () => {
+            // '나중에'로 닫으면 플래그를 안 남겨 다음 접속에 다시 안내한다 (1-7)
+            setFlag('ftue');
+            persist(getState());
             document.querySelector('.tab[data-tab="gacha"]')?.click();
             // 도착하면 10연 버튼이 빛나며 "여기"라고 알려준다
             setTimeout(() => {
@@ -146,20 +150,36 @@ function boot() {
   // 전투 배속 — 설정의 speed 배율 (x1/x2). 방치 계산(killRate)은 실측 기준 유지
   const loop = startLoop((dt) => battle.tick(dt * (getState().settings?.speed || 1)));
 
+  const dotOf = (tab) => document.querySelector(`.tab[data-tab="${tab}"] .tab-dot`);
+
   // 모집 탭 금점 — 오늘의 무료 모집이 남아 있으면 표시
   const refreshGachaDot = () => {
-    const dot = document.querySelector('.tab[data-tab="gacha"] .tab-dot');
+    const dot = dotOf('gacha');
     if (dot) dot.hidden = freePullUsed();
   };
   refreshGachaDot();
   on('gacha:free', refreshGachaDot);
   setInterval(refreshGachaDot, 60000); // 자정 넘김 대비
 
-  // 새 장수를 얻으면 도감 탭에 금점 — 들어가 보면 꺼진다
-  on('hero:add', () => {
-    const dot = document.querySelector('.tab[data-tab="codex"] .tab-dot');
-    if (dot) dot.hidden = false;
-  });
+  // 도감 탭 금점 — 읽을 수 있는 새 열전이 있으면 점등. 재평가 방식이라 탭 진입 시 자동 소등 (3-4)
+  const refreshCodexDot = () => {
+    const dot = dotOf('codex');
+    if (dot) dot.hidden = !hasUnreadTale(getState());
+  };
+  refreshCodexDot();
+  on('hero:add', refreshCodexDot);
+  on('tale:read', refreshCodexDot);
+
+  // 영웅 탭 금점 — 승급 가능(중복 참) 또는 보물 강화 가능(강화석)일 때. 엽전 단련은 상시
+  // 충족되니 제외해 점의 가치를 지킨다 (2-10, G3)
+  const refreshHeroesDot = () => {
+    const dot = dotOf('heroes');
+    if (dot) dot.hidden = !(canStarUpAny(getState()) || canGearUpAny(getState()));
+  };
+  refreshHeroesDot();
+  on('hero:dupe', refreshHeroesDot);
+  on('hero:add', refreshHeroesDot);
+  on('stone', refreshHeroesDot);
 
   // 주기 저장 — 탭이 숨겨져 있는 동안엔 lastSeenAt을 전진시키지 않는다
   // (전진시키면 백그라운드에서 죽었을 때 방치 보상이 통째로 사라진다)
@@ -202,10 +222,14 @@ function boot() {
       /* 로컬 file:// 등에서는 조용히 넘어간다 */
     });
     // 새 버전이 도착해도 게임 도중엔 절대 새로고침하지 않는다 — 플레이 중 타이틀로
-    // 튕기는 건 버그다. 앱을 벗어나는 순간(숨김)에 조용히 적용해, 돌아오면 새 판이다.
+    // 튕기는 건 버그다. 앱을 '충분히 오래' 벗어났을 때만 조용히 적용한다(1-1):
+    // 잠깐(수 초) 전환했다 돌아오면 리로드하지 않아 타이틀로 튕기지 않고,
+    // 오래 비운 뒤 돌아오면 새 판 + 복귀 보상 흐름으로 자연히 흡수된다.
     // 첫 설치 때의 controllerchange(주도권 최초 획득)로는 아무것도 하지 않는다.
+    const SW_RELOAD_DELAY_MS = 30000; // 이보다 짧게 비웠다 오면 리로드 취소
     let hadController = Boolean(navigator.serviceWorker.controller);
     let updateReady = false;
+    let reloadTimer = 0;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       if (!hadController) {
         hadController = true;
@@ -213,12 +237,20 @@ function boot() {
       }
       updateReady = true;
       persist(getState());
-      if (document.hidden) location.reload(); // 이미 벗어나 있으면 즉시
     });
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden && updateReady) {
-        persist(getState());
-        location.reload();
+      if (document.hidden) {
+        if (updateReady && !reloadTimer) {
+          reloadTimer = setTimeout(() => {
+            if (document.hidden) {
+              persist(getState());
+              location.reload();
+            }
+          }, SW_RELOAD_DELAY_MS);
+        }
+      } else if (reloadTimer) {
+        clearTimeout(reloadTimer); // 금방 돌아왔다 — 튕기지 않는다
+        reloadTimer = 0;
       }
     });
   }

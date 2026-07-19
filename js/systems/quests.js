@@ -69,6 +69,14 @@ export function hasClaimable(s = state.getState()) {
   );
 }
 
+/** 목표 배지에 띄울 '지금 할 일' 개수 — 수령 가능 보상 + 남은 급습 (2-15) */
+export function claimableCount(s = state.getState()) {
+  const rewards =
+    dailyList(s).filter((e) => e.done && !e.claimed).length +
+    achievementList(s).filter((e) => e.done && !e.claimed).length;
+  return rewards + state.raidsLeft();
+}
+
 /** 보상 수령 — 달성 검증 후 state에 위임. 성공 시 보상 옥구슬 수, 실패 시 0 */
 export function claim(id) {
   const s = state.getState();

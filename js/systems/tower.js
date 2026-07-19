@@ -20,6 +20,25 @@ export function triesLeft() {
 }
 
 /**
+ * 도전 결과 미리보기 — 상태를 바꾸지 않는다 (1-3).
+ * 반환: { from, to, jade, nextNeed, canClimb, triesLeft }
+ */
+export function preview(s = state.getState()) {
+  const power = partyPower(s);
+  const from = bestFloor(s);
+  let to = from;
+  while (power >= floorPower(to + 1) && to - from < 500) to += 1;
+  return {
+    from,
+    to,
+    jade: (to - from) * BALANCE.tower.jadePerFloor,
+    nextNeed: floorPower(to + 1),
+    canClimb: to > from, // 한 층이라도 오를 수 있는가
+    triesLeft: state.towerTriesLeft(),
+  };
+}
+
+/**
  * 도전 — 최고 기록 다음 층부터 이길 수 있는 데까지 오른다.
  * 반환: { from, to, jade, nextNeed } / 남은 도전이 없으면 null
  */

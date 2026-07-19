@@ -8,7 +8,7 @@ import { fmt } from './format.js';
 import { countUp, flash } from './effects.js';
 import { play, vibrate } from './sound.js';
 
-function bodyHtml() {
+function bodyHtml(pv) {
   const s = getState();
   const best = tower.bestFloor(s);
   return `
@@ -16,28 +16,32 @@ function bodyHtml() {
     <div class="settings-row"><span>최고 기록</span><b>${fmt(best)}층</b></div>
     <div class="settings-row"><span>다음 층 필요 전투력</span><b>${fmt(tower.floorPower(best + 1))}</b></div>
     <div class="settings-row"><span>내 전투력</span><b>${fmt(partyPower(s))}</b></div>
-    <div class="settings-row"><span>오늘 남은 도전</span><b>${tower.triesLeft()}회</b></div>`;
+    <div class="settings-row"><span>오늘 남은 도전</span><b>${pv.triesLeft}회</b></div>`;
 }
 
 export function openTower() {
+  const pv = tower.preview(); // 결과를 미리 알아 도전권 낭비를 막는다 (1-3)
   const body = document.createElement('div');
-  body.innerHTML = bodyHtml();
+  body.innerHTML = bodyHtml(pv);
 
-  showModal({
-    title: '시련의 탑',
-    body,
-    actions: [
-      { label: '닫기' },
-      {
-        label: '도전하기',
-        primary: true,
-        onClick: () => {
-          const result = tower.climb();
-          setTimeout(() => showResult(result), 120);
-        },
+  // 오를 수 있을 때만 활성 — 100% 확정 실패에 도전권을 쓰지 않는다
+  let climbAction;
+  if (pv.triesLeft <= 0) {
+    climbAction = { label: '내일 다시 도전', primary: true, disabled: true };
+  } else if (!pv.canClimb) {
+    climbAction = { label: `전투력 ${fmt(pv.nextNeed)} 필요`, primary: true, disabled: true };
+  } else {
+    climbAction = {
+      label: `도전하기 (+${fmt(pv.to - pv.from)}층 ‧ 옥구슬 ${fmt(pv.jade)})`,
+      primary: true,
+      onClick: () => {
+        const result = tower.climb();
+        setTimeout(() => showResult(result), 120);
       },
-    ],
-  });
+    };
+  }
+
+  showModal({ title: '시련의 탑', body, actions: [{ label: '닫기' }, climbAction] });
 }
 
 function showResult(result) {
@@ -62,7 +66,7 @@ function showResult(result) {
     <p class="settings-note">${fmt(result.from)}층 → <b>${fmt(result.to)}층</b>! ${fmt(climbed)}층을 단숨에 올랐다.</p>
     <div class="offline-coins"><b id="tower-jade">0</b><span>옥구슬</span></div>
     <div class="settings-row"><span>다음 층 필요 전투력</span><b>${fmt(result.nextNeed)}</b></div>`;
-  showModal({ title: '등반 성공!', body, actions: [{ label: '받기', primary: true }] });
+  showModal({ title: '등반 성공!', body, actions: [{ label: '확인', primary: true }] });
   countUp(document.getElementById('tower-jade'), 0, result.jade, { duration: 900, format: fmt });
   flash('gold');
   play('clear');

@@ -41,8 +41,10 @@ export function renderTabs(navRoot, screenRoot) {
     }
   });
 
-  // 폰 뒤로가기 = 이전 탭으로 (앱이 바로 꺼지지 않게)
+  // 폰 뒤로가기 = 이전 탭으로 (앱이 바로 꺼지지 않게).
+  // 단, 모달이 떠 있으면 뒤로가기는 모달 닫기 몫이다 — 탭을 건드리지 않는다 (1-8)
   window.addEventListener('popstate', () => {
+    if (document.getElementById('modal-root')?.hasChildNodes()) return;
     const id = location.hash.slice(1);
     if (TABS.some((t) => t.id === id)) switchTo(id, navRoot, screenRoot, { push: false });
   });
@@ -71,9 +73,10 @@ export function switchTo(id, navRoot, screenRoot, { push = true } = {}) {
   for (const btn of navRoot.querySelectorAll('.tab')) {
     btn.classList.toggle('active', btn.dataset.tab === id);
   }
-  // 도감 금점은 "새 장수 확인" 알림 — 들어가 보면 꺼진다 (모집 금점은 무료 모집 로직이 관리)
-  if (id === 'codex') {
-    const dot = navRoot.querySelector('.tab[data-tab="codex"] .tab-dot');
+  // 도감·영웅 금점 — 들어가 보면 꺼진다. 모집 금점은 무료 모집 로직이 관리.
+  // (재평가 소등은 main.js의 refresh 함수가 하고, 여기선 진입 즉시 끈다)
+  if (id === 'codex' || id === 'heroes') {
+    const dot = navRoot.querySelector(`.tab[data-tab="${id}"] .tab-dot`);
     if (dot) dot.hidden = true;
   }
   screenRoot.innerHTML = '';

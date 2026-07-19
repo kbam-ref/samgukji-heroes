@@ -73,7 +73,9 @@ export function render(root) {
     if (el) el.textContent = '-';
   }
 
-  root.addEventListener('click', (e) => {
+  // 리스너는 이 화면 섹션에 건다 — 탭을 떠나면 innerHTML=''로 함께 사라져 누적되지 않는다 (1-2)
+  const section = root.lastElementChild;
+  section.addEventListener('click', (e) => {
     const toggle = e.target.closest('button.toggle');
     if (!toggle) return;
     const key = toggle.dataset.setting;
