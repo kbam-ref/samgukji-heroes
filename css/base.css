@@ -554,16 +554,19 @@ body.modal-open #tab-bar { visibility: hidden; }
   min-width: 210px;
   min-height: 58px;
   font-size: 19px;
-  letter-spacing: 0.3em;
+  letter-spacing: 0.18em;
+  padding-left: calc(16px + 0.18em); /* 자간 끝 여백 보정 — 글자가 정중앙에 오게 */
   font-family: var(--font-display);
   animation: cta-breathe 2.2s ease-in-out infinite;
 }
 
 /* ── 그려진 UI 스킨 (v37) ── */
 
-/* 모달 — 옻칠 금장 패널로 승격 */
+/* 모달 — 옻칠 금장 패널로 승격
+   (border 단축 속성에 !important를 걸면 border-image까지 통째로 리셋되어
+   금장 테두리가 사라지는 CSS 함정이 있었다 — !important 제거로 해결) */
 .modal-panel {
-  border: 14px solid transparent !important;
+  border: 14px solid transparent;
   border-image: url('../assets/ui/panel-frame.png') 70 fill / 14px stretch;
   border-radius: 0;
   background: none;
@@ -571,10 +574,8 @@ body.modal-open #tab-bar { visibility: hidden; }
 .modal-panel::before { display: none; } /* 손잡이 바는 프레임과 어울리지 않는다 */
 
 
-/* 주요 버튼 — 황금 플레이트 */
+/* 주요 버튼 — 매끈한 황금 그라데이션 (그림 플레이트는 검은 여백이 비쳐 폐기) */
 .btn.primary {
-  background: url('../assets/ui/button-gold.png') center / cover no-repeat,
-    linear-gradient(160deg, var(--gold-bright), var(--gold) 55%, #a8871f);
   border: 1px solid #6b551a;
   text-shadow: 0 1px 0 rgba(255, 244, 200, 0.45);
 }

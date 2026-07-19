@@ -1608,15 +1608,32 @@
 
 /* ── 스킨 2차 (v38) ── */
 
-/* 화면 제목 — 진홍 리본 위의 금술 현판 */
+/* 화면 제목 — 그려진 리본 PNG는 여백에 검은 배경이 비쳐 보여 폐기(v45).
+   대신 타이틀 로고와 같은 금박 명조체 + 붓자국 밑줄로 화면 전체 타이포를 통일한다. */
 .screen-head h2 {
-  background: url('../assets/ui/ribbon-header.png') center / 100% 100% no-repeat;
-  padding: 12px 46px 18px;
-  margin-left: -8px;
-  font-size: 18px;
-  color: #fff3dd;
-  text-shadow: 0 1px 3px rgba(70, 8, 0, 0.75);
-  letter-spacing: 0.24em;
+  position: relative;
+  display: inline-block;
+  padding: 2px 0 12px;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  background: linear-gradient(180deg, #f7e9ac, #e4c55c 45%, #a8871f);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+.screen-head h2::after {
+  content: '';
+  position: absolute;
+  left: 1px;
+  bottom: 4px;
+  width: 44px;
+  height: 3px;
+  border-radius: 3px 1px 3px 1px;
+  background: linear-gradient(90deg, rgba(228, 197, 92, 0.85), rgba(201, 162, 39, 0.15));
+  transform: rotate(-0.6deg);
 }
 
 /* 모집 공개 무대 — 황금 문이 열린다 */
