@@ -149,7 +149,7 @@ function template(s) {
       <div class="weekday-perk">${battle.weekdayPerk().name} — 오늘 엽전 +${Math.round((battle.weekdayPerk().coinMult - 1) * 100)}%</div>
     </header>
 
-    <div class="battlefield" id="bs-field">
+    <div class="battlefield" id="bs-field"${chapter.env ? ` style="--bg:url('./assets/bg/${chapter.env}.png')"` : ''}>
       <div class="field-ambience" aria-hidden="true">
         <i class="fog"></i>
         ${Array.from({ length: 6 }, (_, i) => `<i class="ember" style="--x:${10 + i * 14}%; --d:-${(i * 2.3).toFixed(1)}s"></i>`).join('')}
