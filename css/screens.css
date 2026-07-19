@@ -409,7 +409,8 @@
   text-align: center;
   font-size: 10.5px;
   letter-spacing: 0.08em;
-  color: var(--paper-faint);
+  color: var(--paper-dim);
+  text-shadow: 0 1px 3px rgba(11, 10, 8, 0.85); /* 배경 사진 위에서도 읽히게 (4-3) */
   pointer-events: none;
 }
 
@@ -970,6 +971,7 @@
   margin-bottom: 14px;
 }
 .order-chip {
+  position: relative;
   appearance: none;
   font-family: inherit;
   cursor: pointer;
@@ -979,8 +981,10 @@
   background: var(--ink-800);
   border: 1px solid var(--ink-600);
   padding: 6px 9px;
-  min-height: 30px;
+  min-height: 32px;
 }
+/* 세로 히트 확장 — 44px 근접(칩 간격 6px이라 가로는 이웃과 겹쳐 세로만) (4-5) */
+.order-chip::before { content: ''; position: absolute; inset: -7px 0; }
 .order-chip.on {
   color: var(--gold-bright);
   border-color: rgba(201, 162, 39, 0.55);
@@ -1107,7 +1111,7 @@
 }
 .codex-name { font-size: 14px; font-weight: 700; }
 .codex-title { font-size: 10px; color: var(--paper-dim); line-height: 1.4; }
-.codex-rarity { margin-top: auto; font-size: 9.5px; letter-spacing: 0.08em; }
+.codex-rarity { margin-top: auto; font-size: 10.5px; letter-spacing: 0.08em; } /* 판독성 (4-2) */
 
 .codex-card.locked { background: var(--ink-950); }
 .codex-card.locked .codex-name { color: var(--paper-faint); }
@@ -1466,12 +1470,12 @@
   left: 0;
   right: 0;
   bottom: 0;
-  font-size: 9px;
+  font-size: 10px; /* 판독성 (4-2) */
   font-weight: 700;
   text-align: center;
   padding: 2px 0;
   color: var(--gold-bright);
-  background: rgba(11, 10, 8, 0.72);
+  background: rgba(11, 10, 8, 0.85);
   border-radius: 0 0 5px 5px;
   font-variant-numeric: tabular-nums;
 }
@@ -1521,7 +1525,7 @@
 .gear-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .gear-info b { font-size: 13px; }
 .gear-info span { font-size: 10px; color: var(--paper-dim); }
-.gear-up { min-height: 40px; padding: 4px 10px; flex: none; }
+.gear-up { min-height: 44px; padding: 4px 10px; flex: none; } /* 44px 터치 (4-5) */
 
 /* ── 폴리시 1차 (2026-07-19) ── */
 
@@ -1582,7 +1586,7 @@
   mask-image: linear-gradient(180deg, transparent 0, #000 12px, #000 100%);
 }
 
-/* 미보유 카드 — 세로 낙관풍 '미발견' 도장 */
+/* 미보유 카드 — 세로 낙관풍 '미발견' 도장 (가시성 상향 4-4) */
 .codex-card.locked::after {
   content: '미발견';
   position: absolute;
@@ -1590,9 +1594,9 @@
   right: 8px;
   writing-mode: vertical-rl;
   letter-spacing: 0.22em;
-  font-size: 9px;
-  color: rgba(208, 133, 115, 0.55);
-  border: 1px solid rgba(208, 133, 115, 0.3);
+  font-size: 10.5px;
+  color: rgba(208, 133, 115, 0.9);
+  border: 1px solid rgba(208, 133, 115, 0.55);
   border-radius: 2px;
   padding: 5px 2px;
 }
