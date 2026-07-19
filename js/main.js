@@ -72,7 +72,27 @@ function showOfflineReward(gain) {
   });
 }
 
+/** 안드로이드 전체화면 PWA에서 안전영역(env)이 0으로 잡히는 기기 보정 —
+ *  하단 탭이 시스템 버튼 밑에 깔려 못 누르게 되는 문제를 막는다 */
+function fixSafeArea() {
+  if (!window.matchMedia?.('(display-mode: standalone)').matches) return;
+  if (!/Android/i.test(navigator.userAgent)) return;
+  const probe = document.createElement('div');
+  probe.style.cssText =
+    'position:fixed;left:0;bottom:0;width:1px;height:0;visibility:hidden;' +
+    'padding-bottom:env(safe-area-inset-bottom);padding-top:env(safe-area-inset-top);';
+  document.body.appendChild(probe);
+  const style = getComputedStyle(probe);
+  const bottom = parseFloat(style.paddingBottom) || 0;
+  const top = parseFloat(style.paddingTop) || 0;
+  probe.remove();
+  // 전체화면인데 env가 비어 있으면 기기 값 대신 안전한 보정치를 쓴다
+  if (bottom < 8) document.documentElement.style.setProperty('--safe-b', '42px');
+  if (top < 8) document.documentElement.style.setProperty('--safe-t', '28px');
+}
+
 function boot() {
+  fixSafeArea();
   const save = loadOrCreate();
   const awaySeconds = (Date.now() - save.lastSeenAt) / 1000;
   initState(save);
