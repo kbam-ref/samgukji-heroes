@@ -46,8 +46,9 @@ async function api(path, options = {}) {
 
 // ── 기본 화풍 — 영웅과 같은 치비, 단 적답게 탁한 색·험한 인상 ──
 const STYLE =
-  'chibi mobile game enemy character, super-deformed proportions with big head, ' +
-  'Three Kingdoms era hostile soldier, soft cel shading, clean bold outlines, ' +
+  'high-quality 3D rendered chibi enemy character, cute super-deformed figurine with a big head, ' +
+  'Three Kingdoms era hostile soldier, Blender Octane render, soft studio key light with gentle rim light, ' +
+  'subsurface scattering, smooth stylized PBR materials, soft ambient occlusion, glossy figure finish, ' +
   'muted gloomy colors, menacing but cute, centered full-body, plain dark simple background, ' +
   'no text, no watermark';
 

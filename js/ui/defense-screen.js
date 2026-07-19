@@ -275,7 +275,12 @@ function syncEnemies() {
     if (hitOn !== node.hitOn) { node.el.classList.toggle('hit', hitOn); node.hitOn = hitOn; }
   }
   for (const [eid, node] of enemyNodes) {
-    if (!seen.has(eid)) { node.el.remove(); enemyNodes.delete(eid); }
+    if (!seen.has(eid)) {
+      const el = node.el;
+      el.classList.add('dying'); // 사망 연출 후 제거
+      enemyNodes.delete(eid);
+      setTimeout(() => el.remove(), 280);
+    }
   }
 }
 
@@ -283,7 +288,10 @@ function consumeFx() {
   for (const fx of engine.drainFx(run)) {
     if (fx.type === 'attack') {
       const el = unitNodes.get(fx.uid);
-      if (el) { el.classList.remove('fire'); void el.offsetWidth; el.classList.add('fire'); }
+      if (el) {
+        el.classList.remove('fire'); void el.offsetWidth; el.classList.add('fire');
+        setTimeout(() => el.classList.remove('fire'), 240); // 공격 끝나면 idle 숨쉬기로 복귀
+      }
     } else if (fx.type === 'kill') {
       play('foehit');
     } else if (fx.type === 'stageClear') {

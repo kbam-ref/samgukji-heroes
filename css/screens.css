@@ -1919,6 +1919,13 @@
   position: absolute; left: 50%; bottom: 3px; transform: translateX(-50%);
   width: 42px; height: 50px; object-fit: contain; object-position: bottom;
   filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5)) brightness(1.12);
+  animation: rd-idle 2.4s ease-in-out infinite; /* 상시 숨쉬기 — 살아있게 */
+}
+.rd-unit:nth-child(2n) .rd-sprite { animation-delay: -0.8s; }
+.rd-unit:nth-child(3n) .rd-sprite { animation-delay: -1.5s; }
+@keyframes rd-idle {
+  0%, 100% { transform: translateX(-50%) translateY(0) scale(1, 1); }
+  50% { transform: translateX(-50%) translateY(-2px) scale(1.02, 0.985); }
 }
 .rd-unit.r5 .rd-sprite { filter: drop-shadow(0 0 7px rgba(228, 197, 92, 0.75)) drop-shadow(0 2px 2px rgba(0,0,0,0.5)) brightness(1.12); }
 .rd-unit.r4 .rd-sprite { filter: drop-shadow(0 0 5px rgba(190, 130, 220, 0.7)) drop-shadow(0 2px 2px rgba(0,0,0,0.5)) brightness(1.12); }
@@ -1926,8 +1933,12 @@
   position: absolute; left: 50%; bottom: 48px; transform: translateX(-50%);
   width: 7px; height: 7px; border-radius: 50%; box-shadow: 0 0 3px rgba(0,0,0,0.6);
 }
-.rd-unit.fire .rd-sprite { animation: rd-fire 0.16s ease-out; }
-@keyframes rd-fire { 40% { transform: translateX(-50%) scale(1.16, 0.9); } }
+.rd-unit.fire .rd-sprite { animation: rd-attack 0.24s ease-out; }
+@keyframes rd-attack {
+  25% { transform: translateX(-50%) translateY(-6px) scale(1.14, 0.9) rotate(-4deg); }
+  55% { transform: translateX(-50%) translateY(1px) scale(0.96, 1.06) rotate(3deg); }
+  100% { transform: translateX(-50%); }
+}
 
 /* 적 — 트랙을 걸어서 돈다 */
 .rd-enemy { position: absolute; left: 0; top: 0; width: 0; height: 0; will-change: transform; z-index: 2; }
@@ -1940,8 +1951,18 @@
 }
 .rd-enemy.boss .rd-sprite { filter: drop-shadow(0 0 8px rgba(200, 60, 48, 0.7)) drop-shadow(0 3px 3px rgba(0,0,0,0.6)); }
 @keyframes rd-walk {
-  0%, 100% { transform: translateX(-50%) translateY(0) rotate(-2deg); }
-  50% { transform: translateX(-50%) translateY(-3px) rotate(2deg); }
+  0%, 100% { transform: translateX(-50%) translateY(0) rotate(-2deg) scale(1, 1); }
+  25% { transform: translateX(-50%) translateY(-4px) rotate(1deg) scale(0.98, 1.03); }
+  50% { transform: translateX(-50%) translateY(0) rotate(3deg) scale(1.02, 0.98); }
+  75% { transform: translateX(-50%) translateY(-4px) rotate(-1deg) scale(0.98, 1.03); }
+}
+/* 처치 연출 — 번쩍이며 납작하게 스러진다 */
+.rd-enemy.dying { opacity: 0; transition: opacity 0.26s ease-in; }
+.rd-enemy.dying .rd-hp { opacity: 0; }
+.rd-enemy.dying .rd-sprite { animation: rd-die 0.26s ease-in forwards; }
+@keyframes rd-die {
+  0% { transform: translateX(-50%) scale(1.2, 0.82); filter: brightness(2.2); }
+  100% { transform: translateX(-50%) translateY(5px) scale(1.35, 0.28) rotate(10deg); opacity: 0; }
 }
 /* 머리 위 남은 체력 숫자 */
 .rd-enemy .rd-hp {

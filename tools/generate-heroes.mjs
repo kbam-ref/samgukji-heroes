@@ -47,10 +47,11 @@ async function api(path, options = {}) {
 
 // ── 기본 화풍 — 모든 초상이 공유한다 (generate-pose.mjs도 이 정의를 가져다 쓴다) ──
 export const STYLE =
-  'adorable chibi mobile game character portrait, super-deformed proportions with big head and large sparkling eyes, ' +
-  'Three Kingdoms era character, soft cel shading, clean bold outlines, cheerful gacha game art, ' +
-  'centered composition, no text, no watermark';
-const NEGATIVE = 'photo, 3d render, realistic proportions, scary, grim, text, letters, watermark, frame';
+  'high-quality 3D rendered chibi character, cute super-deformed figurine with a big head and large glossy sparkling eyes, ' +
+  'stylized 3D mobile gacha game hero, Blender Octane render, soft studio key light with gentle rim light, ' +
+  'subsurface scattering, smooth stylized PBR materials, soft ambient occlusion, glossy collectible figure finish, ' +
+  'Three Kingdoms era warrior, clean centered composition, no text, no watermark';
+const NEGATIVE = 'flat 2d, cel shading, hard black outline, lineart, sketch, anime drawing, photo, realistic adult proportions, grim, scary, text, letters, watermark, frame, blurry, low quality';
 
 // ── 세력별 색·배경 — 도감에서 세력 컬렉션이 한눈에 묶여 보이게 ──
 export const FACTION_LOOK = {

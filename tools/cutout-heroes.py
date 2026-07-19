@@ -13,22 +13,27 @@ from pathlib import Path
 from rembg import new_session, remove
 
 root = Path(__file__).resolve().parent.parent
-src_dir = root / "assets" / "heroes"
-out_dir = root / "assets" / "heroes-cut"
-out_dir.mkdir(parents=True, exist_ok=True)
-
 force = "--force" in sys.argv
+
+# 영웅·적을 함께 누끼 — (원본 폴더, 결과 폴더)
+PAIRS = [("heroes", "heroes-cut"), ("enemies", "enemies-cut")]
 
 # isnet-general-use — 일러스트 경계가 u2net보다 깔끔하다
 session = new_session("isnet-general-use")
 
-for p in sorted(src_dir.glob("*.png")):
-    out = out_dir / p.name
-    if out.exists() and not force:
-        print(f"{p.name}: 이미 있음 — 건너뜀")
+for src_name, out_name in PAIRS:
+    src_dir = root / "assets" / src_name
+    out_dir = root / "assets" / out_name
+    if not src_dir.exists():
         continue
-    data = remove(p.read_bytes(), session=session, post_process_mask=True)
-    out.write_bytes(data)
-    print(f"{p.name}: 저장 ({len(data) // 1024}KB)")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for p in sorted(src_dir.glob("*.png")):
+        out = out_dir / p.name
+        if out.exists() and not force:
+            print(f"{src_name}/{p.name}: 이미 있음 — 건너뜀")
+            continue
+        data = remove(p.read_bytes(), session=session, post_process_mask=True)
+        out.write_bytes(data)
+        print(f"{src_name}/{p.name}: 저장 ({len(data) // 1024}KB)")
 
-print("끝. assets/heroes-cut/ 확인 후 전장 통합.")
+print("끝. assets/heroes-cut/ · enemies-cut/ 확인 후 전장 통합.")
