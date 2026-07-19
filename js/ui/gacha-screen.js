@@ -25,12 +25,15 @@ function rateNote() {
 
 // 명성 전당 — 24명 전원 지정 교환 가능. 미보유는 실루엣이라 "저걸 사겠다"는 목표가 된다.
 function shardGridHtml(s) {
+  const bal = s.resources.shard ?? 0;
   return HEROES.map((h) => {
     const owned = Boolean(s.heroes[h.id]);
+    const cost = shard.exchangeCost(h.id);
+    const short = bal < cost; // 조각 부족은 셀에서 바로 보이게 (1-6)
     return `
-    <button class="shard-cell r${h.rarity}" data-id="${h.id}" aria-label="${h.name} 교환">
+    <button class="shard-cell r${h.rarity}${short ? ' short' : ''}" data-id="${h.id}" aria-label="${h.name} 교환">
       ${portraitHtml(h.id, `frame-r${h.rarity}${owned ? '' : ' silhouette'}`)}
-      <span class="shard-cost">${fmt(shard.exchangeCost(h.id))}</span>
+      <span class="shard-cost">${fmt(cost)}</span>
     </button>`;
   }).join('');
 }
@@ -49,6 +52,7 @@ function refreshShardHall() {
 }
 
 function flagCardHtml({ hero, dupe }, index) {
+  // 새 장수는 진홍 리본(축하), 중복은 승급 가치로 (금색은 전설 등급 신호 전용) (3-2)
   return `
   <div class="pull-flag r${hero.rarity}" data-index="${index}" style="--i:${index}">
     <div class="pf-inner">
@@ -57,7 +61,7 @@ function flagCardHtml({ hero, dupe }, index) {
         ${portraitHtml(hero.id, `pf-portrait frame-r${hero.rarity}`)}
         <em class="pf-rarity">${RARITY[hero.rarity].name}</em>
         <b class="pf-name">${hero.name}</b>
-        <span class="pf-tag">${dupe ? '중복 +1' : '새 장수!'}</span>
+        <span class="pf-tag ${dupe ? 'dupe' : 'new'}">${dupe ? '겹침 +1 ‧ 승급 재료' : '새 장수!'}</span>
       </div>
     </div>
   </div>`;
@@ -92,8 +96,9 @@ function showLegendBanner(hero, dupe) {
   setTimeout(() => banner.remove(), 1900);
 }
 
-/** 공개 연출 — 깃발이 순서대로 뒤집힌다. 전설은 1.2초 긴장 뒤에 터진다. 건너뛰기 가능. */
-function startReveal(results) {
+/** 공개 연출 — 깃발이 순서대로 뒤집힌다. 전설은 1.2초 긴장 뒤에 터진다. 건너뛰기 가능.
+ *  opts.fromPull=true면 무대 안에서 천장 잔여·재모집·결과 요약을 보여준다 (3-1, 3-2). */
+function startReveal(results, opts = {}) {
   closeReveal();
 
   const stage = document.createElement('div');
@@ -102,6 +107,7 @@ function startReveal(results) {
   stage.innerHTML = `
     <p class="pull-stage-title">깃발을 눌러 확인하세요</p>
     <div class="pull-track">${results.map(flagCardHtml).join('')}</div>
+    <div class="reveal-foot" id="gs-reveal-foot"></div>
     <button class="btn skip-btn" id="gs-skip">모두 공개</button>`;
   document.body.appendChild(stage);
 
@@ -120,6 +126,32 @@ function startReveal(results) {
   const finish = () => {
     skipBtn.textContent = '확인';
     skipBtn.classList.add('primary');
+    // 뽑기 경로에서만 — 천장 잔여 + 결과 요약 + 무대 안 재모집 (3-1, 3-2, 헌장 3조)
+    if (!opts.fromPull) return;
+    const foot = document.getElementById('gs-reveal-foot');
+    if (!foot) return;
+    const s = getState();
+    const news = results.filter((r) => !r.dupe).length;
+    const dupes = results.length - news;
+    const summary = news > 0 ? `새 장수 ${news}${dupes ? ` ‧ 겹침 ${dupes}` : ''}` : `겹침 ${dupes} ‧ 승급 재료`;
+    const cost = BALANCE.gacha.costTen;
+    const canTen = s.resources.jade >= cost;
+    foot.innerHTML = `
+      <p class="reveal-summary">${summary}</p>
+      <p class="reveal-pity">전설 확정까지 <b>${gacha.pityRemaining(s)}</b>회</p>
+      <button class="btn primary reveal-again${canTen ? '' : ' short'}" id="gs-again">
+        다시 10회 모집<span>옥구슬 ${fmt(cost)}</span>
+      </button>`;
+    foot.querySelector('#gs-again').addEventListener('click', (e) => {
+      const again = gacha.pull(10);
+      if (!again) {
+        shake(e.target.closest('button'));
+        floatText(e.clientX, e.clientY, `옥구슬 ${fmt(cost - getState().resources.jade)} 부족`, 'warn');
+        return;
+      }
+      updateBoard();
+      startReveal(again, { fromPull: true });
+    });
   };
 
   const flip = (i, fanfare = true) => {
@@ -183,12 +215,24 @@ function startReveal(results) {
 
 function updateBoard() {
   const s = getState();
+  const jade = s.resources.jade;
+  // 옥구슬 부족을 disabled로 막지 않는다 — 탭하면 '어디서 얻는지' 안내가 뜨게 (1-4)
   for (const btn of document.querySelectorAll('.pull-btn')) {
-    const count = Number(btn.dataset.count);
-    btn.disabled = s.resources.jade < gacha.pullCost(count);
+    const cost = gacha.pullCost(Number(btn.dataset.count));
+    const short = jade < cost;
+    btn.classList.toggle('short', short);
+    btn.setAttribute('aria-disabled', short ? 'true' : 'false');
+    const shortEl = btn.querySelector('.pull-short');
+    if (shortEl) shortEl.textContent = short ? `옥구슬 ${fmt(cost - jade)} 부족` : '';
   }
+  // 무료 모집은 시간 잠금 — 숨기지 말고 '내일 또 공짜'로 예고 (3-3)
   const freeBtn = document.getElementById('gs-free');
-  if (freeBtn) freeBtn.hidden = !gacha.freePullAvailable();
+  if (freeBtn) {
+    const avail = gacha.freePullAvailable();
+    freeBtn.disabled = !avail;
+    const sub = freeBtn.querySelector('span');
+    if (sub) sub.textContent = avail ? '0 옥구슬 ‧ 하루 1회' : '오늘 완료 — 내일 0시 다시 무료';
+  }
   const pityEl = document.getElementById('gs-pity');
   if (pityEl) pityEl.textContent = gacha.pityRemaining(s);
   const gaugeEl = document.getElementById('gs-pity-fill');
@@ -213,14 +257,14 @@ export function render(root) {
       <p class="pity-line">전설 확정까지 <b id="gs-pity">${gacha.pityRemaining(s)}</b>회</p>
       <div class="pity-gauge"><i id="gs-pity-fill"></i></div>
       <div class="gacha-actions">
-        <button class="btn free-pull" id="gs-free" hidden>
+        <button class="btn free-pull" id="gs-free">
           오늘의 무료 모집<span>0 옥구슬 ‧ 하루 1회</span>
         </button>
         <button class="btn pull-btn" data-count="1">
-          1회 모집<span>옥구슬 ${fmt(BALANCE.gacha.costSingle)}</span>
+          1회 모집<span>옥구슬 ${fmt(BALANCE.gacha.costSingle)}</span><i class="pull-short"></i>
         </button>
         <button class="btn primary pull-btn" data-count="10">
-          10회 모집<span>옥구슬 ${fmt(BALANCE.gacha.costTen)}</span>
+          10회 모집<span>옥구슬 ${fmt(BALANCE.gacha.costTen)}</span><i class="pull-short"></i>
         </button>
       </div>
       <p class="rate-note">${rateNote()}</p>
@@ -266,25 +310,29 @@ export function render(root) {
     const cost = shard.exchangeCost(id);
     const s = getState();
     const owned = Boolean(s.heroes[id]);
+    const bal = s.resources.shard ?? 0;
+    const short = bal < cost;
 
     showModal({
       title: `${hero.name} ‧ ${RARITY[hero.rarity].name}`,
-      body: `${hero.title}\n\n조각 ${fmt(cost)}로 ${owned ? '중복 +1을 얻습니다 (승급 재료)' : '이 장수를 데려옵니다!'}\n보유 조각: ${fmt(s.resources.shard ?? 0)}`,
+      body: `${hero.title}\n\n조각 ${fmt(cost)}로 ${owned ? '중복 +1을 얻습니다 (승급 재료)' : '이 장수를 데려옵니다!'}\n보유 조각: ${fmt(bal)}`,
       actions: [
         { label: '취소' },
-        {
-          label: '교환하기',
-          primary: true,
-          onClick: () => {
-            const result = shard.exchange(id);
-            if (!result) {
-              floatText(window.innerWidth / 2, window.innerHeight / 2, '조각이 모자라요', 'warn');
-              return;
-            }
-            refreshShardHall();
-            startReveal([{ hero, dupe: result.dupe }]); // 교환도 모집 연출로 — 얻는 맛
-          },
-        },
+        short
+          ? { label: `조각 ${fmt(cost - bal)} 부족`, primary: true, disabled: true } // 부족은 모달에서 바로 (1-6)
+          : {
+              label: '교환하기',
+              primary: true,
+              onClick: () => {
+                const result = shard.exchange(id);
+                if (!result) {
+                  floatText(window.innerWidth / 2, window.innerHeight / 2, '조각이 모자라요', 'warn');
+                  return;
+                }
+                refreshShardHall();
+                startReveal([{ hero, dupe: result.dupe }]); // 교환도 모집 연출로 — 얻는 맛
+              },
+            },
       ],
     });
   });
@@ -293,7 +341,7 @@ export function render(root) {
     const results = gacha.pullFree();
     if (!results) return;
     updateBoard();
-    startReveal(results);
+    startReveal(results, { fromPull: true });
   });
 
   document.querySelector('.gacha-actions').addEventListener('click', (e) => {
@@ -305,12 +353,13 @@ export function render(root) {
     if (!results) {
       shake(btn);
       const rect = btn.getBoundingClientRect();
-      floatText(rect.left + rect.width / 2, rect.top, '옥구슬이 모자라요', 'warn');
+      const lack = gacha.pullCost(count) - getState().resources.jade;
+      floatText(rect.left + rect.width / 2, rect.top, `옥구슬 ${fmt(lack)} 부족 — 전장 돌파 보상으로 모아요`, 'warn');
       return;
     }
 
     updateBoard();
-    startReveal(results);
+    startReveal(results, { fromPull: true });
   });
 
   unsubs.push(

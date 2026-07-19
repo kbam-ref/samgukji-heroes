@@ -726,8 +726,16 @@
 }
 .pf-rarity { font-size: 9px; letter-spacing: 0.1em; color: var(--rc, var(--r1)); font-style: normal; }
 .pf-name { font-size: 14px; font-weight: 700; }
-.pf-tag { font-size: 9px; color: var(--paper-dim); }
-.pull-flag.r5 .pf-tag { color: var(--gold-bright); }
+.pf-tag { font-size: 10px; font-weight: 700; color: var(--paper-dim); }
+/* 새 장수 — 진홍 리본(축하). 금색은 전설 등급 신호 전용이라 침범하지 않는다 (3-2) */
+.pf-tag.new {
+  color: #fff0e4;
+  background: linear-gradient(180deg, #b8342c, #7e211c);
+  padding: 2px 8px;
+  border-radius: 3px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+.pf-tag.dupe { color: var(--paper-faint); }
 
 .pull-stage.legend-flash::after {
   content: '';
@@ -1192,10 +1200,30 @@
   font-size: 17px;
 }
 .gacha-actions .pull-btn[data-count='1'] { min-height: 46px; }
-.pull-btn.primary:not(:disabled) { animation: cta-breathe 2.4s ease-in-out infinite; }
+/* 못 사는 버튼은 유혹하지 않는다 — .short엔 숨쉬기 없음 (1-4) */
+.pull-btn.primary:not(.short) { animation: cta-breathe 2.4s ease-in-out infinite; }
 @keyframes cta-breathe {
   50% { box-shadow: inset 0 1px 0 rgba(250, 245, 232, 0.35), 0 0 20px rgba(228, 197, 92, 0.5); }
 }
+/* 옥구슬 부족 — disabled 대신 흐림 + 부족분 표기 (1-4) */
+.pull-btn.short { opacity: 0.7; }
+.pull-btn.short span { color: var(--alert); }
+.pull-short { display: block; font-size: 9.5px; color: var(--alert); margin-top: 1px; }
+.pull-short:empty { display: none; }
+.free-pull:disabled { opacity: 0.55; animation: none; }
+.free-pull:disabled span { color: var(--paper-faint); }
+/* 명성 전당 부족 셀 — 가격 붉게 (1-6) */
+.shard-cell.short .shard-cost { color: var(--alert); }
+
+/* 공개 무대 발치 — 천장 잔여 + 결과 요약 + 재모집 (3-1) */
+.reveal-foot { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 10px; min-height: 1px; }
+.reveal-foot:empty { display: none; }
+.reveal-summary { font-size: 13px; font-weight: 700; color: var(--paper); }
+.reveal-pity { font-size: 12px; color: var(--paper-dim); }
+.reveal-pity b { color: var(--gold-bright); }
+.reveal-again { min-height: 48px; min-width: 200px; }
+.reveal-again.short { opacity: 0.7; }
+.reveal-again.short span { color: var(--alert); }
 
 /* #6 큰 숫자 각인 — 전투력은 금박으로 */
 #bs-ally-power,

@@ -36,10 +36,14 @@ export function showModal({ title, body, actions = [], dismissible = true }) {
       const btn = document.createElement('button');
       btn.className = action.primary ? 'btn primary' : 'btn';
       btn.textContent = action.label;
-      btn.addEventListener('click', () => {
-        if (action.onClick) action.onClick();
-        close();
-      });
+      if (action.disabled) {
+        btn.disabled = true; // 재화 부족 등 — 실행 자체가 불가한 액션 (1-3)
+      } else {
+        btn.addEventListener('click', () => {
+          if (action.onClick) action.onClick();
+          close();
+        });
+      }
       row.appendChild(btn);
     }
     panel.appendChild(row);
