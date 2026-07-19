@@ -10,6 +10,7 @@ import { renderResourceBar } from './ui/resource-bar.js';
 import { renderTabs } from './ui/tabs.js';
 import { showModal } from './ui/modal.js';
 import { maybeShowAttendance } from './ui/attendance-modal.js';
+import { showTitle } from './ui/title-screen.js';
 import { fmt, formatDuration } from './ui/format.js';
 import { countUp } from './ui/effects.js';
 import { initSound, play, vibrate } from './ui/sound.js';
@@ -131,9 +132,12 @@ function boot() {
   }
   on('attendance:claim', () => setTimeout(maybeShowFtue, 400));
 
-  const gain = computeOfflineGain(save, awaySeconds);
-  if (gain) showOfflineReward(gain);
-  else if (!maybeShowAttendance()) maybeShowFtue();
+  // 타이틀 → 출정을 누르면 보상 흐름(복귀→출석→온보딩)이 시작된다
+  showTitle(() => {
+    const gain = computeOfflineGain(save, awaySeconds);
+    if (gain) showOfflineReward(gain);
+    else if (!maybeShowAttendance()) maybeShowFtue();
+  });
 
   // 전투 배속 — 설정의 speed 배율 (x1/x2). 방치 계산(killRate)은 실측 기준 유지
   const loop = startLoop((dt) => battle.tick(dt * (getState().settings?.speed || 1)));

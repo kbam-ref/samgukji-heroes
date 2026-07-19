@@ -1,7 +1,7 @@
 // 서비스워커 — 전체 에셋을 캐시해 비행기 모드에서도 완전히 플레이 가능하게 한다.
 // 에셋이 바뀌면 CACHE 버전을 올린다.
 
-const CACHE = 'samgukji-v36';
+const CACHE = 'samgukji-v37';
 
 // 영웅 초상 — js/data/heroes.js의 id와 일치 (24명)
 const HERO_IDS = [
@@ -24,6 +24,11 @@ const BG_IDS = [
 // 이미지 — 하나쯤 빠져도 네트워크 폴백이 있으므로 best-effort로 담는다
 // heroes = 카드용 원본(배경 포함), heroes-cut/enemies-cut = 전장용 누끼(배경 투명)
 const IMAGE_ASSETS = [
+  './assets/ui/title-art.png',
+  './assets/ui/panel-frame.png',
+  './assets/ui/button-gold.png',
+  './assets/ui/fx-slash.png',
+  './assets/ui/fx-burst.png',
   ...BG_IDS.map((id) => `./assets/bg/${id}.png`),
   ...HERO_IDS.map((id) => `./assets/heroes/${id}.png`),
   ...HERO_IDS.map((id) => `./assets/heroes-cut/${id}.png`),
@@ -76,6 +81,7 @@ const ASSETS = [
   './js/ui/modal.js',
   './js/ui/attendance-modal.js',
   './js/ui/tower-modal.js',
+  './js/ui/title-screen.js',
   './js/ui/sound.js',
   './js/ui/goals-modal.js',
   './js/ui/tales-modal.js',

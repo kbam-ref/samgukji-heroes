@@ -312,26 +312,31 @@ function foeAnchor() {
   return { x: rect.left + rect.width / 2, y: rect.top };
 }
 
-/** 베기 궤적 + 충격 링 — 강타는 더 크고 금빛으로. 강타엔 칼의 호(弧)도 적 위에서 그려진다 */
+/** 베기 이펙트 — 그려진 VFX 스프라이트 (screen 블렌드로 검정이 사라진다) + 충격 링 */
 function spawnSlash(foeBox, heavy = false) {
-  const mark = document.createElement('i');
-  mark.className = heavy ? 'slash heavy' : 'slash';
-  mark.style.setProperty('--slash-rot', `${Math.round(-38 + Math.random() * 66)}deg`);
+  const mark = document.createElement('img');
+  mark.className = heavy ? 'slash-img heavy' : 'slash-img';
+  mark.src = './assets/ui/fx-slash.png';
+  mark.alt = '';
+  mark.style.setProperty('--slash-rot', `${Math.round(-55 + Math.random() * 110)}deg`);
   foeBox.appendChild(mark);
   const ring = document.createElement('i');
   ring.className = 'impact-ring';
   foeBox.appendChild(ring);
-  let arc = null;
-  if (heavy) {
-    arc = document.createElement('i');
-    arc.className = 'swing-arc';
-    foeBox.appendChild(arc);
-  }
   setTimeout(() => {
     mark.remove();
     ring.remove();
-    if (arc) arc.remove();
   }, 320);
+}
+
+/** 폭발 이펙트 — 처치 순간 (우두머리는 크게) */
+function spawnBurst(fieldEl, big = false) {
+  const b = document.createElement('img');
+  b.className = big ? 'burst-img big' : 'burst-img';
+  b.src = './assets/ui/fx-burst.png';
+  b.alt = '';
+  fieldEl.appendChild(b);
+  setTimeout(() => b.remove(), 460);
 }
 
 const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -606,6 +611,7 @@ export function render(root) {
       }
       const at = foeAnchor();
       if (at) burst(at.x, at.y + 26, { count: boss ? 12 : 7 });
+      if (fieldEl) spawnBurst(fieldEl, boss); // 그려진 폭발
       if (boss) setBgmMood(false); // 결전이 끝나면 장단도 가라앉는다
       // 모든 처치에 마무리 손맛 — 정지 + (잡몹) 흔들림·짧은 진동
       hitStop(field, boss ? BALANCE.feel.bossStopMs : BALANCE.feel.killStopMs);
