@@ -245,6 +245,7 @@ function partyFlagsHtml(s) {
 }
 
 let foeFigureKey = ''; // 지금 그려진 적 모습 ('mob' 또는 rival:영웅id) — 바뀔 때만 다시 그린다
+let shownChapterKey = ''; // 지금 그려진 '난이도:장' — 바뀌면 개막 카드를 띄운다
 
 /** 뒤쪽 적 무리 — 남은 처치 수만큼 두텁다. 베어 나갈수록 무리가 줄어 "뚫고 있다"가 보인다 */
 function updateBackline(s = getState()) {
@@ -433,6 +434,24 @@ function dashAttack(unit, foeBox) {
   }, 170);
 }
 
+/** 장(章) 개막 카드 — 새 장이 열리는 순간, 먹빛 화면에 장 제목이 붓으로 찍힌다 */
+function showChapterCard(chapter, difficulty) {
+  const layer = document.getElementById('fx-layer');
+  if (!layer) return;
+  const el = document.createElement('div');
+  el.className = 'chapter-card';
+  el.innerHTML = `
+    <div class="cc-ink">
+      <span class="cc-step">난이도 ${difficulty} ‧ 제${chapter.id}장</span>
+      <b class="cc-title">${chapter.name}</b>
+      <span class="cc-sub">천하통일의 길</span>
+    </div>`;
+  layer.appendChild(el);
+  play('chapter');
+  vibrate(20);
+  setTimeout(() => el.remove(), 2200);
+}
+
 /** 숙적 조우 컷인 — 이름 깃발과 연의체 한마디가 전장을 가로지른다 */
 function showRivalCutin(enemy) {
   const layer = document.getElementById('fx-layer');
@@ -477,6 +496,7 @@ export function render(root) {
   const s = getState();
   root.insertAdjacentHTML('beforeend', template(s));
   foeFigureKey = foeFigure(s, null).key; // template은 잡병 아트로 그린다
+  shownChapterKey = `${s.stage.difficulty ?? 1}:${battle.currentChapter(s).id}`;
   updateFoe();
   updatePowers(); // 부족(붉은 표시) 상태를 첫 화면부터 정확히
   updateUpgradeButton();
@@ -752,10 +772,16 @@ export function render(root) {
           floatText(cx, rect.top + rect.height / 2 + 34, `옥구슬 +${fmt(BALANCE.battle.jadeOnClear)}`, 'gold');
         }
       }
+      const prevChapterKey = shownChapterKey;
       const rootEl = document.getElementById('screen-root');
       if (rootEl) {
         rootEl.innerHTML = '';
         render(rootEl);
+      }
+      // 장이 바뀌었으면(난이도 회차 포함) 개막 카드 — 새 무대가 열렸다
+      if (shownChapterKey !== prevChapterKey) {
+        const s2 = getState();
+        showChapterCard(battle.currentChapter(s2), s2.stage.difficulty ?? 1);
       }
     }),
 

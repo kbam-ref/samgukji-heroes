@@ -1747,3 +1747,57 @@
 }
 /* 대형 바가 걸린 동안 우두머리 머리 위 작은 바는 지운다 */
 .foe.boss .unit-hp { opacity: 0; }
+
+/* ── 장(章) 개막 카드 (v42) — 먹빛 화면에 장 제목이 붓으로 찍힌다 ── */
+.chapter-card {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(16, 12, 9, 0.88) 30%, rgba(8, 6, 4, 0.96));
+  animation: cc-veil 2.2s ease-in-out forwards;
+}
+@keyframes cc-veil {
+  0%   { opacity: 0; }
+  10%  { opacity: 1; }
+  82%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+.cc-ink {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  animation: cc-stamp 2.2s var(--ease-out) forwards;
+}
+@keyframes cc-stamp {
+  0%   { opacity: 0; transform: scale(1.24); letter-spacing: 0.6em; }
+  16%  { opacity: 1; transform: scale(1); }
+  84%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.98); }
+}
+.cc-step {
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: 0.34em;
+  color: rgba(232, 213, 170, 0.75);
+}
+.cc-title {
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  color: var(--gold-bright, #e8c86a);
+  text-shadow: 0 2px 14px rgba(200, 150, 40, 0.35), 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+.cc-sub {
+  font-size: 12px;
+  letter-spacing: 0.5em;
+  color: rgba(214, 197, 164, 0.55);
+  border-top: 1px solid rgba(214, 197, 164, 0.25);
+  padding-top: 10px;
+}
