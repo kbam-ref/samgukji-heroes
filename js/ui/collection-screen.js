@@ -3,10 +3,13 @@
 import { on } from '../core/events.js';
 import { getState } from '../core/state.js';
 import { HEROES, RARITY, FACTIONS } from '../data/heroes.js';
+import { GACHA_RATES } from '../data/gacha-tables.js';
 import { BALANCE } from '../data/balance.js';
 import { collectionBonus } from '../systems/growth.js';
 import { taleList } from '../systems/tales.js';
 import { openTale } from './tales-modal.js';
+import { showModal } from './modal.js';
+import { fmt } from './format.js';
 import { portraitHtml } from './portrait.js';
 
 let unsubs = [];
@@ -16,7 +19,7 @@ function cardHtml(hero, owned, s, index = 0) {
   if (!owned) {
     // 실루엣 — 진짜 초상을 검게 가려 "저게 누구지" 갈증을 만든다
     return `
-    <div class="codex-card locked" ${stagger}>
+    <div class="codex-card locked" data-id="${hero.id}" ${stagger}>
       ${portraitHtml(hero.id, 'codex-portrait silhouette')}
       <span class="codex-q" aria-hidden="true">?</span>
       <b class="codex-name">${hero.name}</b>
@@ -25,7 +28,7 @@ function cardHtml(hero, owned, s, index = 0) {
   }
   const rivalKills = s?.rivalKills?.[hero.id] ?? 0;
   return `
-  <div class="codex-card f-${hero.faction} r${hero.rarity}" ${stagger}>
+  <div class="codex-card f-${hero.faction} r${hero.rarity}" data-id="${hero.id}" data-owned="1" ${stagger}>
     <span class="codex-flag f-${hero.faction}">${hero.name}</span>
     ${portraitHtml(hero.id, `codex-portrait frame-r${hero.rarity}`)}
     <b class="codex-name">${hero.name}</b>
@@ -37,20 +40,26 @@ function cardHtml(hero, owned, s, index = 0) {
 
 function talesHtml(s) {
   const nameOf = (id) => HEROES.find((h) => h.id === id)?.name ?? id;
+  const rewardNote = `첫 열람: 옥구슬 ${fmt(BALANCE.tales.jade)} ‧ 인연 +${Math.round(BALANCE.tales.bondBonusAdd * 100)}%p`;
   return taleList(s)
     .map((entry) => {
-      const have = entry.bond.heroes.filter((id) => s.heroes[id]).length;
+      const missing = entry.bond.heroes.filter((id) => !s.heroes[id]);
+      const have = entry.bond.heroes.length - missing.length;
       const need = entry.bond.heroes.length;
+      // 잠긴 열전: 한 명만 남았으면 그 이름을 금빛으로 강조해 '조금만 더'를 만든다 (3-5)
       const status = entry.read
         ? '<span class="q-done">읽음</span>'
         : entry.unlocked
           ? `<button class="btn primary tale-open" data-tale="${entry.tale.id}">읽기</button>`
-          : `<span class="q-progress">${have} / ${need} 모음</span>`;
+          : missing.length === 1
+            ? `<span class="q-progress almost">《${nameOf(missing[0])}》만 남음</span>`
+            : `<span class="q-progress">${have} / ${need} 모음</span>`;
       return `
       <li class="q-row${entry.read ? ' claimed' : ''}">
         <div class="q-info">
           <b>${entry.tale.title}</b>
           <span class="q-blurb">${entry.bond.name} — ${entry.bond.heroes.map(nameOf).join(' ‧ ')}</span>
+          ${entry.read ? '' : `<span class="q-reward">${rewardNote}</span>`}
         </div>
         ${status}
       </li>`;
@@ -96,6 +105,34 @@ function bodyHtml(s) {
     ${groups}`;
 }
 
+/** 도감 카드 탭 — 침묵하던 카드에 응답을 준다 (3-6).
+ *  잠긴 카드: 어디서 만나는지(등급 확률·천장) + 모집으로 가는 길. 보유 카드: 상세. */
+function openCard(id, owned) {
+  const hero = HEROES.find((h) => h.id === id);
+  if (!hero) return;
+  const s = getState();
+  if (owned) {
+    const rivalKills = s.rivalKills?.[id] ?? 0;
+    showModal({
+      title: `${hero.name} ‧ ${RARITY[hero.rarity].name}`,
+      body: `${hero.title}\n\n${FACTIONS[hero.faction].name}${rivalKills > 0 ? `\n숙적으로 격파 ${rivalKills}회` : ''}`,
+      actions: [{ label: '닫기' }],
+    });
+    return;
+  }
+  const rate = GACHA_RATES.find((r) => r.rarity === hero.rarity);
+  const pct = rate ? Math.round(rate.rate * 1000) / 10 : null;
+  const legendLine = hero.rarity === 5 ? `\n전설은 모집 ${fmt(BALANCE.gacha.pityLegend)}회 안에 반드시 나옵니다(천장).` : '';
+  showModal({
+    title: `${hero.name} ‧ ${RARITY[hero.rarity].name}`,
+    body: `아직 만나지 못한 장수입니다.\n\n모집에서 ${RARITY[hero.rarity].name} 확률 ${pct !== null ? `${pct}%` : ''}로 만날 수 있어요.${legendLine}\n명성 전당에서 조각으로 지명해 데려올 수도 있습니다.`,
+    actions: [
+      { label: '닫기' },
+      { label: '모집으로 가기', primary: true, onClick: () => document.querySelector('.tab[data-tab="gacha"]')?.click() },
+    ],
+  });
+}
+
 export function render(root) {
   destroy();
   root.insertAdjacentHTML(
@@ -110,10 +147,14 @@ export function render(root) {
   // 리스너는 화면 섹션에 — 탭 전환 시 함께 사라져 누적되지 않는다 (1-2)
   const section = root.lastElementChild;
   section.addEventListener('click', (e) => {
-    const btn = e.target.closest('.tale-open');
-    if (!btn) return;
-    const entry = taleList(getState()).find((x) => x.tale.id === btn.dataset.tale);
-    if (entry) openTale(entry);
+    const taleBtn = e.target.closest('.tale-open');
+    if (taleBtn) {
+      const entry = taleList(getState()).find((x) => x.tale.id === taleBtn.dataset.tale);
+      if (entry) openTale(entry);
+      return;
+    }
+    const card = e.target.closest('.codex-card');
+    if (card) openCard(card.dataset.id, card.dataset.owned === '1');
   });
 
   const refresh = () => {
