@@ -561,6 +561,16 @@ body.modal-open #tab-bar { visibility: hidden; }
 
 /* ── 그려진 UI 스킨 (v37) ── */
 
+/* 모달 — 옻칠 금장 패널로 승격 */
+.modal-panel {
+  border: 14px solid transparent !important;
+  border-image: url('../assets/ui/panel-frame.png') 70 fill / 14px stretch;
+  border-radius: 0;
+  background: none;
+}
+.modal-panel::before { display: none; } /* 손잡이 바는 프레임과 어울리지 않는다 */
+
+
 /* 주요 버튼 — 황금 플레이트 */
 .btn.primary {
   background: url('../assets/ui/button-gold.png') center / cover no-repeat,

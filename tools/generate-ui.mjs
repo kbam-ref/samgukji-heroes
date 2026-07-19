@@ -59,6 +59,20 @@ const ITEMS = {
       'with tall war banners toward golden dawn light, dramatic clouds, painterly, rich warm colors, ' +
       'wide empty sky in the upper third for a logo, no text, no watermark',
   },
+  'ribbon-header': {
+    w: 512, h: 192,
+    prompt:
+      'traditional korean silk ribbon banner, deep crimson with gold trim and tassels at both ends, ' +
+      'horizontal, perfectly symmetrical, empty center for text, on pure black background, ' +
+      'flat front view, game UI asset, no text, no watermark',
+  },
+  'summon-gate': {
+    w: 512, h: 768,
+    prompt:
+      'massive ancient golden palace gate opening with divine light rays pouring out, ' +
+      'mystical golden clouds swirling, centered symmetrical composition, painterly, vertical, ' +
+      'dark edges, no people, no text, no watermark',
+  },
   // 전투 VFX — 순흑 배경 (screen 블렌드로 검정이 사라진다)
   'fx-slash': {
     w: 512, h: 512,
