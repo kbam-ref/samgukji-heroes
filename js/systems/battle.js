@@ -92,11 +92,15 @@ export function isBossStage(s) {
   return s.stage.index % 5 === 0;
 }
 
+/** 다가올(또는 현재) 우두머리 전장의 번호 — 5·10 중 가까운 쪽 */
+export function nextBossIndex(s) {
+  return Math.min(Math.ceil(s.stage.index / 5) * 5, 10);
+}
+
 /** 다음 우두머리 전장의 돌파 필요 전투력 (일반 전장에서는 다가올 보스전 기준을 보여준다) */
 export function nextBossGate(s) {
-  const bossIndex = Math.min(Math.ceil(s.stage.index / 5) * 5, 10);
   return Math.ceil(
-    stagePowerAt(s.stage.difficulty ?? 1, s.stage.chapter, bossIndex) * BALANCE.battle.bossPowerRatio
+    stagePowerAt(s.stage.difficulty ?? 1, s.stage.chapter, nextBossIndex(s)) * BALANCE.battle.bossPowerRatio
   );
 }
 

@@ -350,9 +350,9 @@
 /* 합격 깃발 버튼 — 인연이 발동 중일 때만 보인다 */
 .combo-btn {
   position: absolute;
-  right: 12px;
+  right: 10px;
   bottom: 12px;
-  width: 40px;
+  width: 44px; /* 44px 터치 타깃 규약 (2-5) — clip-path는 %라 자동 스케일 */
   height: 76px;
   appearance: none;
   cursor: pointer;
@@ -436,9 +436,12 @@
   font-variant-numeric: tabular-nums;
 }
 .power-line b { color: var(--paper); }
-/* 모자라면 붉게, 충분하면 금빛 — 숫자를 안 읽어도 상태가 보인다 */
+/* 관문 수치 색 문법(G1): 지금 막혔을 때만 붉게(경보), 그 외엔 중립 예고 톤.
+   미래 관문 수치를 금빛(가능/가치)으로 칠하면 '이미 이겼다'로 오독되므로 중립으로. */
 .power-line.lack #bs-foe-power { color: var(--alert); }
-.power-line:not(.lack) #bs-foe-power { color: var(--gold-bright); }
+.power-line:not(.lack) #bs-foe-power { color: var(--paper-dim); }
+#bs-gate-label { color: var(--paper-faint); font-size: 11px; }
+.power-line.lack #bs-gate-label { color: var(--alert); }
 .vs-mark { width: 12px; height: 1px; background: var(--paper-faint); align-self: center; }
 
 .kill-bar { height: 6px; border-radius: 3px; background: var(--ink-700); overflow: hidden; }
@@ -455,8 +458,30 @@
   min-height: 17px;
   font-size: 11.5px;
   text-align: center;
-  color: #c98f4a;
+  color: #d29a58;
+  text-shadow: 0 1px 3px rgba(11, 10, 8, 0.85); /* 대비 보강 (4-3) */
 }
+.battle-hint.has-cta { min-height: 46px; display: flex; align-items: center; justify-content: center; }
+
+/* 벽 막힘 CTA — 말이 아니라 '문'. 탭하면 성장·모집으로 데려간다 (2-1) */
+.battle-cta {
+  appearance: none;
+  font-family: inherit;
+  cursor: pointer;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 14px;
+  border: 1px solid rgba(228, 197, 92, 0.5);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(201, 162, 39, 0.16), rgba(201, 162, 39, 0.06));
+  color: var(--paper);
+  font-size: 12.5px;
+  letter-spacing: 0.02em;
+  transition: transform 0.06s ease, background 0.2s ease;
+  animation: cta-breathe 2.4s ease-in-out infinite;
+}
+.battle-cta b { color: var(--gold-bright); font-weight: 700; }
+.battle-cta:active { transform: translateY(1px) scale(0.99); }
 
 /* 공격 연마 버튼 — 엄지가 닿는 화면 아래쪽, 44px 이상 */
 .atk-upgrade {
@@ -505,6 +530,9 @@
   justify-content: center;
   padding: 2px 18px 10px;
 }
+/* 깃발을 탭하면 0.1초 눌림 — 탭 전환 전에도 손끝에 반응 (2-2) */
+.party-row .hero-flag { cursor: pointer; transition: transform 0.08s ease; }
+.party-row .hero-flag:active { transform: translateY(1px) scale(0.97); }
 
 /* ── 영웅 ── */
 
@@ -1224,6 +1252,8 @@
   font-weight: 800;
   cursor: pointer;
 }
+/* 시각 크기는 유지하되 실터치 영역을 46px로 넓힌다 — 빗나가 필드 탭 오발 방지 (2-5) */
+.speed-btn::before { content: ''; position: absolute; inset: -8px; }
 .speed-btn:active { transform: scale(0.92); }
 
 /* 오늘의 무료 모집 — 금테 강조 */
@@ -1644,34 +1674,59 @@
     rgba(11, 10, 8, 0.92);
 }
 
-/* ── 전장 행군 연출 (v39) — 부대가 앞으로 나아가고, 앞의 적과 싸운다 ── */
+/* ── 전장 대형·크기 (v46) — 캐릭터를 줄이고 V자 웨지로 세워 전장을 넓게 쓴다 ── */
 
-/* 배우 확대 — 모션이 '보이는' 크기 */
-.unit-sprite { width: 76px; height: 92px; }
-.ally-unit { flex: 0 1 80px; }
-.ally-unit::before { width: 52px; bottom: 18px; }
-.foe .unit-sprite { width: 96px; height: 116px; }
-.foe::before { width: 76px; }
+/* 배우 크기 축소 — 화면이 답답하지 않게, 대신 대형과 배경으로 무게를 준다 */
+.unit-sprite { width: 60px; height: 74px; }
+.ally-unit { flex: 0 1 58px; }
+.ally-unit::before { width: 40px; bottom: 15px; }
+.foe .unit-sprite { width: 78px; height: 94px; }
+.foe::before { width: 62px; }
 
-/* 부대는 왼쪽에 줄 선다 — 행군의 출발선. 적과의 사이는 돌진으로 메운다 */
+/* 부대는 왼쪽에 V자(웨지)로 선다 — 가운데가 앞(아래), 양 날개가 뒤(위).
+   dash 애니메이션이 .ally-unit의 transform을 쓰므로 대형 오프셋은 margin-bottom으로 준다(충돌 방지). */
 .ally-line {
-  left: 2%;
-  right: 44%;
-  bottom: 6%;
-  gap: 2px;
+  left: 3%;
+  right: 46%;
+  bottom: 5%;
+  gap: 3px;
+  align-items: flex-end;
 }
-.foe { left: 72%; bottom: 29%; }
+.foe { left: 74%; bottom: 28%; }
 
-/* 뒷줄 재조정 (확대 비율 유지) */
-.ally-unit:nth-child(2n) { margin-bottom: 30px; }
-.ally-unit:nth-child(2n) .unit-sprite { width: 60px; height: 74px; }
-.ally-unit-name { font-size: 11px; }
+/* 지그재그(2열) 규칙 무효화 + 기본은 평평(1~2인은 대형이랄 게 없음) */
+.ally-unit:nth-child(2n) { margin-bottom: 0; }
+.ally-unit .unit-sprite { width: 60px; height: 74px; opacity: 1; }
+.ally-unit-name { font-size: 10px; color: var(--paper); }
 
-/* 원근 잡졸 재배치 */
-.back-mob.m1 { right: 6%; bottom: 54%; }
-.back-mob.m2 { right: 18%; bottom: 58%; }
-.back-mob.m3 { right: 12%; bottom: 62%; }
-.burst-img { left: 70%; }
+/* V자 웨지 — 파티 인원(data-n)에 따라 가운데가 앞(아래), 바깥일수록 뒤(위)·작게.
+   인원수 기반이라 솔로·듀오는 자연스럽게 평평, 3인부터 V가 선다. */
+.ally-line[data-n="3"] .ally-unit:nth-child(1),
+.ally-line[data-n="3"] .ally-unit:nth-child(3) { margin-bottom: 22px; z-index: 1; }
+.ally-line[data-n="3"] .ally-unit:nth-child(1) .unit-sprite,
+.ally-line[data-n="3"] .ally-unit:nth-child(3) .unit-sprite { width: 52px; height: 64px; opacity: 0.92; }
+.ally-line[data-n="3"] .ally-unit:nth-child(2) { z-index: 4; }
+
+.ally-line[data-n="4"] .ally-unit:nth-child(1),
+.ally-line[data-n="4"] .ally-unit:nth-child(4) { margin-bottom: 28px; z-index: 1; }
+.ally-line[data-n="4"] .ally-unit:nth-child(2),
+.ally-line[data-n="4"] .ally-unit:nth-child(3) { margin-bottom: 6px; z-index: 3; }
+.ally-line[data-n="4"] .ally-unit:nth-child(1) .unit-sprite,
+.ally-line[data-n="4"] .ally-unit:nth-child(4) .unit-sprite { width: 50px; height: 62px; opacity: 0.9; }
+
+.ally-line[data-n="5"] .ally-unit:nth-child(1),
+.ally-line[data-n="5"] .ally-unit:nth-child(5) { margin-bottom: 30px; z-index: 1; }
+.ally-line[data-n="5"] .ally-unit:nth-child(2),
+.ally-line[data-n="5"] .ally-unit:nth-child(4) { margin-bottom: 15px; z-index: 2; }
+.ally-line[data-n="5"] .ally-unit:nth-child(3) { z-index: 4; }
+.ally-line[data-n="5"] .ally-unit:nth-child(1) .unit-sprite,
+.ally-line[data-n="5"] .ally-unit:nth-child(5) .unit-sprite { width: 50px; height: 62px; opacity: 0.9; }
+
+/* 원근 잡졸 — 적장 가까이 촘촘하게 (사이 간격 축소) */
+.back-mob.m1 { right: 8%;  bottom: 40%; }
+.back-mob.m2 { right: 15%; bottom: 44%; }
+.back-mob.m3 { right: 11%; bottom: 47%; }
+.burst-img { left: 72%; }
 
 /* 적 등장 — 진군 끝에서 적이 걸어 들어온다 */
 .foe.arrive { animation: foe-arrive 0.45s var(--ease-out); }
@@ -1681,14 +1736,39 @@
   100% { transform: translateX(-50%); }
 }
 
-/* 배경 스크롤 레이어 — 행군 중 세상이 흐른다 (JS가 backgroundPosition을 민다) */
+/* 배경 스크롤 레이어 — 세상이 늘 흐른다 (JS가 backgroundPosition을 민다).
+   전투 중엔 아주 느리게, 행군 중엔 빠르게 — 멈춘 세계로 보이지 않게 (v46) */
+/* background-image는 인라인으로 직접 지정한다(템플릿) — 커스텀 속성 안 상대경로 url()을
+   크로미움이 CSS 파일 기준(/css/assets/…)으로 잘못 해석해 404 나던 문제를 근본 수리 (v46) */
 .field-bg {
   position: absolute;
   inset: 0;
-  background-image: var(--bg);
   background-repeat: repeat-x;
   background-size: auto 100%;
   background-position: 0 42%;
+}
+
+/* 근경 지면 레이어 — 원경(field-bg)보다 빠르게 흘러 원근(패럴럭스) 깊이를 만든다.
+   에셋 없이 CSS로 그린 흙먼지·자갈 결. 배경 사진과 겹쳐도 겉돌지 않게 낮은 명도. */
+.field-ground {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 34%;
+  pointer-events: none;
+  background-repeat: repeat-x;
+  background-size: 240px 100%;
+  background-position: 0 bottom;
+  background-image:
+    linear-gradient(180deg, transparent, rgba(6, 5, 4, 0.28) 70%, rgba(6, 5, 4, 0.5)),
+    repeating-linear-gradient(84deg,
+      rgba(46, 38, 28, 0) 0 34px,
+      rgba(28, 22, 15, 0.42) 34px 41px,
+      rgba(64, 54, 40, 0.22) 41px 48px);
+  opacity: 0.7;
+  mask-image: linear-gradient(180deg, transparent, #000 55%);
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 55%);
 }
 /* 가독성 어둠은 배경 위, 배우 아래 */
 .field-shade {

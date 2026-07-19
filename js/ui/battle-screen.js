@@ -23,6 +23,9 @@ function towerTriesLeftLabel() {
 let unsubs = [];
 let rafId = 0;
 let lastTap = 0;
+let capNudged = false;      // 이 적에게서 '상한 도달' 안내를 이미 띄웠는가 (2-4)
+let capNudgeCount = 0;      // 세션 누적 — 몇 번 알린 뒤엔 침묵(소음 방지)
+let comboHintShown = false; // 협공 첫 등장 안내를 이번 화면에서 띄웠는가 (2-6)
 const cutinSeen = new Set(); // 숙적 컷인은 접속당 한 번 — 재조우는 짧게
 
 function foeSvg(bandColor) {
@@ -77,6 +80,7 @@ function updateAllies() {
   const line = document.getElementById('bs-allies');
   if (!line) return;
   const units = battle.alliesSnapshot();
+  line.dataset.n = units.length; // V자 대형은 인원수에 따라 (CSS data-n)
   const nodes = line.children;
 
   const sameShape =
@@ -99,6 +103,16 @@ function updateAllies() {
 /** 화면에 보여주는 '돌파' 수치 = 다가올(또는 지금) 보스전에 필요한 전투력 */
 function gatePower(s) {
   return battle.nextBossGate(s);
+}
+
+/** 관문 수치가 '어느 전장 기준'인지 라벨 — 미래 관문을 현재형 '부족'으로 오독하지 않게 (2-3) */
+function gateLabel(s) {
+  return battle.isBossStage(s) ? '이번 관문' : `${battle.nextBossIndex(s)}전장 관문`;
+}
+
+/** 지금 실제로 우두머리에게 막혀 있는가 — 붉은 경보색은 이 순간에만 (2-3) */
+function isBlocked(s) {
+  return battle.isBossStage(s) && battle.isBossPhase(s) && !battle.canBeatBoss(s);
 }
 
 function chapterBand(s = getState()) {
@@ -149,14 +163,15 @@ function template(s) {
   return `
   <section class="screen battle-screen">
     <header class="stage-plate">
-      <div class="stage-chapter">난이도 ${diff} ‧ ${chapter.id}장 ‧ ${chapter.name}</div>
+      <div class="stage-chapter">${diff > 1 ? `난이도 ${diff} ‧ ` : ''}${chapter.id}장 ‧ ${chapter.name}</div>
       <h1 class="stage-name" id="bs-stage-name">${stage.name}</h1>
       <div class="stage-step">${s.stage.index} / ${chapter.stages.length} 전장${battle.isBossStage(s) ? ' ‧ 우두머리전' : ''}</div>
       <div class="weekday-perk">${battle.weekdayPerk().name} — 오늘 엽전 +${Math.round((battle.weekdayPerk().coinMult - 1) * 100)}%</div>
     </header>
 
     <div class="battlefield${battle.currentEnemy() ? '' : ' marching'}" id="bs-field">
-      <div class="field-bg" id="bs-field-bg"${chapter.env ? ` style="--bg:url('./assets/bg/${chapter.env}.png')"` : ''}></div>
+      <div class="field-bg" id="bs-field-bg"${chapter.env ? ` style="background-image:url('./assets/bg/${chapter.env}.png')"` : ''}></div>
+      <div class="field-ground" id="bs-field-ground" aria-hidden="true"></div>
       <div class="field-shade" aria-hidden="true"></div>
       <div class="field-ambience" aria-hidden="true">
         <i class="fog"></i>
@@ -182,7 +197,7 @@ function template(s) {
         <img class="portrait back-mob m3" src="./assets/enemies-cut/${chapter.foeArt}.png" alt="">
       </div>` : ''}
 
-      <div class="ally-line" id="bs-allies">${alliesHtml()}</div>
+      <div class="ally-line" id="bs-allies" data-n="${battle.alliesSnapshot().length}">${alliesHtml()}</div>
 
       <button class="combo-btn" id="bs-combo" hidden aria-label="협공 발동">
         <i class="combo-fill" id="bs-combo-fill"></i>
@@ -200,7 +215,7 @@ function template(s) {
         <span class="power-line" id="bs-power-line">
           내 전투력 <b id="bs-ally-power">${fmt(partyPower(s))}</b>
           <i class="vs-mark"></i>
-          돌파 필요 <b id="bs-foe-power">${fmt(gatePower(s))}</b>
+          <span id="bs-gate-label">${gateLabel(s)}</span> <b id="bs-foe-power">${fmt(gatePower(s))}</b>
         </span>
       </div>
       <div class="kill-bar"><i id="bs-kill-fill"></i></div>
@@ -302,17 +317,40 @@ function updateFoe() {
     }
   }
 
+  updateHint(s, hintEl);
+}
+
+let hintKey = ''; // 지금 그려진 힌트의 상태 키 — 바뀔 때만 DOM을 다시 만든다 (터치 씹힘 방지)
+
+/** 막힘 안내를 '말'이 아니라 '문'으로 — 벽에 막히면 성장·모집으로 데려다주는 탭 가능한 CTA (2-1) */
+function updateHint(s, hintEl) {
+  const blocked = isBlocked(s);
+  // 막혔을 때 더 큰 지렛대(모집)를 우선: 옥구슬이 1회 모집분 이상이면 모집, 아니면 단련
+  const canPull = (s.resources.jade ?? 0) >= BALANCE.gacha.costSingle;
+  let key, html;
   if (battle.isRecovering()) {
-    hintEl.textContent = '전열을 가다듬는 중…';
-  } else if (battle.isBossStage(s) && battle.isBossPhase(s) && !battle.canBeatBoss(s)) {
-    const gap = gatePower(s) - partyPower(s);
-    hintEl.textContent = `전투력이 ${fmt(gap)} 모자라요 — 아래 [공격 연마]나 영웅 탭의 단련으로 키우세요`;
+    key = 'recover';
+    html = '<span class="battle-hint-text">전열을 가다듬는 중…</span>';
+  } else if (blocked) {
+    const gap = fmt(gatePower(s) - partyPower(s));
+    key = canPull ? 'blocked-gacha' : 'blocked-train';
+    html = canPull
+      ? `<button class="battle-cta" data-dest="gacha">전투력 ${gap} 부족 — <b>새 장수 모집하러 가기 →</b></button>`
+      : `<button class="battle-cta" data-dest="heroes">전투력 ${gap} 부족 — <b>영웅 단련하러 가기 →</b></button>`;
   } else if (battle.isBossPhase(s)) {
-    hintEl.textContent = '우두머리와 맞붙는 중!';
+    key = 'boss';
+    html = '<span class="battle-hint-text">우두머리와 맞붙는 중!</span>';
   } else if (s.resources.coin >= upgrades.atkUpgradeCost()) {
-    hintEl.textContent = '엽전이 모였어요 — 아래 [공격 연마]를 누르면 더 세져요';
+    key = 'coin';
+    html = '<span class="battle-hint-text">엽전이 모였어요 — 아래 [공격 연마]를 누르면 더 세져요</span>';
   } else {
-    hintEl.textContent = '';
+    key = 'none';
+    html = '';
+  }
+  if (key !== hintKey) {
+    hintKey = key;
+    hintEl.innerHTML = html;
+    hintEl.classList.toggle('has-cta', key.startsWith('blocked'));
   }
 }
 
@@ -338,9 +376,11 @@ function updatePowers() {
   const foe = document.getElementById('bs-foe-power');
   if (ally) ally.textContent = fmt(partyPower(s));
   if (foe) foe.textContent = fmt(gatePower(s));
-  // 모자라면 필요 수치가 붉게, 충분하면 금빛으로 — 숫자를 읽지 않아도 상태가 보인다
+  const label = document.getElementById('bs-gate-label');
+  if (label) label.textContent = gateLabel(s);
+  // 붉은 경보색은 '지금 실제로 막힌' 순간에만 — 미래 관문 수치를 부족으로 오독하지 않게 (2-3)
   const line = document.getElementById('bs-power-line');
-  if (line) line.classList.toggle('lack', partyPower(s) < gatePower(s));
+  if (line) line.classList.toggle('lack', isBlocked(s));
 }
 
 function foeAnchor() {
@@ -477,7 +517,14 @@ function showRivalCutin(enemy) {
 function updateCombo() {
   const btn = document.getElementById('bs-combo');
   if (!btn) return;
-  btn.hidden = bondBonus(getState()) <= 0; // 인연이 있어야 협공이 있다
+  const has = bondBonus(getState()) > 0;
+  btn.hidden = !has; // 인연이 있어야 협공이 있다
+  // 협공 버튼이 처음 등장하면 무엇인지 한 번만 알린다 (2-6)
+  if (has && !comboHintShown) {
+    comboHintShown = true;
+    const r = btn.getBoundingClientRect();
+    if (r.width) floatText(r.left + r.width / 2, r.top - 4, '인연 협공! 가득 차면 터뜨려요', 'gold');
+  }
   const fill = document.getElementById('bs-combo-fill');
   if (fill) fill.style.height = `${battle.comboProgress() * 100}%`;
   btn.classList.toggle('ready', battle.comboReady());
@@ -497,15 +544,49 @@ export function render(root) {
   root.insertAdjacentHTML('beforeend', template(s));
   foeFigureKey = foeFigure(s, null).key; // template은 잡병 아트로 그린다
   shownChapterKey = `${s.stage.difficulty ?? 1}:${battle.currentChapter(s).id}`;
+  hintKey = ''; // 새 화면 — 힌트도 처음부터 다시 그린다
+  capNudged = false;
+  comboHintShown = false;
   updateFoe();
   updatePowers(); // 부족(붉은 표시) 상태를 첫 화면부터 정확히
   updateUpgradeButton();
   updateCombo();
 
+  // 벽 막힘 CTA — 힌트 안의 버튼을 눌러 성장·모집으로 이동 (2-1)
+  document.getElementById('bs-hint').addEventListener('click', (e) => {
+    const cta = e.target.closest('.battle-cta');
+    if (!cta) return;
+    vibrate(8);
+    document.querySelector(`.tab[data-tab="${cta.dataset.dest}"]`)?.click();
+  });
+
+  // 하단 파티 깃발 줄 — 탭하면 영웅(편성) 화면으로. 빈 자리는 편성 안내 (2-2)
+  const partyRow = document.getElementById('bs-party');
+  if (partyRow) {
+    partyRow.addEventListener('click', (e) => {
+      const flag = e.target.closest('.hero-flag');
+      if (!flag) return;
+      vibrate(8);
+      pulse(flag);
+      if (flag.classList.contains('empty')) {
+        const r = flag.getBoundingClientRect();
+        floatText(r.left + r.width / 2, r.top, '영웅을 편성하세요', 'gold');
+      }
+      document.querySelector('.tab[data-tab="heroes"]')?.click();
+    });
+  }
+
   const comboBtn = document.getElementById('bs-combo');
   comboBtn.addEventListener('click', (e) => {
     e.stopPropagation(); // 전장 터치 보상과 겹치지 않게
-    if (!battle.fireCombo()) shake(comboBtn);
+    if (!battle.fireCombo()) {
+      shake(comboBtn);
+      // 왜 안 터지는지 — 충전 중임을 알려준다 (2-6)
+      if (!battle.comboReady()) {
+        const r = comboBtn.getBoundingClientRect();
+        floatText(r.left + r.width / 2, r.top, `충전 중 ${Math.round(battle.comboProgress() * 100)}%`, 'warn');
+      }
+    }
   });
 
   // 시련의 탑
@@ -538,6 +619,16 @@ export function render(root) {
     if (coins > 0) {
       floatText(e.clientX, e.clientY, `+${fmt(coins)}`, 'gold');
       flyCoins(e.clientX, e.clientY, 2);
+    } else if (!capNudged && capNudgeCount < 3) {
+      // 상한 도달 — 왜 더 안 나오는지 정직하게 알린다 (2-4). 세션 3회 뒤엔 침묵(소음 방지).
+      capNudged = true;
+      capNudgeCount += 1;
+      floatText(e.clientX, e.clientY, '다음 적에게서 더 나와요', '');
+      const hint = document.getElementById('bs-hint');
+      if (hint && hintKey === 'none') {
+        hint.innerHTML = '<span class="battle-hint-text">적을 처치하면 다시 터치 보상!</span>';
+        hintKey = 'tap-cap';
+      }
     }
     pulse(field, 'field-tap');
   });
@@ -560,6 +651,7 @@ export function render(root) {
 
   unsubs.push(
     on('battle:spawn', ({ enemy }) => {
+      capNudged = false; // 새 적 — 터치 상한 안내도 새로
       updateFoe();
       field.classList.remove('marching'); // 적을 만나면 행군을 멈춘다
       const foeBox = document.getElementById('bs-foe');
@@ -822,39 +914,51 @@ export function render(root) {
     })
   );
 
-  // 전장 게이지 + 행군 스크롤 — 요소 참조는 한 번만 잡는다 (저사양 기기 보호)
+  // 전장 게이지 + 배경 스크롤 — 요소 참조는 한 번만 잡는다 (저사양 기기 보호)
   const gaugeFill = document.getElementById('bs-kill-fill');
   const fieldBg = document.getElementById('bs-field-bg');
+  const fieldGround = document.getElementById('bs-field-ground'); // 근경 패럴럭스
   let gaugeLast = -1;
-  let marchOffset = 0;
+  let farOffset = 0;   // 원경(하늘·먼 산) — 느리게
+  let nearOffset = 0;  // 근경(지면) — 원경보다 빠르게 → 깊이감
   let dustTick = 0;
   function gauge() {
     if (gaugeFill) {
       const s2 = getState();
       const base = Math.min(s2.stage.kills, BALANCE.battle.killsPerStage);
-      const pct = Math.min(100, ((base + battle.killProgress()) / (BALANCE.battle.killsPerStage + 1)) * 100);
+      // 일반 전장은 정원(killsPerStage)만으로 게이지가 가득 차야 '돌파' 쾌감이 산다.
+      // 우두머리 전장만 관문(+1)이 남는다. (v46 곁수정 2-6)
+      const denom = battle.isBossStage(s2) ? BALANCE.battle.killsPerStage + 1 : BALANCE.battle.killsPerStage;
+      const pct = Math.min(100, ((base + battle.killProgress()) / denom) * 100);
       const rounded = Math.round(pct * 10) / 10;
       if (rounded !== gaugeLast) {
         gaugeLast = rounded;
         gaugeFill.style.width = `${rounded}%`;
       }
     }
-    // 행군 — 부대가 달리는 동안 세상이 왼쪽으로 흐른다
-    if (fieldBg && field.classList.contains('marching')) {
-      marchOffset = (marchOffset + 3.4 * (getState().settings?.speed || 1)) % 8192;
-      fieldBg.style.backgroundPosition = `${-marchOffset}px 42%`;
-      if (++dustTick >= 12) {
-        dustTick = 0;
-        const line = document.getElementById('bs-allies');
-        const units = line ? line.children : [];
-        if (units.length) {
-          const u = units[Math.floor(Math.random() * units.length)];
-          const dust = document.createElement('i');
-          dust.className = 'dash-dust';
-          dust.style.left = `${u.offsetLeft + u.offsetWidth / 2}px`;
-          line.appendChild(dust);
-          setTimeout(() => dust.remove(), 380);
-        }
+    // 세상은 늘 흐른다 — 전투 중엔 미세하게, 행군 중엔 빠르게.
+    // 근경(지면)이 원경(배경)보다 빠르게 흘러 '진짜 나아가는' 원근을 만든다.
+    const marching = field.classList.contains('marching');
+    const speed = getState().settings?.speed || 1;
+    const farStep = (marching ? 3.4 : 0.28) * speed;
+    farOffset = (farOffset + farStep) % 8192;
+    if (fieldBg) fieldBg.style.backgroundPosition = `${-farOffset}px 42%`;
+    if (fieldGround) {
+      nearOffset = (nearOffset + farStep * 2.1) % 4096; // 근경은 2.1배 빠르게
+      fieldGround.style.backgroundPosition = `${-nearOffset}px bottom`;
+    }
+    // 행군 중엔 발밑에서 흙먼지가 인다
+    if (marching && ++dustTick >= 12) {
+      dustTick = 0;
+      const line = document.getElementById('bs-allies');
+      const units = line ? line.children : [];
+      if (units.length) {
+        const u = units[Math.floor(Math.random() * units.length)];
+        const dust = document.createElement('i');
+        dust.className = 'dash-dust';
+        dust.style.left = `${u.offsetLeft + u.offsetWidth / 2}px`;
+        line.appendChild(dust);
+        setTimeout(() => dust.remove(), 380);
       }
     }
     rafId = requestAnimationFrame(gauge);
