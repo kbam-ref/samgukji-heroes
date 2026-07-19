@@ -201,12 +201,14 @@ function template(s) {
     </div>
 
     <button class="atk-upgrade" id="bs-upgrade">
+      <svg class="btn-ico" viewBox="0 0 20 20" aria-hidden="true"><path d="M3.5 16.5 L13 7 M10.6 3.8 L16.2 9.4 M4 12.6 L7.4 16" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>
       <span class="up-name">공격 연마</span>
       <span class="up-stat">공격 <b id="bs-up-atk">${fmt(totalDps())}</b> <i id="bs-up-next">→ ${fmt(totalDps() + atkPerUpgrade())}</i></span>
       <span class="up-cost" id="bs-up-cost">엽전 ${fmt(upgrades.atkUpgradeCost())}</span>
     </button>
 
     <button class="tower-btn" id="bs-tower">
+      <svg class="btn-ico" viewBox="0 0 20 20" aria-hidden="true"><path d="M5.5 17 V9.5 H14.5 V17 M3.5 9.5 H16.5 M7 9.5 V5.5 H13 V9.5 M8.8 5.5 V3 H11.2 V5.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/></svg>
       <span class="up-name">시련의 탑</span>
       <span class="up-stat" id="bs-tower-note">최고 ${fmt(s.records?.bestTower ?? 0)}층 ‧ 오늘 ${towerTriesLeftLabel(s)}</span>
     </button>

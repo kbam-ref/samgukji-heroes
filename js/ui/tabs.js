@@ -71,6 +71,11 @@ export function switchTo(id, navRoot, screenRoot, { push = true } = {}) {
   for (const btn of navRoot.querySelectorAll('.tab')) {
     btn.classList.toggle('active', btn.dataset.tab === id);
   }
+  // 도감 금점은 "새 장수 확인" 알림 — 들어가 보면 꺼진다 (모집 금점은 무료 모집 로직이 관리)
+  if (id === 'codex') {
+    const dot = navRoot.querySelector('.tab[data-tab="codex"] .tab-dot');
+    if (dot) dot.hidden = true;
+  }
   screenRoot.innerHTML = '';
   screenRoot.scrollTop = 0;
   tab.screen.render(screenRoot);

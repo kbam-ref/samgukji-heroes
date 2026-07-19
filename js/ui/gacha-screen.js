@@ -50,7 +50,7 @@ function refreshShardHall() {
 
 function flagCardHtml({ hero, dupe }, index) {
   return `
-  <div class="pull-flag r${hero.rarity}" data-index="${index}">
+  <div class="pull-flag r${hero.rarity}" data-index="${index}" style="--i:${index}">
     <div class="pf-inner">
       <div class="pf-back"></div>
       <div class="pf-front">

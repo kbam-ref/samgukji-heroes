@@ -1566,3 +1566,32 @@
   margin-left: 1px;
   color: var(--paper-faint);
 }
+
+/* ── 폴리시 4차 (v35) ── */
+
+/* 모집 깃발 — 착착 내려와 꽂힌다 */
+.pull-flag {
+  animation: flag-in 0.3s var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 55ms);
+}
+@keyframes flag-in {
+  from { opacity: 0; transform: translateY(-16px) scale(0.92); }
+}
+
+/* 협공 준비 — 파문이 퍼지며 "지금 눌러라" */
+.combo-btn.ready::before {
+  content: '';
+  position: absolute;
+  inset: -7px;
+  border: 2px solid rgba(228, 197, 92, 0.55);
+  border-radius: 10px;
+  animation: ready-ring 1.1s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes ready-ring {
+  from { transform: scale(0.92); opacity: 1; }
+  to   { transform: scale(1.22); opacity: 0; }
+}
+
+/* 버튼 아이콘 */
+.btn-ico { width: 17px; height: 17px; color: var(--gold); flex: none; }

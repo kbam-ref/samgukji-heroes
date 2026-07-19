@@ -147,6 +147,12 @@ function boot() {
   on('gacha:free', refreshGachaDot);
   setInterval(refreshGachaDot, 60000); // 자정 넘김 대비
 
+  // 새 장수를 얻으면 도감 탭에 금점 — 들어가 보면 꺼진다
+  on('hero:add', () => {
+    const dot = document.querySelector('.tab[data-tab="codex"] .tab-dot');
+    if (dot) dot.hidden = false;
+  });
+
   // 주기 저장 — 탭이 숨겨져 있는 동안엔 lastSeenAt을 전진시키지 않는다
   // (전진시키면 백그라운드에서 죽었을 때 방치 보상이 통째로 사라진다)
   setInterval(() => persist(getState(), { seen: !document.hidden }), AUTOSAVE_MS);
