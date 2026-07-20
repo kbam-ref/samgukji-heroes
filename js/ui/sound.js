@@ -490,6 +490,9 @@ export function play(kind) {
     case 'combo':  drum(t, 0.34, 76, sfxGain); drum(t + 0.11, 0.34, 76, sfxGain); drum(t + 0.22, 0.42, 66, sfxGain); pluck(SCALE[6] * 2, t + 0.3, 0.16, sfxGain); break;
     case 'drum':   drum(t, 0.4, 70, sfxGain); drum(t + 0.22, 0.4, 70, sfxGain); drum(t + 0.48, 0.5, 58, sfxGain); break;
     case 'omen':   gong(t, 0.11, sfxGain); flute(523, t + 0.05, 0.6, 0.04); break;
+    case 'boss':   gong(t, 0.2, sfxGain); drum(t + 0.05, 0.45, 50, sfxGain); drum(t + 0.32, 0.5, 44, sfxGain); flute(330, t + 0.14, 0.9, 0.06); break; // 보스 출현 — 징이 울리고 낮은 북이 몰아친다
+    case 'danger': whoosh(t, 0.1, 2600, 900, 0.06); drum(t, 0.32, 96, sfxGain); drum(t + 0.14, 0.34, 104, sfxGain); break; // 패배 임박 — 다급한 경보 북
+
     case 'chapter': gong(t, 0.18, sfxGain); drum(t + 0.1, 0.4, 62, sfxGain); flute(587, t + 0.24, 0.9, 0.05); pluck(SCALE[4] * 2, t + 0.5, 0.16, sfxGain); break; // 장 개막 — 징이 울리고 피리가 연다
 
   }

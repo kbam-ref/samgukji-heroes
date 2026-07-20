@@ -22,6 +22,7 @@ let speed = 1;            // 전투 배속 x1/x2/x3 (설정에 영속)
 let revealing = false;    // 10연 소환 연출 중 — 월드를 멈춘다
 let revealTimers = [];
 let started = false;      // '시작하기'를 누르기 전엔 월드가 돌지 않는다 (로딩·타이틀 뒤 스폰 방지)
+let dangerLevel = 0;      // 패배 임박 경보 단계(0/1/2) — 임계를 넘을 때만 1회 울린다
 
 // 타이틀의 '시작하기' → 도전 1 소모하고 새 판(라운드1). 도전이 없으면 결제 화면으로.
 on('game:begin', () => startNewPlay());
@@ -29,6 +30,7 @@ on('game:begin', () => startNewPlay());
 // 저장해 둔 판을 불러온다. 불러오면 세이브 소모(1저장=1이어하기). 방어 화면 준비 후에만
 // 부작용(clearRun) 실행 — 설정탭 등 fieldEl 없을 때 세이브만 지워지고 로드 안 되는 버그 방지.
 on('game:load', () => {
+  if (!fieldEl) emit('nav:battle'); // 설정 탭 등에서 방어 화면이 언마운트됐으면 먼저 마운트
   if (!fieldEl) return;
   const saved = loadRun();
   clearRun();
@@ -173,6 +175,18 @@ function spawnImpact(x, y, color, weapon) {
   s.style.setProperty('--c', color);
   shotLayer.appendChild(s);
   setTimeout(() => releaseFxEl(s), 260);
+}
+
+// 보스 출현 배너 — 필드 위로 '보스 출현!'이 크게 밀려들었다 사라진다 (긴장 연출)
+function bossBanner() {
+  if (!fieldEl || reduceMotion) return;
+  const old = fieldEl.querySelector('.rd-boss-banner');
+  if (old) old.remove();
+  const b = document.createElement('div');
+  b.className = 'rd-boss-banner';
+  b.innerHTML = '<b>보스 출현!</b><span>강한 적이 밀려온다</span>';
+  fieldEl.appendChild(b);
+  setTimeout(() => b.remove(), 1600);
 }
 
 function hud() {
@@ -375,8 +389,17 @@ function updateHud() {
   if (s) s.textContent = run.stage;
   if (g) g.textContent = fmt(Math.floor(run.gold));
   if (a) {
-    a.textContent = run.enemies.length;
-    a.parentElement.classList.toggle('danger', run.enemies.length >= DEFENSE.wave.loseAt * 0.75);
+    const alive = run.enemies.length;
+    const loseAt = DEFENSE.wave.loseAt;
+    a.textContent = alive;
+    a.parentElement.classList.toggle('danger', alive >= loseAt * 0.75);
+    // 패배 임박 경보 — 임계를 '처음' 넘는 순간 1회 소리·진동(방치·배속 중 조용히 100 도달 방지)
+    const lvl = alive >= loseAt * 0.9 ? 2 : alive >= loseAt * 0.75 ? 1 : 0;
+    if (lvl > dangerLevel && !run.prepLeft) {
+      if (lvl === 2) { play('danger'); vibrate([0, 60, 50, 80]); }
+      else { play('foehit'); vibrate(30); }
+    }
+    dangerLevel = lvl;
   }
   // 누적 처치
   const k = document.getElementById('rd-kills');
@@ -623,8 +646,13 @@ function consumeFx() {
         floatText(window.innerWidth / 2, 120, '보스 격파! 무료 소환', 'gold');
       }
       updateHud();
+    } else if (fx.type === 'bossSpawn') {
+      // 보스 등장 — 헌장 #3(긴장 단계). 경보음·섬광·배너로 "온다"를 알린다.
+      play('boss'); flash('ember'); vibrate([0, 45, 60, 45]);
+      bossBanner();
     } else if (fx.type === 'bossReward') {
-      play('epic');
+      play('epic'); vibrate(24);
+      floatText(window.innerWidth / 2, window.innerHeight * 0.3, `무료 소환 +${fx.pulls}`, 'gold');
       syncUnits();
     } else if (fx.type === 'summon') {
       syncUnits();
@@ -656,6 +684,7 @@ function wipeNodes() {
 function beginRun(newRun) {
   closeReveal(); // 진행 중이던 10연 리빌 정리 — 안 그러면 revealing=true로 새 런 루프가 영구 정지(소프트락)
   run = newRun;
+  dangerLevel = 0; // 새 판 — 경보 단계 초기화
   const over = document.getElementById('rd-over');
   if (over) { over.hidden = true; over.innerHTML = ''; }
   wipeNodes();
@@ -674,29 +703,48 @@ function showOver(won) {
   rafId = 0;
   const reachedStage = run.stage;
   const sec = Math.round(run.elapsed);
-  clearRun(); // 런 종료 → 이어하기 세이브 삭제(패배 시 처음부터)
-  const newBest = meta.recordRun(reachedStage, sec, won); // 최고 라운드 갱신
+  // 기록·세이브 삭제·종료음은 판당 1회만 — 탭 왕복으로 재진입해도 '신기록' 라벨이 사라지거나
+  // 종료음이 다시 울리지 않게(run에 캐시). recordRun 재호출 시 newBest=false로 뒤집히던 버그 수리.
+  if (!run.recorded) {
+    clearRun(); // 런 종료 → 이어하기 세이브 삭제(패배 시 처음부터)
+    run.recorded = { newBest: meta.recordRun(reachedStage, sec, won) };
+    play(won ? 'legend' : 'wipe');
+  }
+  const newBest = run.recorded.newBest;
   const b = meta.best();
   const over = document.getElementById('rd-over');
   if (!over) return;
-  play(won ? 'legend' : 'wipe');
   over.hidden = false;
   over.innerHTML = `
     <div class="rd-over-card">
       <b>${won ? `${engine.stageCap()}라운드 클리어!` : '패배'}</b>
       <span>${won ? '천하를 지켜냈다' : `${reachedStage}라운드에서 무너졌다`} · 최고 ${b.stage}라운드${newBest ? ' · 신기록!' : ''}</span>
+      <span class="rd-over-stat">처치 <b>${fmt(run.kills || 0)}</b> · <b>${formatSec(sec)}</b> 생존</span>
       <button class="btn primary" id="rd-retry">다시 시작 <em>도전 ${meta.playsLeft()}회</em></button>
     </div>`;
   document.getElementById('rd-retry').addEventListener('click', () => startNewPlay());
 }
 
+// 초 → "1분 20초" / "45초"
+function formatSec(s) {
+  if (s >= 60) return `${Math.floor(s / 60)}분 ${s % 60}초`;
+  return `${s}초`;
+}
+
 // 새 판 시작 — 도전 1 소모(라운드1부터). 남은 도전이 없으면 결제 화면(plays:empty)으로.
 // 방어 화면 준비(fieldEl) 후에만 소모 — 아니면 도전만 날리고 판이 안 열리는 버그 방지.
 function startNewPlay() {
-  if (!fieldEl) return;
+  if (!fieldEl) emit('nav:battle'); // 설정 탭 등에서 방어 화면이 언마운트됐으면 먼저 마운트
+  if (!fieldEl) return;             // 그래도 없으면(이론상) 도전만 날리지 않게 중단
   if (!meta.consumePlay()) { emit('plays:empty'); return; }
   started = true;
   beginRun(engine.createRun({}));
+}
+
+// SW 자동 업데이트로 새로고침되기 직전 — 진행 중이던 판을 저장해 새 버전에서 도전 소모 없이 이어가게 한다.
+// (우리 배포로 유저의 판·유료 도전이 증발하지 않도록. 저장 1칸을 자동으로 채운다.)
+export function saveActiveRun() {
+  if (run && started && !run.gameOver && !run.won) saveRun();
 }
 
 // ── 10연 소환 리빌 — 깃발을 하나씩 뒤집는다. 등급이 높을수록 빛·소리가 커진다(헌장 #3 가챠 연출). ──

@@ -2579,6 +2579,33 @@
 }
 @keyframes rd-prep-go { 0% { transform: scale(0.5); opacity: 0; } 34% { transform: scale(1.18); opacity: 1; } 100% { transform: scale(1); } }
 
+/* ── 보스 출현 배너 (v89) — 매 5라운드 최대 하이라이트, 긴장 단계를 알린다 (헌장 #3) ── */
+.rd-boss-banner {
+  position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%);
+  z-index: 9; pointer-events: none; text-align: center; white-space: nowrap;
+  animation: rd-boss-in 1.6s cubic-bezier(0.2, 1.2, 0.35, 1) both;
+}
+.rd-boss-banner b {
+  display: block; font-family: var(--font-display); font-size: 42px; font-weight: 800;
+  letter-spacing: 0.06em; color: #ffd9a0;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8), 0 0 22px rgba(226, 88, 52, 0.7);
+}
+.rd-boss-banner span {
+  display: block; margin-top: 3px; font-size: 12px; letter-spacing: 0.08em; color: #f4c9b4;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+}
+@keyframes rd-boss-in {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+  16% { opacity: 1; transform: translate(-50%, -50%) scale(1.12); }
+  28% { transform: translate(-50%, -50%) scale(1); }
+  78% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.04); }
+}
+
+/* 결과화면 — 이번 판 성과 한 줄(처치·생존시간) */
+.rd-over-stat { font-size: 13px; color: var(--paper); opacity: 0.9; }
+.rd-over-stat b { color: var(--gold-bright); font-weight: 700; }
+
 /* ── 로딩 화면 (v75) — 24영웅이 모여들고 금빛 명조 타이틀이 뜬다 (실제 컷아웃 합성) ── */
 #loading-screen {
   position: fixed; inset: 0; z-index: 200;

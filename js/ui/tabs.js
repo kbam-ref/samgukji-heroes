@@ -3,6 +3,7 @@
 import * as defenseScreen from './defense-screen.js';
 import * as settingsScreen from './settings-screen.js';
 import { vibrate } from './sound.js';
+import { on } from '../core/events.js';
 
 const ICONS = {
   battle: `<svg viewBox="0 0 24 24"><path d="M5 19 L15.5 6.5 M19 19 L8.5 6.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/><path d="M4 16.5 L7.5 20 M20 16.5 L16.5 20" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>`,
@@ -18,8 +19,18 @@ const TABS = [
 ];
 
 let active = null;
+let navRootRef = null;
+let screenRootRef = null;
+
+// 방어(전투) 화면이 언마운트된 상태(설정 탭 등)에서 새 판/이어하기를 열려면 먼저 방어 탭을 마운트해야 한다.
+// defense-screen이 fieldEl 없이 시작 요청을 받으면 이 이벤트로 방어 탭을 되살린 뒤 이어서 진행한다.
+on('nav:battle', () => {
+  if (navRootRef && screenRootRef) switchTo('battle', navRootRef, screenRootRef, { push: false });
+});
 
 export function renderTabs(navRoot, screenRoot) {
+  navRootRef = navRoot;
+  screenRootRef = screenRoot;
   navRoot.innerHTML = TABS.map(
     (t) => `
     <button class="tab" data-tab="${t.id}" aria-label="${t.label}">

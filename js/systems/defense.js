@@ -250,6 +250,7 @@ function beginStage(run) {
   run.spawned = 0;
   run.killedThisStage = 0;
   run.spawnTimer = 0;
+  run.bossWarned = false; // 이번 스테이지 '보스 출현' 경보를 아직 안 울렸다
   run.bossStage = isBossStage(run.stage);
   // 보스 스테이지: 일반(perStage - count) + 보스 count. 보스는 중반·후반 스폰 인덱스에 배정.
   const per = DEFENSE.wave.perStage;
@@ -335,6 +336,11 @@ function spawnEnemy(run) {
     hit: 0,
     face: 1, // 이동 방향으로 좌우 뒤집기
   });
+  // 이번 스테이지 첫 보스가 나오는 순간 — 긴장 단계를 알린다(경보음·배너). 스테이지당 1회.
+  if (isBoss && !run.bossWarned) {
+    run.bossWarned = true;
+    run.fx.push({ type: 'bossSpawn' });
+  }
   run.spawned += 1;
 }
 
