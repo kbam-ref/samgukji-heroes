@@ -303,6 +303,7 @@ export function render(root) {
           <b class="rd-prep-n">15</b>
           <span class="rd-prep-sub">전투 시작까지 · 장수를 배치하세요</span>
         </div>
+        <button class="rd-next" id="rd-next" hidden>다음 라운드 ▶</button>
         <div class="rd-over" id="rd-over" hidden></div>
       </div>
       <div class="rd-dock" id="rd-dock">
@@ -320,6 +321,13 @@ export function render(root) {
 
   // 설정 — 상단 톱니 버튼이 설정 오버레이를 연다
   document.getElementById('rd-gear').addEventListener('click', () => { play('tap'); emit('nav:settings'); });
+
+  // 다음 라운드 — 다 잡았는데 타이머가 남았으면 기다리지 않고 바로 넘어간다(수석)
+  document.getElementById('rd-next').addEventListener('click', () => {
+    if (!run || run.prepLeft > 0 || run.gameOver || run.won) return;
+    run.roundLeft = 0.02; // 타이머를 끝내 즉시 다음 라운드로(엔진이 처리)
+    play('drum'); vibrate(20);
+  });
 
   // 전투 배속 — 저장된 값에서 이어받아 칩에 반영
   speed = clampSpeed(getState().settings?.rdSpeed);
@@ -397,6 +405,13 @@ function updateHud() {
   if (tEl) {
     const s = Math.floor(run.elapsed || 0);
     tEl.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  }
+  // '다음 라운드' 버튼 — 이번 라운드 다 스폰+다 처치했는데 타이머가 남았을 때만
+  const nextBtn = document.getElementById('rd-next');
+  if (nextBtn) {
+    const cleared = !run.prepLeft && !run.gameOver && !run.won
+      && run.spawned >= (run.toSpawn || 1e9) && run.enemies.length === 0 && (run.roundLeft ?? 0) > 1;
+    nextBtn.hidden = !cleared;
   }
   // 라운드 제한 시간 — 전투 중에만 표시, 10초 이하 빨갛게
   const timer = document.getElementById('rd-timer');
