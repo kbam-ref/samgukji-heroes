@@ -208,6 +208,7 @@ function boot() {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       bgAt = performance.now();
+      try { saveActiveRun(); } catch { /* noop */ } // 강제종료 직전 현재 상태 스냅샷 — 되감기 스컴 방지
       persist(getState());
     } else {
       // 이미 시작화면·결제화면·모달·리빌이 떠 있으면 건드리지 않는다(런 교체·상태 오염 방지)
@@ -225,7 +226,10 @@ function boot() {
       loop.resetClock(); // 같은 시간이 루프에서 한 번 더 계산되지 않게
     }
   });
-  window.addEventListener('pagehide', () => persist(getState(), { seen: !document.hidden }));
+  window.addEventListener('pagehide', () => {
+    try { saveActiveRun(); } catch { /* noop */ }
+    persist(getState(), { seen: !document.hidden });
+  });
 
   if ('serviceWorker' in navigator) {
     // 공격적 자동 업데이트(2026-07-20 수석 지시): 새 배포를 감지하면 즉시 세이브하고 바로 반영한다.

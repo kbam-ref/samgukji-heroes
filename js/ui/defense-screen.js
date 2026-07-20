@@ -50,6 +50,7 @@ const unitNodes = new Map(); // uid -> el
 let fieldW = 0;
 let fieldH = 0;
 let saveTick = 0;
+const AUTOSAVE_SEC = 3; // 연속 자동저장 주기(초) — 강제종료 되감기(세이브 스컴) 방지
 let drag = null; // { uid, startX, startY, moved }
 // 폰 가로 전환 — 세로 전용이라 가로에선 게임 루프를 멈춘다(CSS #rotate-guard가 화면을 덮음)
 const landscapeMQ = matchMedia('(orientation: landscape) and (max-height: 600px) and (pointer: coarse)');
@@ -232,7 +233,6 @@ export function render(root) {
         <div class="rd-units" id="rd-units" aria-hidden="true"></div>
         <div class="rd-enemies" id="rd-enemies" aria-hidden="true"></div>
         <div class="rd-shots" id="rd-shots" aria-hidden="true"></div>
-        <button class="rd-save" id="rd-save" aria-label="저장">저장</button>
         <button class="rd-speed" id="rd-speed" aria-label="전투 배속">1×</button>
         <div class="rd-prep" id="rd-prep" hidden>
           <b class="rd-prep-n">15</b>
@@ -276,14 +276,6 @@ export function render(root) {
     updateSpeedChip();
     play('tap');
     vibrate(6);
-  });
-
-  // 저장 — 지금 판을 저장해 두면 다음에 타이틀에서 '이어하기'로 불러올 수 있다(1저장=1이어하기).
-  document.getElementById('rd-save').addEventListener('click', () => {
-    if (!run || run.gameOver || run.won) { vibrate(8); return; }
-    saveRun();
-    play('claim'); vibrate(12);
-    floatText(window.innerWidth / 2, window.innerHeight * 0.42, '저장됨 — 다음에 이어하기', 'gold');
   });
 
   // 등급이 높을수록 크게 축포를 터뜨린다 (소환의 손맛)
@@ -685,6 +677,7 @@ function beginRun(newRun) {
   closeReveal(); // 진행 중이던 10연 리빌 정리 — 안 그러면 revealing=true로 새 런 루프가 영구 정지(소프트락)
   run = newRun;
   dangerLevel = 0; // 새 판 — 경보 단계 초기화
+  saveTick = 0;    // 자동저장 주기 초기화
   const over = document.getElementById('rd-over');
   if (over) { over.hidden = true; over.innerHTML = ''; }
   wipeNodes();
@@ -882,6 +875,10 @@ function loop(now) {
   updateHud();
   updateBg();
   updatePrep();
+  // 연속 자동저장 — 몇 초마다 '지금 이 순간'을 저장한다. 강제종료해도 되감기가 아니라
+  // 그 자리(위험한 상태)에서 이어지므로 죽음 회피용 세이브 스컴이 막힌다. (게임오버/승리면 saveRun이 no-op)
+  saveTick += dt;
+  if (saveTick >= AUTOSAVE_SEC) { saveTick = 0; saveRun(); }
   if (rafId) rafId = requestAnimationFrame(loop);
 }
 
@@ -889,7 +886,7 @@ export function destroy() {
   closeReveal(); // 리빌 오버레이가 떠 있으면 걷어낸다
   if (rafId) cancelAnimationFrame(rafId);
   rafId = 0;
-  // 자동 저장 없음 — 세이브는 '저장' 버튼으로만(그래야 '저장한 경우에만 이어하기'가 성립). 탭 전환엔 인메모리 run 유지.
+  // 세이브는 loop()의 연속 자동저장 + main.js의 백그라운드/종료 스냅샷이 담당. 탭 전환엔 인메모리 run 유지.
   window.removeEventListener('resize', measureField);
   window.removeEventListener('pointermove', onDragMove);
   drag = null;

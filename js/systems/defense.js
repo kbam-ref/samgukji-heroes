@@ -268,6 +268,7 @@ export function serializeRun(run) {
     stage: run.stage, gold: run.gold, elapsed: run.elapsed, freePulls: run.freePulls,
     kills: run.kills || 0,
     spawned: run.spawned, killedThisStage: run.killedThisStage,
+    bossWarned: run.bossWarned || false,
     units: run.units, enemies: run.enemies,
     dmgMult: run.dmgMult || 1,
     prepLeft: run.prepLeft || 0,
@@ -286,6 +287,7 @@ export function deserializeRun(o) {
     prepLeft: o.prepLeft || 0,
   };
   run.bossStage = isBossStage(run.stage);
+  run.bossWarned = o.bossWarned || false; // 이미 이번 스테이지 보스 경보를 울렸는지(중복 배너 방지)
   const per = DEFENSE.wave.perStage;
   run.toSpawn = per;
   run.bossIdx = run.bossStage
