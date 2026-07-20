@@ -184,9 +184,12 @@ export const HERO_SIZE_ROLE = {
 // 임시 적 아트 — 신규 적 아트(50라운드+보스) 나오기 전, 기존 스프라이트(assets/enemies-cut) 재사용.
 // 스테이지마다 순환 배정, 보스는 별도. (stages.js의 foeArt/bossArt id와 동일)
 export const ENEMY_SPRITES = [
-  'yellow-turban', 'dong-soldier', 'warlord-soldier', 'yuan-soldier', 'wu-soldier', 'nanman-soldier',
+  'yellow-turban', 'bandit-archer', 'dong-soldier', 'halberdier', 'warlord-soldier', 'shield-brute',
+  'yuan-soldier', 'twin-blade', 'wu-soldier', 'crossbowman', 'nanman-soldier', 'axe-raider',
+  'spear-guard', 'flag-bearer',
 ];
-export const BOSS_SPRITE = 'zhangjiao';
+export const BOSS_SPRITES = ['zhangjiao', 'boss-general', 'boss-warlock'];
+export const BOSS_SPRITE = BOSS_SPRITES[0]; // 하위호환
 
 // 등급별 소환 후보(영웅 id). 소환·합성 시 등급 안에서 랜덤 1명.
 export const SUMMON_POOL = [1, 2, 3, 4, 5].reduce((pool, r) => {

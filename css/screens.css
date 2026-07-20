@@ -1903,6 +1903,8 @@
   background: rgba(150, 122, 74, 0.16);
   box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.32);
 }
+.rd-bg { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0.92; }
+.rd-bg::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 42%, rgba(22, 17, 11, 0.12), rgba(12, 9, 6, 0.55)); }
 .rd-units, .rd-enemies, .rd-over { position: absolute; inset: 0; }
 .rd-units { pointer-events: none; }
 .rd-enemies { pointer-events: none; }
@@ -2013,6 +2015,27 @@
 .rd-act b { font-size: 13px; }
 .rd-act.refund { border-color: rgba(127, 169, 142, 0.4); }
 .rd-act.refund span { color: var(--jade); }
+
+/* 티켓·성장 상점 */
+.rd-stat.rd-ticket b { color: var(--cta-bright); }
+.rd-shop { min-width: 76px; min-height: 54px; gap: 1px; border-color: rgba(127, 169, 142, 0.45); }
+.rd-shop b { color: var(--jade); font-weight: 800; font-size: 14px; }
+.rd-shop-box { display: flex; flex-direction: column; gap: 8px; }
+.rd-shop-jade { font-size: 13px; color: var(--paper-dim); text-align: right; margin: 0 0 2px; }
+.rd-shop-jade b { color: var(--jade); }
+.rd-perm {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 14px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--ink-800); color: var(--paper); font-family: inherit; cursor: pointer;
+  transition: transform 0.08s ease;
+}
+.rd-perm.charge { border-color: rgba(216, 114, 46, 0.4); }
+.rd-perm-name { font-size: 13px; font-weight: 600; }
+.rd-perm-name em { font-style: normal; color: var(--gold-bright); font-size: 12px; margin-left: 5px; }
+.rd-perm-cost { font-size: 12px; color: var(--jade); font-variant-numeric: tabular-nums; }
+.rd-perm:disabled { opacity: 0.45; cursor: default; }
+.rd-perm:not(:disabled):active { transform: scale(0.98); }
+.rd-over-card .btn { min-width: 180px; }
 
 /* 게임오버·승리 */
 .rd-over {

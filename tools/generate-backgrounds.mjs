@@ -55,14 +55,25 @@ const SCENES = {
   'night-camp': 'war camp on a wide plateau at night, starry sky, dark tents and banners, distant campfires',
   // 가챠 공개 무대 — 세로
   'gacha-sky': 'majestic sea of golden clouds at dawn, god rays breaking through, sky only, vertical composition',
+  // 랜덤 디펜스 아레나 바닥 — 톱다운(세로), 트랙 뒤 배경
+  'arena-plain': 'dry cracked earth battlefield ground, scattered rocks and sparse dead grass, faint wheel ruts, warm dusk light',
+  'arena-stone': 'ancient stone-paved courtyard floor, weathered mossy flagstones, cracks, subtle torch glow at the edges',
+  'arena-camp': 'trampled war-camp dirt ground, scattered straw, wooden stakes and rope, warm firelight from the sides',
+  'arena-snow': 'frozen battlefield ground, snow-dusted dark earth and cracked ice, cold pale blue dusk light',
 };
+// 아레나는 톱다운 시점(위에서 내려다본 바닥) — 캐릭터·수평선 없이 바닥 텍스처만
+const ARENA_STYLE =
+  'high quality 3D rendered top-down aerial view of a battlefield arena floor for a mobile game, ' +
+  'looking straight down at the ground, soft ambient lighting, gentle vignette, rich texture detail, ' +
+  'no people, no characters, no horizon, no sky, no text, no watermark';
 
 async function generateOne(id) {
-  const vertical = id === 'gacha-sky';
+  const arena = id.startsWith('arena-');
+  const vertical = id === 'gacha-sky' || arena;
   const body = {
     parameters: {
       type: 'txt2img',
-      prompt: `${STYLE}, ${SCENES[id]}`,
+      prompt: arena ? `${ARENA_STYLE}, ${SCENES[id]}` : `${STYLE}, ${SCENES[id]}`,
       numSamples: 1,
       width: vertical ? 512 : 768,
       height: vertical ? 768 : 512,

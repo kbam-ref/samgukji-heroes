@@ -5,7 +5,7 @@
 import { HEROES } from '../data/heroes.js';
 import {
   DEFENSE, SUMMON_POOL, HERO_ELEMENT, HERO_SIZE_ROLE,
-  ELEMENT_BEATS, SIZE_ROLE_MULT, ENEMY_SPRITES, BOSS_SPRITE,
+  ELEMENT_BEATS, SIZE_ROLE_MULT, ENEMY_SPRITES, BOSS_SPRITES,
 } from '../data/defense.js';
 
 const BASE = new Map(HEROES.map((h) => [h.id, h.base]));
@@ -244,6 +244,7 @@ export function serializeRun(run) {
     stage: run.stage, gold: run.gold, elapsed: run.elapsed, freePulls: run.freePulls,
     spawned: run.spawned, killedThisStage: run.killedThisStage,
     units: run.units, enemies: run.enemies,
+    dmgMult: run.dmgMult || 1,
     unitSeq, enemySeq,
   };
 }
@@ -254,6 +255,7 @@ export function deserializeRun(o) {
     units: o.units || [], enemies: o.enemies || [], fx: [],
     gameOver: false, won: false,
     spawned: o.spawned || 0, killedThisStage: o.killedThisStage || 0, spawnTimer: 0,
+    dmgMult: o.dmgMult || 1,
   };
   run.bossStage = isBossStage(run.stage);
   const per = DEFENSE.wave.perStage;
@@ -266,10 +268,10 @@ export function deserializeRun(o) {
   return run;
 }
 
-export function createRun() {
+export function createRun(boot = {}) {
   const run = {
     stage: 1,
-    gold: DEFENSE.summon.startGold,
+    gold: DEFENSE.summon.startGold + (boot.startGold || 0), // 영구성장: 시작 골드
     units: [],
     enemies: [],
     fx: [],
@@ -277,9 +279,10 @@ export function createRun() {
     won: false,
     elapsed: 0,
     freePulls: 0, // 보스 보상 등 무료 소환 대기분
+    dmgMult: boot.dmgMult || 1, // 영구성장: 전 유닛 데미지 배수
   };
   beginStage(run);
-  run.freePulls = DEFENSE.summon.openingPulls; // 오프닝 무료 10연차 — 자동 배치 아님, 플레이어가 눌러 뽑는다
+  run.freePulls = DEFENSE.summon.openingPulls + (boot.openingPulls || 0); // 오프닝 무료 소환(+영구성장)
   return run;
 }
 
@@ -290,7 +293,9 @@ function spawnEnemy(run) {
   const hp = enemyHp(run.stage, idx, size, isBoss);
   run.enemies.push({
     eid: enemySeq++,
-    spriteId: isBoss ? BOSS_SPRITE : ENEMY_SPRITES[(run.stage - 1) % ENEMY_SPRITES.length],
+    spriteId: isBoss
+      ? BOSS_SPRITES[Math.floor(run.stage / DEFENSE.wave.boss.everyStages - 1) % BOSS_SPRITES.length]
+      : ENEMY_SPRITES[(run.stage - 1) % ENEMY_SPRITES.length],
     isBoss,
     size,
     element: randElement(),
@@ -364,7 +369,7 @@ export function tick(run, dt) {
       if (d <= best) { best = d; target = e; }
     }
     if (target) {
-      const dmg = damage(u, target);
+      const dmg = damage(u, target) * (run.dmgMult || 1); // 영구성장 데미지 배수
       target.hp -= dmg;
       target.hit = 0.18;
       u.cd = DEFENSE.unit.byRarity[u.rarity].cooldown;

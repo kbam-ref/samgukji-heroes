@@ -61,6 +61,18 @@ const ENEMY_PROMPTS = {
   'wu-soldier':      'river navy soldier in crimson-and-teal light armor with rope and boarding hook, agile stance, sly grin',
   'nanman-soldier':  'wild southern tribal warrior in rattan armor with feather and bone ornaments, face paint, short curved blade, fierce grin',
   zhangjiao:         'sinister old sorcerer with long gray hair, tattered yellow robe, wooden staff with paper talismans, faint eerie green glow, ominous grin',
+  // 신규 잡병 8종 — 50라운드 변화용
+  'bandit-archer':   'ragged bandit archer drawing a short bow, torn leather vest, straw quiver, sneering face',
+  'halberdier':      'heavy soldier in thick dark iron plate armor gripping a long halberd with both hands, grim scowl',
+  'shield-brute':    'huge hulking brute crouching behind a massive rectangular tower shield, snarling face',
+  'twin-blade':      'agile masked assassin holding two short curved daggers crossed, sly narrow-eyed smirk',
+  'crossbowman':     'disciplined soldier aiming a repeating crossbow forward, iron cap, cold focused stare',
+  'axe-raider':      'muscular raider swinging a heavy double-bladed war axe overhead, fur shoulder, wild roar',
+  'spear-guard':     'armored guard in red lacquered armor standing with a long spear and small round shield, stern face',
+  'flag-bearer':     'soldier in dark armor hoisting a tattered black war banner on a pole, shouting mouth open',
+  // 신규 보스 2종
+  'boss-general':    'towering enemy warlord in ornate blood-red spiked armor and horned helmet, giant twin axes, furious glowing eyes, imposing boss',
+  'boss-warlock':    'dark shaman boss in flowing black-and-purple robes floating slightly, skull staff, swirling purple flames, menacing hollow eyes',
 };
 
 async function generateOne(id) {

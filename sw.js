@@ -1,7 +1,7 @@
 // 서비스워커 — 전체 에셋을 캐시해 비행기 모드에서도 완전히 플레이 가능하게 한다.
 // 에셋이 바뀌면 CACHE 버전을 올린다.
 
-const CACHE = 'samgukji-v66';
+const CACHE = 'samgukji-v67';
 
 // 영웅 초상 — js/data/heroes.js의 id와 일치 (24명)
 const HERO_IDS = [
@@ -13,12 +13,17 @@ const HERO_IDS = [
 ];
 
 // 적 스프라이트 — stages.js의 foeArt/bossArt id와 일치
-const ENEMY_IDS = ['yellow-turban', 'dong-soldier', 'warlord-soldier', 'yuan-soldier', 'wu-soldier', 'nanman-soldier', 'zhangjiao'];
+const ENEMY_IDS = [
+  'yellow-turban', 'dong-soldier', 'warlord-soldier', 'yuan-soldier', 'wu-soldier', 'nanman-soldier', 'zhangjiao',
+  'bandit-archer', 'halberdier', 'shield-brute', 'twin-blade', 'crossbowman', 'axe-raider', 'spear-guard', 'flag-bearer',
+  'boss-general', 'boss-warlock',
+];
 
 // 배경 그림 — 장(章) 테마 (stages.js env와 일치). 반드시 IMAGE_ASSETS보다 먼저 선언
 const BG_IDS = [
   'village-plain', 'fortress-gate', 'burning-city', 'river-shore', 'red-cliffs',
   'mountain-pass', 'palace-court', 'jungle', 'night-camp', 'gacha-sky',
+  'arena-plain', 'arena-camp', 'arena-stone', 'arena-snow',
 ];
 
 // 오디오 — ElevenLabs로 만든 정적 파일(있으면 재생, 없으면 합성음 폴백). best-effort 캐시.
@@ -77,6 +82,7 @@ const ASSETS = [
   './js/systems/shard.js',
   './js/systems/gear.js',
   './js/systems/defense.js',
+  './js/systems/rd-meta.js',
   './js/data/balance.js',
   './js/data/defense.js',
   './js/data/heroes.js',

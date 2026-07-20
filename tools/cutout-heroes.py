@@ -30,10 +30,10 @@ for src_name, out_name in PAIRS:
     for p in sorted(src_dir.glob("*.png")):
         out = out_dir / p.name
         if out.exists() and not force:
-            print(f"{src_name}/{p.name}: 이미 있음 — 건너뜀")
+            print(f"{src_name}/{p.name}: skip (exists)")
             continue
         data = remove(p.read_bytes(), session=session, post_process_mask=True)
         out.write_bytes(data)
-        print(f"{src_name}/{p.name}: 저장 ({len(data) // 1024}KB)")
+        print(f"{src_name}/{p.name}: saved ({len(data) // 1024}KB)")
 
-print("끝. assets/heroes-cut/ · enemies-cut/ 확인 후 전장 통합.")
+print("done. heroes-cut / enemies-cut ready.")
