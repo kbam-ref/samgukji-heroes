@@ -13,6 +13,7 @@ import { showModal } from './modal.js';
 import { play, vibrate } from './sound.js';
 
 const HERO_NAME = new Map(HEROES.map((h) => [h.id, h.name]));
+const ELEM_GLYPH = { water: '水', fire: '火', earth: '土' }; // 속성 배지 글자 — 색만으론 헷갈려서
 
 let run = null;
 let rafId = 0;
@@ -447,8 +448,9 @@ function syncUnits() {
       el.className = `rd-unit r${u.rarity}`;
       el.dataset.uid = u.uid;
       el.innerHTML = `
+        <b class="rd-stars">${'★'.repeat(u.rarity)}</b>
         <div class="rd-body"><img class="rd-sprite" src="${heroCut(u.heroId)}" alt="" draggable="false"></div>
-        <i class="rd-elem" style="background:${ELEMENT_COLOR[u.element]}"></i>`;
+        <i class="rd-elem" style="background:${ELEMENT_COLOR[u.element]}">${ELEM_GLYPH[u.element]}</i>`;
       unitLayer.appendChild(el);
       unitNodes.set(u.uid, el);
       place(el, u.x, u.y);
@@ -513,7 +515,7 @@ function syncEnemies() {
       el.className = `rd-enemy${e.isBoss ? ' boss' : ''} sz-${e.size}`;
       el.style.setProperty('--sz', DEFENSE.wave.sizes[e.size].scale * (e.isBoss ? DEFENSE.wave.boss.scale : 1));
       el.innerHTML = `
-        <b class="rd-hp"></b>
+        <div class="rd-hpbar"><i></i></div>
         <div class="rd-body"><img class="rd-sprite" src="${enemyCut(e.spriteId)}" alt="" draggable="false"></div>
         <i class="rd-elem" style="background:${ELEMENT_COLOR[e.element]}"></i>`;
       enemyLayer.appendChild(el);
@@ -522,12 +524,12 @@ function syncEnemies() {
     }
     place(node.el, e.x, e.y);
     if (e.face !== node.face) { node.el.style.setProperty('--face', e.face); node.face = e.face; }
-    const hpShown = Math.max(0, Math.ceil(e.hp));
-    if (hpShown !== node.hp) {
-      node.el.querySelector('.rd-hp').textContent = fmt(hpShown);
-      node.hp = hpShown;
-      const pct = Math.max(0, e.hp / e.maxHp);
+    // 체력은 숫자 대신 줄어드는 바 — node.hp에 마지막 비율을 저장해 바뀔 때만 갱신
+    const pct = Math.max(0, e.hp / e.maxHp);
+    if (pct !== node.hp) {
       node.el.style.setProperty('--hppct', pct);
+      node.el.classList.toggle('hp-low', pct <= 0.35); // 낮으면 빨갛게
+      node.hp = pct;
     }
     const hitOn = e.hit > 0;
     if (hitOn !== node.hitOn) { node.el.classList.toggle('hit', hitOn); node.hitOn = hitOn; }
