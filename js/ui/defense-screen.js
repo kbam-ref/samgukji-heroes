@@ -164,10 +164,10 @@ function spawnShot(fx) {
   shotLayer.appendChild(el);
   setTimeout(() => {
     releaseFxEl(el);
-    spawnImpact(fx.ex, fx.ey, color, weapon); // 명중 순간 불꽃
+    spawnImpact(fx.ex, fx.ey, color, weapon, ang); // 명중 순간 불꽃(+화살이면 꽂힘)
   }, t);
 }
-function spawnImpact(x, y, color, weapon) {
+function spawnImpact(x, y, color, weapon, ang = 0) {
   if (!shotLayer || reduceMotion || shotLayer.childElementCount > 36) return;
   const s = getFxEl();
   s.className = `rd-impact ${weapon}`;
@@ -176,6 +176,16 @@ function spawnImpact(x, y, color, weapon) {
   s.style.setProperty('--c', color);
   shotLayer.appendChild(s);
   setTimeout(() => releaseFxEl(s), 260);
+  // 화살류는 명중 지점에 화살이 잠깐 꽂힌다
+  if (weapon === 'arrow' && shotLayer.childElementCount < 40) {
+    const a = getFxEl();
+    a.className = 'rd-stuck';
+    a.style.left = `${(x / 100) * fieldW}px`;
+    a.style.top = `${(y / 100) * fieldH}px`;
+    a.style.setProperty('--ang', `${ang}deg`);
+    shotLayer.appendChild(a);
+    setTimeout(() => releaseFxEl(a), 460);
+  }
 }
 
 // 보스 출현 배너 — 필드 위로 '보스 출현!'이 크게 밀려들었다 사라진다 (긴장 연출)
@@ -203,6 +213,7 @@ function hud() {
     <div class="rd-spawnbar" aria-hidden="true">
       <i id="rd-spawn-fill"></i>
       <b id="rd-spawn-txt">이번 라운드 0 / ${per} 출현</b>
+      <em id="rd-round-elem" class="rd-round-elem"></em>
     </div>`;
 }
 
@@ -289,9 +300,7 @@ export function render(root) {
   document.getElementById('rd-summon').addEventListener('click', () => {
     const u = engine.summon(run);
     if (!u) {
-      vibrate(8);
-      const btn = document.getElementById('rd-summon');
-      btn.classList.remove('shake'); void btn.offsetWidth; btn.classList.add('shake');
+      summonFail('rd-summon');
       return;
     }
     summonFanfare(u.rarity);
@@ -303,9 +312,7 @@ export function render(root) {
   document.getElementById('rd-summon10').addEventListener('click', () => {
     const made = engine.summonMany(run, 10);
     if (!made.length) {
-      vibrate(8);
-      const btn = document.getElementById('rd-summon10');
-      btn.classList.remove('shake'); void btn.offsetWidth; btn.classList.add('shake');
+      summonFail('rd-summon10');
       return;
     }
     syncUnits();
@@ -373,6 +380,14 @@ export function render(root) {
   if (run.gameOver || run.won) showOver(run.won);
 }
 
+// 소환 실패 안내 — 배치칸이 무제한이라 실패 사유는 골드 부족뿐
+function summonFail(btnId) {
+  vibrate(8);
+  const btn = document.getElementById(btnId);
+  if (btn) { btn.classList.remove('shake'); void btn.offsetWidth; btn.classList.add('shake'); }
+  floatText(window.innerWidth / 2, window.innerHeight * 0.52, '골드가 부족해요', 'warn');
+}
+
 function updateHud() {
   if (!run) return;
   const s = document.getElementById('rd-stage');
@@ -401,8 +416,17 @@ function updateHud() {
   const spawned = Math.min(run.spawned || 0, per);
   const fill = document.getElementById('rd-spawn-fill');
   const stxt = document.getElementById('rd-spawn-txt');
-  if (fill) fill.style.width = `${(spawned / per) * 100}%`;
+  if (fill) {
+    fill.style.width = `${(spawned / per) * 100}%`;
+    if (run.stageElement) { fill.style.background = ELEMENT_COLOR[run.stageElement]; fill.style.opacity = '0.5'; }
+  }
   if (stxt) stxt.textContent = `이번 라운드 ${spawned} / ${per} 출현`;
+  // 이번 라운드 적 속성(라운드마다 통일) — 상성 유닛을 배치하도록 색·글자로 안내
+  const re = document.getElementById('rd-round-elem');
+  if (re && run.stageElement) {
+    re.textContent = `${ELEM_GLYPH[run.stageElement]} ${ELEMENT_LABEL[run.stageElement]}`;
+    re.style.color = ELEMENT_COLOR[run.stageElement];
+  }
   const cost = DEFENSE.summon.cost;
   const free = run.freePulls;
 
@@ -520,6 +544,7 @@ function syncUnits() {
       el = document.createElement('div');
       el.className = `rd-unit r${u.rarity}`;
       el.dataset.uid = u.uid;
+      el.dataset.weapon = HERO_WEAPON[u.heroId] || 'slash'; // 참격/화살 — 공격 연출 판별
       el.innerHTML = `
         <b class="rd-stars">${'★'.repeat(u.rarity)}</b>
         <div class="rd-body"><img class="rd-sprite" src="${heroCut(u.heroId)}" alt="" draggable="false"></div>

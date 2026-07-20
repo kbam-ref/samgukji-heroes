@@ -1900,6 +1900,12 @@
   font-size: 9px; font-weight: 700; font-style: normal; color: var(--paper);
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.75); letter-spacing: 0.02em;
 }
+/* 이번 라운드 적 속성(통일) — 바 오른쪽 끝의 색 글자 (색은 인라인) */
+.rd-round-elem {
+  position: absolute; right: 7px; top: 50%; transform: translateY(-50%); z-index: 2;
+  font-size: 9px; font-weight: 800; font-style: normal;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}
 
 .rd-field {
   position: relative;
@@ -1990,6 +1996,31 @@
   72%  { transform: translateX(calc(-50% - 6px))  translateY(calc(var(--ly, 0px) * -0.2 + 1px)) scale(0.94, 1.06); } /* 뒤로 빠진다 */
   100% { transform: translateX(-50%) translateY(0); }
 }
+
+/* 무기 휘두름 (v91) — 근접(참격) 유닛이 칠 때 앞쪽으로 칼이 호(弧)를 그리며 번뜩인다.
+   scaleX(var(--face))로 바라보는 방향에 맞춰 좌우 뒤집힘. 화살 유닛은 대신 투사체가 날아간다. */
+.rd-unit[data-weapon="slash"].fire::after {
+  content: ''; position: absolute; z-index: 3; pointer-events: none;
+  top: 50%; left: 50%; width: 46px; height: 42px; margin: -21px 0 0 0;
+  background: radial-gradient(ellipse 58% 100% at 12% 50%, transparent 55%, rgba(255, 255, 255, 0.96) 63%, #ffe6a2 71%, transparent 82%);
+  transform-origin: left center;
+  animation: rd-swing 0.24s ease-out forwards;
+  filter: drop-shadow(0 0 5px rgba(255, 220, 140, 0.7));
+}
+@keyframes rd-swing {
+  0%   { opacity: 0; transform: scaleX(var(--face, 1)) rotate(-58deg) scale(0.62); }
+  30%  { opacity: 1; }
+  100% { opacity: 0; transform: scaleX(var(--face, 1)) rotate(54deg) scale(1.08); }
+}
+/* 꽂힌 화살 (v91) — 궁수/책사 명중 지점에 화살이 잠깐 박혔다 사라진다 */
+.rd-stuck { position: absolute; left: 0; top: 0; transform: translate(-50%, -50%); z-index: 4; pointer-events: none; }
+.rd-stuck::before {
+  content: ''; position: absolute; width: 18px; height: 3px; left: -9px; top: -1.5px; border-radius: 2px;
+  background: linear-gradient(90deg, #7a5230, #caa46a 60%, #fff);
+  transform: rotate(var(--ang, 0deg)); box-shadow: 0 0 4px rgba(0, 0, 0, 0.45);
+  animation: rd-stuck-fade 0.42s ease-out 0.05s forwards;
+}
+@keyframes rd-stuck-fade { 0%, 68% { opacity: 1; } 100% { opacity: 0; } }
 
 /* 투사체 — 참격/화살이 적에게 날아가 명중 지점에서 불꽃 (v69) */
 .rd-shots { position: absolute; inset: 0; pointer-events: none; z-index: 3; }

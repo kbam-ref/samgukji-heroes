@@ -31,12 +31,18 @@ export function pathPoint(prog) {
   return { x: PATH[0].x, y: PATH[0].y };
 }
 
-// ── 유닛 배치 칸 좌표 — 트랙 안쪽 4×4 그리드 ──
+// ── 유닛 배치 칸 좌표 — 배치 박스(bounds) 안에 고루 편다. 배치칸 무제한(2026-07-20 수석)이라
+//    30칸을 넘으면 다음 무리를 살짝 어긋나게 겹쳐 쌓는다(플레이어가 끌어 펴거나 합성). ──
 export function slotPos(i) {
-  const cols = 4;
-  const col = i % cols;
-  const row = Math.floor(i / cols);
-  return { x: 26 + col * 16, y: 34 + row * 10.7 };
+  const b = DEFENSE.unit.bounds;
+  const cols = 5, rows = 6, per = cols * rows;
+  const cell = ((i % per) + per) % per;
+  const col = cell % cols;
+  const row = Math.floor(cell / cols);
+  const bump = Math.floor(i / per) * 2.2; // 31번째~ 는 2.2%씩 어긋나 겹침이 보이게
+  const x = b.x1 + ((col + 0.5) / cols) * (b.x2 - b.x1) + bump;
+  const y = b.y1 + ((row + 0.5) / rows) * (b.y2 - b.y1) + bump;
+  return { x: Math.min(b.x2, x), y: Math.min(b.y2, y) };
 }
 
 // ── 확률 유틸 ──
@@ -69,6 +75,11 @@ function randElement() {
   const es = ['water', 'fire', 'earth'];
   return es[Math.floor(Math.random() * es.length)];
 }
+// 라운드 속성 — 한 라운드는 한 속성으로 통일(2026-07-20 수석). 직전 라운드와 다른 속성을 뽑아 변화를 준다.
+function pickStageElement(prev) {
+  const es = ['water', 'fire', 'earth'].filter((e) => e !== prev);
+  return es[Math.floor(Math.random() * es.length)];
+}
 
 // ── 유닛 생성(소환) ──
 let unitSeq = 1;
@@ -93,9 +104,11 @@ function makeUnit(heroId, slot) {
   };
 }
 function freeSlot(run) {
+  // 배치칸 무제한(2026-07-20 수석 지시) — 상한 없이 항상 빈 인덱스를 찾아준다.
   const used = new Set(run.units.map((u) => u.slot));
-  for (let i = 0; i < DEFENSE.field.slots; i++) if (!used.has(i)) return i;
-  return -1;
+  let i = 0;
+  while (used.has(i)) i++;
+  return i;
 }
 
 /** 소환 1회 — 무료 소환권(freePulls)이 있으면 무료, 없으면 골드 지불. 빈 칸 없으면 실패. */
@@ -251,6 +264,7 @@ function beginStage(run) {
   run.killedThisStage = 0;
   run.spawnTimer = 0;
   run.bossWarned = false; // 이번 스테이지 '보스 출현' 경보를 아직 안 울렸다
+  run.stageElement = pickStageElement(run.stageElement); // 이번 라운드 적 속성(통일)
   run.bossStage = isBossStage(run.stage);
   // 보스 스테이지: 일반(perStage - count) + 보스 count. 보스는 중반·후반 스폰 인덱스에 배정.
   const per = DEFENSE.wave.perStage;
@@ -269,6 +283,7 @@ export function serializeRun(run) {
     kills: run.kills || 0,
     spawned: run.spawned, killedThisStage: run.killedThisStage,
     bossWarned: run.bossWarned || false,
+    stageElement: run.stageElement || 'fire',
     units: run.units, enemies: run.enemies,
     dmgMult: run.dmgMult || 1,
     prepLeft: run.prepLeft || 0,
@@ -288,6 +303,7 @@ export function deserializeRun(o) {
   };
   run.bossStage = isBossStage(run.stage);
   run.bossWarned = o.bossWarned || false; // 이미 이번 스테이지 보스 경보를 울렸는지(중복 배너 방지)
+  run.stageElement = o.stageElement || 'fire'; // 이번 라운드 통일 속성(이어하기 유지)
   const per = DEFENSE.wave.perStage;
   run.toSpawn = per;
   run.bossIdx = run.bossStage
@@ -331,7 +347,7 @@ function spawnEnemy(run) {
       : ENEMY_SPRITES[(run.stage - 1) % ENEMY_SPRITES.length],
     isBoss,
     size,
-    element: randElement(),
+    element: run.stageElement || randElement(), // 라운드 통일 속성(구세이브 방어로 폴백)
     hp,
     maxHp: hp,
     prog: Math.random() * 0.02, // 살짝 흩어져 스폰
