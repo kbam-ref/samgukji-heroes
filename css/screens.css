@@ -1973,6 +1973,13 @@
   text-shadow: 0 0 2px rgba(0, 0, 0, 0.95), 0 1px 2px rgba(0, 0, 0, 0.95), -0.5px -0.5px 1px rgba(0, 0, 0, 0.8);
   pointer-events: none;
 }
+/* 영웅 이름 — 캐릭터 발밑(v102). 방향 반전 안 됨(별처럼) */
+.rd-unit .rd-uname {
+  position: absolute; left: 50%; bottom: -11px; transform: translateX(-50%);
+  font-size: 8px; font-weight: 700; font-style: normal; white-space: nowrap; line-height: 1;
+  color: #f0e6cf; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
+  padding: 1px 3px; border-radius: 3px; background: rgba(12, 9, 6, 0.55); pointer-events: none;
+}
 /* 속성 배지 — 색 + 글자(水/火/土). 머리 위(별 아래) — 몸/얼굴을 가리지 않게 */
 .rd-unit .rd-elem {
   position: absolute; left: 50%; bottom: 53px; transform: translateX(-50%);

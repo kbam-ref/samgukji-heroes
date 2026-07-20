@@ -111,8 +111,7 @@ function onDragMove(e) {
 }
 function onDragUp() {
   window.removeEventListener('pointermove', onDragMove);
-  if (drag && !drag.moved) openPanel(drag.uid); // 안 움직였으면 탭 = 패널
-  drag = null;
+  drag = null; // 탭 패널 제거(수석) — 탭은 아무 것도 안 하고, 끌면 이동만
 }
 
 // ── 이어하기 세이브 (앱 닫아도 계속) ──
@@ -306,9 +305,8 @@ export function render(root) {
         </div>
         <div class="rd-over" id="rd-over" hidden></div>
       </div>
-      <div class="rd-panel" id="rd-panel" hidden></div>
       <div class="rd-dock" id="rd-dock">
-        <p class="rd-tip" id="rd-tip"><b>소환</b>한 장수를 <b>끌어</b> 가장자리(적 길목)에 배치하세요 · <b>탭</b>하면 단련</p>
+        <p class="rd-tip" id="rd-tip"><b>소환</b>한 장수를 <b>끌어</b> 가장자리(적 길목)에 배치하세요</p>
         <div class="rd-sheet" id="rd-sheet" hidden></div>
       </div>
     </section>`
@@ -350,29 +348,6 @@ export function render(root) {
     drag = { uid: Number(el.dataset.uid), startX: e.clientX, startY: e.clientY, moved: false };
     window.addEventListener('pointermove', onDragMove);
     window.addEventListener('pointerup', onDragUp, { once: true });
-  });
-
-  const panel = document.getElementById('rd-panel');
-  panel.addEventListener('click', (e) => {
-    if (e.target.closest('#rd-panel-x')) { closePanel(); return; }
-    const act = e.target.closest('.rd-act');
-    if (!act || act.disabled) return;
-    const uid = Number(panel.dataset.uid);
-    const u = run.units.find((x) => x.uid === uid);
-    if (!u) { closePanel(); return; }
-    const r = act.getBoundingClientRect();
-    const cx = r.left + r.width / 2, cy = r.top;
-    if (act.dataset.act === 'upgrade') {
-      if (engine.upgrade(run, uid)) { play('claim'); floatText(cx, cy, '단련 +1', 'gold'); syncUnits(); openPanel(uid); updateHud(); }
-      else vibrate(8);
-    } else if (act.dataset.act === 'merge') {
-      const nu = engine.mergeHero(run, u.heroId);
-      if (nu) { play('epic'); floatText(cx, cy, `합성! ${RARITY[nu.rarity].name} ${HERO_NAME.get(nu.heroId)}`, 'gold'); closePanel(); syncUnits(); updateHud(); }
-      else vibrate(8);
-    } else if (act.dataset.act === 'refund') {
-      const v = engine.refund(run, uid);
-      if (v > 0) { play('claim'); floatText(cx, cy, `+${fmt(v)} 골드`, 'jade'); closePanel(); syncUnits(); updateHud(); }
-    }
   });
 
   window.addEventListener('resize', measureField);
@@ -806,10 +781,11 @@ function syncUnits() {
       el.className = `rd-unit r${u.rarity}`;
       el.dataset.uid = u.uid;
       el.dataset.weapon = HERO_WEAPON[u.heroId] || 'slash'; // 참격/화살 — 공격 연출 판별
-      // 별 개수 = 등급, 별 '색' = 속성(수석) — 색으로 속성을 알 수 있어 별도 속성 배지는 뺐다.
+      // 별 개수 = 등급, 별 '색' = 속성(수석). 이름은 캐릭터 아래에(수석).
       el.innerHTML = `
         <b class="rd-stars" style="color:${ELEMENT_COLOR[u.element]}">${'★'.repeat(u.rarity)}</b>
-        <div class="rd-body"><img class="rd-sprite" src="${heroCut(u.heroId)}" alt="" draggable="false"></div>`;
+        <div class="rd-body"><img class="rd-sprite" src="${heroCut(u.heroId)}" alt="" draggable="false"></div>
+        <b class="rd-uname">${HERO_NAME.get(u.heroId)}</b>`;
       unitLayer.appendChild(el);
       unitNodes.set(u.uid, el);
       place(el, u.x, u.y);
@@ -821,46 +797,6 @@ function syncUnits() {
   for (const [uid, el] of unitNodes) {
     if (!seen.has(uid)) { el.remove(); unitNodes.delete(uid); }
   }
-}
-
-function closePanel() {
-  const panel = document.getElementById('rd-panel');
-  if (panel) { panel.hidden = true; panel.removeAttribute('data-uid'); }
-  const tip = document.getElementById('rd-tip');
-  if (tip) tip.hidden = false; // 패널 닫히면 안내 다시 표시
-  for (const [, el] of unitNodes) el.classList.remove('picked');
-}
-function openPanel(uid) {
-  const u = run.units.find((x) => x.uid === uid);
-  const panel = document.getElementById('rd-panel');
-  if (!u || !panel) return;
-  const tip = document.getElementById('rd-tip');
-  if (tip) tip.hidden = true; // 패널 열리면 안내 숨김(공간 양보)
-  for (const [id, el] of unitNodes) el.classList.toggle('picked', id === uid);
-  const upCost = engine.upgradeCost(u.upgradeLv);
-  const maxed = u.upgradeLv >= DEFENSE.unit.upgrade.maxLevel;
-  const refVal = engine.refundValue(u);
-  const mergeable = engine.canMergeHero(run, u.heroId);
-  const haveN = engine.sameHeroCount(run, u.heroId);
-  panel.hidden = false;
-  panel.dataset.uid = uid;
-  panel.innerHTML = `
-    <div class="rd-panel-head">
-      <b class="rarity r${u.rarity}">${HERO_NAME.get(u.heroId)}</b>
-      <span>${RARITY[u.rarity].name} · ${ELEMENT_LABEL[u.element]} · 단련 ${u.upgradeLv}</span>
-      <button class="rd-panel-x" id="rd-panel-x" aria-label="닫기">✕</button>
-    </div>
-    <div class="rd-panel-acts">
-      <button class="btn rd-act" data-act="upgrade" ${maxed || run.gold < upCost ? 'disabled' : ''}>
-        <b>단련</b><span>${maxed ? '최대' : `골드 ${fmt(upCost)}`}</span>
-      </button>
-      <button class="btn rd-act" data-act="merge" ${mergeable ? '' : 'disabled'}>
-        <b>합성</b><span>${u.rarity >= 6 ? '최고 등급' : `같은 영웅 ${haveN}/3`}</span>
-      </button>
-      <button class="btn rd-act refund" data-act="refund">
-        <b>반환</b><span>+골드 ${fmt(refVal)}</span>
-      </button>
-    </div>`;
 }
 
 function syncEnemies() {
