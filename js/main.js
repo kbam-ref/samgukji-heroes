@@ -15,7 +15,7 @@ import { showModal } from './ui/modal.js';
 import { maybeShowAttendance } from './ui/attendance-modal.js';
 import { showTitle } from './ui/title-screen.js';
 import { showLoading } from './ui/loading-screen.js';
-import { hasSavedRun, saveActiveRun } from './ui/defense-screen.js';
+import { hasSavedRun, saveActiveRun, clearSavedRun } from './ui/defense-screen.js';
 import { playsLeft, playsInfo, grantPaid } from './systems/rd-meta.js';
 import { fmt, formatDuration } from './ui/format.js';
 import { countUp, flyCoins } from './ui/effects.js';
@@ -143,14 +143,11 @@ function boot() {
   }
   on('attendance:claim', () => setTimeout(maybeShowFtue, 400));
 
-  // 부팅: 저장된 판이 있으면 로딩 후 '바로 이어서'(도전 소모 없음 — 이미 쓴 도전).
-  //       없으면 시작화면 → '시작하기'가 도전 1을 소모하고 새 판(라운드1)을 연다.
+  // 부팅(2026-07-20 수석): 재실행은 '항상 처음부터'. 남은 세이브를 지우고 시작화면으로 —
+  //   강제종료로 죽음을 회피하는 이어하기가 생기지 않는다(세션 중 백그라운드 복귀는 그대로 이어감).
   on('plays:empty', showNoPlays); // 도전 소진 시 결제 화면
-  if (hasSavedRun()) {
-    showLoading(() => emit('game:load'));
-  } else {
-    showLoading(openTitle);
-  }
+  clearSavedRun();
+  showLoading(openTitle);
 
   // 랜덤 디펜스(아케이드)로 전환한 뒤 구 방치 전투엔진(battle.tick)은 쓰지 않는다.
   // 계속 돌리면 마이그레이션 세이브(파티 보유)에서 유령 처치음·진동이 나고 배터리만 축낸다.

@@ -2017,10 +2017,10 @@
 /* 꽂힌 화살 (v91) — 궁수/책사 명중 지점에 화살이 잠깐 박혔다 사라진다 */
 .rd-stuck { position: absolute; left: 0; top: 0; transform: translate(-50%, -50%); z-index: 4; pointer-events: none; }
 .rd-stuck::before {
-  content: ''; position: absolute; width: 18px; height: 3px; left: -9px; top: -1.5px; border-radius: 2px;
-  background: linear-gradient(90deg, #7a5230, #caa46a 60%, #fff);
-  transform: rotate(var(--ang, 0deg)); box-shadow: 0 0 4px rgba(0, 0, 0, 0.45);
-  animation: rd-stuck-fade 0.42s ease-out 0.05s forwards;
+  content: ''; position: absolute; width: 22px; height: 3px; left: -14px; top: -1.5px; border-radius: 2px;
+  background: linear-gradient(90deg, #7a5230, #caa46a 55%, #fff);
+  transform: rotate(var(--ang, 0deg)); box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+  animation: rd-stuck-fade 0.5s ease-out 0.05s forwards;
 }
 @keyframes rd-stuck-fade { 0%, 68% { opacity: 1; } 100% { opacity: 0; } }
 
@@ -2040,9 +2040,17 @@
 }
 /* v78: 더 크고 밝게 — 잘 보이게 (화살=긴 광선, 참격=흰 초승달) */
 .rd-shot.arrow::before {
-  width: 28px; height: 5px; border-radius: 3px;
-  background: linear-gradient(90deg, transparent, var(--c) 35%, #fff 85%);
-  box-shadow: 0 0 9px var(--c), 0 0 3px #fff;
+  width: 38px; height: 5px; border-radius: 3px;
+  background: linear-gradient(90deg, transparent, var(--c) 22%, #ffe9a8 62%, #fff 100%);
+  box-shadow: 0 0 13px var(--c), 0 0 6px #fff;
+}
+/* 화살촉 — 앞쪽 끝의 밝은 삼각형(진행 방향으로) */
+.rd-shot.arrow::after {
+  content: ''; position: absolute; left: 0; top: 0;
+  transform: translate(-50%, -50%) rotate(var(--ang)) translateX(19px);
+  width: 0; height: 0;
+  border-left: 10px solid #fff; border-top: 5px solid transparent; border-bottom: 5px solid transparent;
+  filter: drop-shadow(0 0 5px var(--c));
 }
 .rd-shot.slash::before {
   width: 34px; height: 13px; border-radius: 50%;
@@ -2139,9 +2147,10 @@
   100% { transform: translateX(-50%); filter: none; }
 }
 
-/* ── 하단 도크 + 컨텍스트 시트 (v92) — 6버튼 바에서 소환/단련/반환/도박 옵션을 여기 펼친다 ── */
+/* ── 하단 도크 + 컨텍스트 시트 — 액션 옵션을 여기 펼친다. 도크는 고정 높이라 필드가 안 흔들리고,
+      시트는 도크 안에 담겨(overflow) 전투 화면을 침범하지 않는다 (v94 수석: 메인화면과 분리). ── */
 .rd-dock {
-  position: relative; margin: 0 14px; min-height: 96px;
+  position: relative; margin: 0 14px; height: 150px; flex: none;
   display: flex; align-items: center; justify-content: center;
 }
 .rd-tip {
@@ -2152,35 +2161,36 @@
 .rd-tip[hidden] { display: none; }
 
 .rd-sheet {
-  position: absolute; left: 0; right: 0; bottom: 0;
-  background: linear-gradient(180deg, rgba(28, 23, 16, 0.96), rgba(20, 16, 11, 0.98));
+  position: absolute; inset: 0; overflow-y: auto;
+  background: linear-gradient(180deg, rgba(28, 23, 16, 0.97), rgba(20, 16, 11, 0.99));
   border: 1px solid var(--ink-600); border-radius: 12px;
   padding: 8px 10px 10px; box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.4);
-  animation: rd-sheet-up 0.2s var(--ease-out);
+  animation: rd-sheet-up 0.18s var(--ease-out);
 }
 .rd-sheet[hidden] { display: none; }
 @keyframes rd-sheet-up { from { transform: translateY(10px); opacity: 0; } }
-.rd-sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.rd-sheet-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .rd-sheet-head b { font-size: 12.5px; font-weight: 700; color: var(--paper); }
-.rd-sheet-x { appearance: none; background: none; border: 0; color: var(--paper-faint); font-size: 15px; line-height: 1; padding: 4px 6px; cursor: pointer; }
+.rd-sheet-hint { font-size: 10px; color: var(--paper-faint); margin-left: auto; }
+.rd-sheet-x { appearance: none; background: none; border: 0; color: var(--paper-faint); font-size: 15px; line-height: 1; padding: 4px 6px; cursor: pointer; margin-left: 6px; }
 
 /* 소환 옵션 — 10연 / 1회 */
 .rd-summon-opts { display: flex; gap: 8px; }
 .rd-summon-opts .btn { flex: 1; min-height: 52px; gap: 2px; }
 .rd-summon-opts .btn b { font-size: 15px; font-weight: 800; }
 
-/* 속성 단련 — 4속성 × (공격/공속) */
-.rd-eu-list { display: flex; flex-direction: column; gap: 5px; }
-.rd-eu-row { display: grid; grid-template-columns: 58px 1fr 1fr; gap: 6px; align-items: stretch; }
-.rd-eu-name { font-size: 13px; font-weight: 800; display: flex; align-items: center; }
+/* 속성 단련 — 4속성 × (공격/공속). 컴팩트 단일행으로 도크 안에 담는다. */
+.rd-eu-list { display: flex; flex-direction: column; gap: 4px; }
+.rd-eu-row { display: grid; grid-template-columns: 50px 1fr 1fr; gap: 5px; align-items: stretch; }
+.rd-eu-name { font-size: 12px; font-weight: 800; display: flex; align-items: center; }
 .rd-eu-btn {
-  appearance: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
-  background: rgba(255, 255, 255, 0.03); border: 1px solid var(--ink-600); border-radius: 8px;
-  padding: 5px 4px; cursor: pointer; color: var(--paper); font-size: 11px;
+  appearance: none; display: flex; align-items: center; justify-content: space-between; gap: 4px;
+  background: rgba(255, 255, 255, 0.03); border: 1px solid var(--ink-600); border-radius: 7px;
+  padding: 4px 8px; cursor: pointer; color: var(--paper); font-size: 10.5px; min-height: 30px;
 }
 .rd-eu-btn:active { transform: scale(0.97); }
 .rd-eu-btn em { font-style: normal; color: var(--paper-dim); }
-.rd-eu-cost { font-size: 10px; color: var(--gold-bright); font-weight: 700; }
+.rd-eu-cost { font-size: 10px; color: var(--gold-bright); font-weight: 700; white-space: nowrap; }
 
 /* 반환 조건 */
 .rd-rf-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
@@ -2255,6 +2265,31 @@
 
 /* 배속 칩 — 필드 우상단 토글 (x1/x2/x3) */
 .rd-field .rd-over { z-index: 8; } /* 게임오버·티켓없음 오버레이가 배속 칩을 덮게 */
+/* 설정 톱니 — 필드 좌상단(배속 칩과 대칭). 눌러 설정 오버레이를 연다 (v94) */
+.rd-gear {
+  position: absolute; top: 8px; left: 8px; z-index: 4;
+  width: 30px; height: 30px; padding: 0; border-radius: 15px;
+  border: 1px solid var(--ink-600); background: rgba(23, 19, 16, 0.62);
+  color: var(--paper-dim); cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.rd-gear svg { width: 18px; height: 18px; }
+.rd-gear:active { transform: scale(0.92); }
+
+/* 설정 오버레이 — 상단 톱니가 여는 작은 패널(전투 화면 위) */
+.settings-overlay {
+  position: fixed; inset: 0; z-index: 120; display: flex; align-items: center; justify-content: center;
+  padding: 20px; background: rgba(8, 6, 4, 0.72); animation: rd-sheet-up 0.18s var(--ease-out);
+}
+.so-panel {
+  position: relative; width: min(420px, 92vw); max-height: 80vh; overflow-y: auto;
+  background: linear-gradient(180deg, #221b12, #16110b); border: 1px solid var(--ink-600);
+  border-radius: 16px; padding: 14px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+}
+.so-close {
+  position: absolute; top: 8px; right: 10px; z-index: 2; appearance: none; background: none; border: 0;
+  color: var(--paper-faint); font-size: 18px; line-height: 1; padding: 4px 6px; cursor: pointer;
+}
+
 .rd-speed {
   position: absolute; top: 8px; right: 8px; z-index: 4;
   min-width: 42px; height: 30px; padding: 0 10px;

@@ -116,6 +116,8 @@ function clearRun() {
 export function hasSavedRun() {
   try { return !!localStorage.getItem(RD_KEY); } catch { return false; }
 }
+/** 콜드 부팅 시 호출 — 재실행은 항상 새 판(수석). 남은 세이브를 지워 자동 이어하기를 막는다. */
+export function clearSavedRun() { clearRun(); }
 
 function heroCut(id) {
   return `./assets/heroes-cut/${id}.png`;
@@ -168,7 +170,7 @@ function spawnShot(fx) {
   const ang = (Math.atan2(dypx, dxpx) * 180) / Math.PI;
   const weapon = HERO_WEAPON[fx.heroId] || 'slash';
   const color = ELEMENT_COLOR[fx.element] || '#e9d6a0';
-  const t = weapon === 'arrow' ? 150 : 100; // 화살은 조금 더 오래 난다
+  const t = weapon === 'arrow' ? 240 : 100; // 화살은 더 오래 날아 잘 보인다(원거리)
   const el = getFxEl();
   el.className = `rd-shot ${weapon}`;
   el.style.left = `${sx}px`;
@@ -273,6 +275,7 @@ export function render(root) {
         <div class="rd-units" id="rd-units" aria-hidden="true"></div>
         <div class="rd-enemies" id="rd-enemies" aria-hidden="true"></div>
         <div class="rd-shots" id="rd-shots" aria-hidden="true"></div>
+        <button class="rd-gear" id="rd-gear" aria-label="설정"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.1" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 3.8 V6 M12 18 V20.2 M3.8 12 H6 M18 12 H20.2 M6.3 6.3 L7.9 7.9 M16.1 16.1 L17.7 17.7 M17.7 6.3 L16.1 7.9 M7.9 16.1 L6.3 17.7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button>
         <button class="rd-speed" id="rd-speed" aria-label="전투 배속">1×</button>
         <div class="rd-timer" id="rd-timer" hidden><b id="rd-timer-n">60</b><span>초</span></div>
         <div class="rd-prep" id="rd-prep" hidden>
@@ -294,6 +297,9 @@ export function render(root) {
   unitLayer = document.getElementById('rd-units');
   shotLayer = document.getElementById('rd-shots');
   measureField();
+
+  // 설정 — 상단 톱니 버튼이 설정 오버레이를 연다
+  document.getElementById('rd-gear').addEventListener('click', () => { play('tap'); emit('nav:settings'); });
 
   // 전투 배속 — 저장된 값에서 이어받아 칩에 반영
   speed = clampSpeed(getState().settings?.rdSpeed);
@@ -479,10 +485,9 @@ function closeSheet() {
 
 function sheetSummonHtml() {
   return `
-    <div class="rd-sheet-head"><b>소환</b><button class="rd-sheet-x" data-x aria-label="닫기">✕</button></div>
+    <div class="rd-sheet-head"><b>소환</b><span class="rd-sheet-hint">꾹 누르면 연속 소환</span><button class="rd-sheet-x" data-x aria-label="닫기">✕</button></div>
     <div class="rd-summon-opts">
-      <button class="btn primary" data-s="10"><b>10연 소환</b><span id="rd-s10-cost"></span></button>
-      <button class="btn" data-s="1"><b>1회 소환</b><span id="rd-s1-cost"></span></button>
+      <button class="btn primary rd-summon-one" data-s="1"><b>소환</b><span id="rd-s1-cost"></span></button>
     </div>`;
 }
 function sheetUpgradeHtml() {
@@ -739,7 +744,7 @@ function updatePrep() {
     const nb = el.querySelector('.rd-prep-n');
     if (nb && nb.textContent !== n) nb.textContent = n;
     const sub = el.querySelector('.rd-prep-sub');
-    const txt = need ? "무료 '10연 소환'으로 병력을 모으세요!" : '전투 시작까지 · 장수를 배치하세요';
+    const txt = need ? "아래 '소환'을 꾹 눌러 병력을 모으세요!" : '전투 시작까지 · 장수를 배치하세요';
     if (sub && sub.textContent !== txt) sub.textContent = txt;
   }
 }
