@@ -6,8 +6,9 @@ import { HEROES, RARITY } from '../data/heroes.js';
 import * as engine from '../systems/defense.js';
 import * as meta from '../systems/rd-meta.js';
 import { on } from '../core/events.js';
+import { getState, setSetting } from '../core/state.js';
 import { fmt } from './format.js';
-import { floatText } from './effects.js';
+import { floatText, flash } from './effects.js';
 import { showModal } from './modal.js';
 import { play, vibrate } from './sound.js';
 
@@ -16,6 +17,9 @@ const HERO_NAME = new Map(HEROES.map((h) => [h.id, h.name]));
 let run = null;
 let rafId = 0;
 let last = 0;
+let speed = 1;            // 전투 배속 x1/x2/x3 (설정에 영속)
+let revealing = false;    // 10연 소환 연출 중 — 월드를 멈춘다
+let revealTimers = [];
 let fieldEl = null;
 let enemyLayer = null;
 let unitLayer = null;
@@ -136,13 +140,19 @@ export function render(root) {
         <div class="rd-track" style="${trackRectStyle()}" aria-hidden="true"></div>
         <div class="rd-units" id="rd-units" aria-hidden="true"></div>
         <div class="rd-enemies" id="rd-enemies" aria-hidden="true"></div>
+        <button class="rd-speed" id="rd-speed" aria-label="전투 배속">1×</button>
         <div class="rd-over" id="rd-over" hidden></div>
       </div>
       <div class="rd-panel" id="rd-panel" hidden></div>
       <div class="rd-controls">
-        <button class="btn primary rd-summon" id="rd-summon">
-          <b>소환</b><span>골드 ${DEFENSE.summon.cost}</span>
+        <button class="btn primary rd-summon10" id="rd-summon10">
+          <b>10연 소환</b><span id="rd-s10-cost">무료 10회</span>
         </button>
+        <button class="btn rd-summon" id="rd-summon">
+          <b>소환</b><span id="rd-s1-cost">골드 ${DEFENSE.summon.cost}</span>
+        </button>
+      </div>
+      <div class="rd-controls sub">
         <button class="btn rd-gamble" id="rd-gamble">
           <b>도박</b><span>골드 ${DEFENSE.gamble.cost}</span>
         </button>
@@ -158,6 +168,25 @@ export function render(root) {
   unitLayer = document.getElementById('rd-units');
   measureField();
 
+  // 전투 배속 — 저장된 값에서 이어받아 칩에 반영
+  speed = clampSpeed(getState().settings?.rdSpeed);
+  updateSpeedChip();
+  document.getElementById('rd-speed').addEventListener('click', () => {
+    speed = speed >= 3 ? 1 : speed + 1;
+    setSetting('rdSpeed', speed);
+    updateSpeedChip();
+    play('tap');
+    vibrate(6);
+  });
+
+  // 등급이 높을수록 크게 축포를 터뜨린다 (소환의 손맛)
+  function summonFanfare(rarity) {
+    if (rarity >= 5) { play('legend'); flash('gold'); vibrate(40); }
+    else if (rarity >= 4) { play('epic'); flash('ember'); vibrate(22); }
+    else if (rarity >= 3) { play('claim'); vibrate(10); }
+    else play('tap');
+  }
+
   document.getElementById('rd-summon').addEventListener('click', () => {
     const u = engine.summon(run);
     if (!u) {
@@ -166,9 +195,23 @@ export function render(root) {
       btn.classList.remove('shake'); void btn.offsetWidth; btn.classList.add('shake');
       return;
     }
-    play('tap');
+    summonFanfare(u.rarity);
     syncUnits();
     updateHud();
+  });
+
+  // 10연 소환 — 깃발이 하나씩 뒤집히는 리빌. 무료 소환권부터 쓰고, 모자라면 골드로.
+  document.getElementById('rd-summon10').addEventListener('click', () => {
+    const made = engine.summonMany(run, 10);
+    if (!made.length) {
+      vibrate(8);
+      const btn = document.getElementById('rd-summon10');
+      btn.classList.remove('shake'); void btn.offsetWidth; btn.classList.add('shake');
+      return;
+    }
+    syncUnits();
+    updateHud();
+    startReveal(made);
   });
 
   document.getElementById('rd-gamble').addEventListener('click', (e) => {
@@ -244,13 +287,41 @@ function updateHud() {
     a.textContent = run.enemies.length;
     a.parentElement.classList.toggle('danger', run.enemies.length >= DEFENSE.wave.loseAt * 0.75);
   }
+  const cost = DEFENSE.summon.cost;
+  const free = run.freePulls;
+
+  // 단일 소환
   const btn = document.getElementById('rd-summon');
-  if (btn) {
-    const free = run.freePulls > 0;
-    btn.querySelector('b').textContent = free ? '무료 소환' : '소환';
-    btn.querySelector('span').textContent = free ? `${run.freePulls}회 남음` : `골드 ${DEFENSE.summon.cost}`;
-    btn.classList.toggle('can-buy', free || run.gold >= DEFENSE.summon.cost);
+  const s1 = document.getElementById('rd-s1-cost');
+  if (btn && s1) {
+    s1.textContent = free > 0 ? `무료 · ${free}회 남음` : `골드 ${cost}`;
+    btn.classList.toggle('can-buy', free > 0 || run.gold >= cost);
   }
+
+  // 10연 소환 — 무료분부터 소진, 나머지는 골드
+  const btn10 = document.getElementById('rd-summon10');
+  const s10 = document.getElementById('rd-s10-cost');
+  if (btn10 && s10) {
+    const freeUse = Math.min(10, free);
+    const paid = 10 - freeUse;
+    const goldCost = paid * cost;
+    s10.textContent =
+      freeUse >= 10 ? '무료 10회' :
+      freeUse > 0 ? `무료 ${freeUse} + 골드 ${fmt(goldCost)}` :
+      `골드 ${fmt(goldCost)}`;
+    btn10.classList.toggle('can-buy', free > 0 || run.gold >= cost);
+  }
+}
+
+function clampSpeed(v) {
+  const n = Math.round(Number(v) || 1);
+  return n < 1 ? 1 : n > 3 ? 3 : n;
+}
+function updateSpeedChip() {
+  const chip = document.getElementById('rd-speed');
+  if (!chip) return;
+  chip.textContent = `${speed}×`;
+  chip.classList.toggle('boosted', speed > 1);
 }
 
 function syncUnits() {
@@ -496,11 +567,131 @@ function openShop() {
   showModal({ title: '성장 상점', body: box, actions: [{ label: '닫기' }] });
 }
 
+// ── 10연 소환 리빌 — 깃발을 하나씩 뒤집는다. 등급이 높을수록 빛·소리가 커진다(헌장 #3 가챠 연출). ──
+function revealCardHtml(u, i) {
+  return `
+    <button class="rd-rcard r${u.rarity}" data-i="${i}" style="--i:${i}" aria-label="장수 확인">
+      <span class="rd-rcard-in">
+        <span class="rd-rcard-back">將</span>
+        <span class="rd-rcard-face">
+          <img class="rd-rcard-img" src="${heroCut(u.heroId)}" alt="" draggable="false">
+          <em class="rd-rcard-rar">${RARITY[u.rarity].name}</em>
+          <b class="rd-rcard-name">${HERO_NAME.get(u.heroId)}</b>
+        </span>
+      </span>
+    </button>`;
+}
+
+function clearRevealTimers() {
+  for (const t of revealTimers) clearTimeout(t);
+  revealTimers = [];
+}
+
+function closeReveal() {
+  clearRevealTimers();
+  const stage = document.getElementById('rd-reveal');
+  if (stage) stage.remove();
+  if (revealing) {
+    revealing = false;
+    last = performance.now(); // 멈춰 있던 시간이 다음 프레임 dt로 튀지 않게
+  }
+}
+
+function startReveal(units) {
+  closeReveal();
+  revealing = true;
+
+  const top = Math.max(...units.map((u) => u.rarity));
+  const stage = document.createElement('div');
+  stage.className = 'rd-reveal';
+  stage.id = 'rd-reveal';
+  if (top >= 5) stage.classList.add('omen-legend');
+  else if (top >= 4) stage.classList.add('omen-epic');
+  stage.innerHTML = `
+    <p class="rd-reveal-title">천하의 장수를 불러들인다</p>
+    <div class="rd-reveal-grid">${units.map(revealCardHtml).join('')}</div>
+    <button class="btn rd-reveal-skip" id="rd-reveal-skip">모두 공개</button>`;
+  document.body.appendChild(stage);
+  if (top >= 4) play('omen'); // 서광 — 큰 게 온다는 암시
+
+  const cards = [...stage.querySelectorAll('.rd-rcard')];
+  const skip = document.getElementById('rd-reveal-skip');
+  let revealed = 0;
+
+  const finish = () => {
+    skip.textContent = '확인';
+    skip.classList.add('primary');
+  };
+
+  const flip = (i) => {
+    const card = cards[i];
+    if (!card || card.classList.contains('open')) return;
+    card.classList.remove('tremble');
+    stage.classList.remove('dim');
+    card.classList.add('open');
+    const r = units[i].rarity;
+    if (r >= 5) {
+      stage.classList.add('flash-legend');
+      play('legend'); flash('gold'); vibrate(50);
+      setTimeout(() => stage.classList.remove('flash-legend'), 800);
+    } else if (r >= 4) {
+      stage.classList.add('flash-epic');
+      play('epic'); flash('ember'); vibrate(24);
+      setTimeout(() => stage.classList.remove('flash-epic'), 480);
+    } else if (r >= 3) {
+      play('claim'); vibrate(10);
+    } else {
+      play('tap');
+    }
+    if (++revealed === cards.length) finish();
+  };
+
+  // 순차 공개 — 전설(5성) 앞에서는 화면을 어둡게 깔고 깃발을 떨어 긴장을 만든다
+  let at = 300;
+  units.forEach((u, i) => {
+    if (u.rarity >= 5) {
+      const tensionAt = at;
+      revealTimers.push(setTimeout(() => { stage.classList.add('dim'); cards[i].classList.add('tremble'); }, tensionAt));
+      at += 1100;
+      revealTimers.push(setTimeout(() => flip(i), at));
+      at += 1400;
+    } else if (u.rarity >= 4) {
+      revealTimers.push(setTimeout(() => flip(i), at));
+      at += 560;
+    } else {
+      revealTimers.push(setTimeout(() => flip(i), at));
+      at += 240;
+    }
+  });
+
+  // 깃발을 직접 눌러 먼저 확인할 수 있다 — '내가 뽑는' 손맛
+  stage.querySelector('.rd-reveal-grid').addEventListener('click', (e) => {
+    const c = e.target.closest('.rd-rcard');
+    if (c) flip(cards.indexOf(c));
+  });
+
+  skip.addEventListener('click', () => {
+    if (revealed < cards.length) {
+      // 모두 공개 — 촤라락 넘기되 등급 팡파르는 그대로
+      clearRevealTimers();
+      cards.forEach((c, i) => revealTimers.push(setTimeout(() => flip(i), i * 70)));
+      return;
+    }
+    closeReveal();
+  });
+}
+
 function loop(now) {
   if (!run) { rafId = 0; return; }
+  // 소환 리빌 중엔 월드를 멈춘다 — 깃발을 뒤집는 순간의 긴장을 온전히 (적이 새지 않게)
+  if (revealing) { last = now; if (rafId) rafId = requestAnimationFrame(loop); return; }
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
-  engine.tick(run, dt);
+  // 배속 — 같은 dt로 speed번 틱해 물리를 안정적으로 유지한 채 시간만 빠르게 (x1/x2/x3)
+  for (let i = 0; i < speed; i++) {
+    engine.tick(run, dt);
+    if (run.gameOver || run.won) break;
+  }
   syncEnemies();
   syncUnits(); // 유닛이 이동하므로 매 프레임 위치·방향 갱신
   consumeFx();
@@ -511,6 +702,7 @@ function loop(now) {
 }
 
 export function destroy() {
+  closeReveal(); // 리빌 오버레이가 떠 있으면 걷어낸다
   if (rafId) cancelAnimationFrame(rafId);
   rafId = 0;
   saveRun(); // 탭 떠날 때 저장 — 설정 갔다 와도 이어진다

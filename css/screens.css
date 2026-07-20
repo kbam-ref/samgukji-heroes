@@ -2004,6 +2004,34 @@
 .rd-gamble { min-width: 88px; min-height: 54px; gap: 1px; border-color: rgba(216, 114, 46, 0.5); }
 .rd-gamble b { font-size: 15px; font-weight: 800; color: var(--cta-bright); }
 
+/* 10연 소환 · 단일 소환 · 하위 컨트롤 (v68) */
+.rd-summon10 { flex: 1.6; min-height: 54px; gap: 2px; }
+.rd-summon10 b { font-size: 17px; font-weight: 800; }
+.rd-summon10.can-buy { animation: hs-primary-glow 2s var(--ease-out) infinite; }
+.rd-summon10.shake { animation: shake 0.3s; }
+.rd-controls .rd-summon { flex: 1; max-width: 150px; }
+.rd-controls.sub { margin-top: 2px; }
+.rd-controls.sub .btn { flex: 1; max-width: 190px; min-height: 44px; gap: 1px; }
+
+/* 배속 칩 — 필드 우상단 토글 (x1/x2/x3) */
+.rd-field .rd-over { z-index: 8; } /* 게임오버·티켓없음 오버레이가 배속 칩을 덮게 */
+.rd-speed {
+  position: absolute; top: 8px; right: 8px; z-index: 4;
+  min-width: 42px; height: 30px; padding: 0 10px;
+  border-radius: 15px; border: 1px solid var(--ink-600);
+  background: rgba(23, 19, 16, 0.62);
+  color: var(--paper-dim); font-weight: 800; font-size: 14px;
+  font-variant-numeric: tabular-nums; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: color 0.15s, border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+.rd-speed.boosted {
+  color: var(--cta-ink);
+  background: linear-gradient(160deg, var(--cta-bright), var(--cta));
+  border-color: var(--cta-deep);
+  box-shadow: 0 0 10px var(--cta-tint);
+}
+
 /* 유닛 액션 패널 — 탭한 유닛의 단련/합성/반환 */
 .rd-panel { margin: 0 14px; padding: 10px 12px; border-radius: 12px; background: linear-gradient(180deg, var(--ink-700), var(--ink-900)); border: 1px solid var(--ink-600); }
 .rd-panel-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }

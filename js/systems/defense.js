@@ -115,6 +115,17 @@ export function summon(run) {
   return unit;
 }
 
+/** 여러 번 소환(10연 등) — 빈 칸/자원이 다할 때까지. 생성된 유닛 배열을 돌려준다(리빌 연출용). */
+export function summonMany(run, n) {
+  const made = [];
+  for (let i = 0; i < n; i++) {
+    const u = summon(run);
+    if (!u) break;
+    made.push(u);
+  }
+  return made;
+}
+
 // ── 단련(업그레이드) ──
 export function upgradeCost(lv) {
   const u = DEFENSE.unit.upgrade;

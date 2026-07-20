@@ -469,3 +469,91 @@
   18%  { opacity: 1; }
   100% { opacity: 0; transform: scale(1.35); }
 }
+
+/* ── 10연 소환 리빌 (v68) — 깃발을 뒤집어 장수를 공개. 등급 높을수록 화려하게(헌장 #3) ── */
+.rd-reveal {
+  position: fixed; inset: 0; z-index: 60;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 18px; padding: 24px 16px;
+  background: radial-gradient(ellipse at 50% 38%, rgba(40, 32, 22, 0.92), rgba(10, 8, 5, 0.97));
+  animation: rd-reveal-in 0.24s ease-out;
+}
+@keyframes rd-reveal-in { from { opacity: 0; } to { opacity: 1; } }
+.rd-reveal.dim { background: radial-gradient(ellipse at 50% 38%, rgba(20, 16, 11, 0.97), rgba(3, 2, 1, 0.99)); }
+
+.rd-reveal-title {
+  font-family: var(--font-display); font-size: 18px; color: var(--gold-bright);
+  letter-spacing: 0.08em; text-align: center;
+}
+.rd-reveal.omen-epic .rd-reveal-title { color: var(--r4); text-shadow: 0 0 12px rgba(156, 107, 192, 0.7); }
+.rd-reveal.omen-legend .rd-reveal-title {
+  color: var(--gold-bright); text-shadow: 0 0 16px rgba(228, 197, 92, 0.85);
+  animation: rd-omen 1s ease-in-out infinite;
+}
+@keyframes rd-omen { 50% { text-shadow: 0 0 28px rgba(228, 197, 92, 1); } }
+
+.rd-reveal-grid {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;
+  width: 100%; max-width: 380px;
+}
+.rd-rcard { aspect-ratio: 3 / 4; border: none; background: none; padding: 0; cursor: pointer; perspective: 520px; }
+.rd-rcard-in {
+  position: relative; display: block; width: 100%; height: 100%;
+  transform-style: preserve-3d; transition: transform 0.5s var(--ease-out);
+}
+.rd-rcard.open .rd-rcard-in { transform: rotateY(180deg); }
+.rd-rcard-back, .rd-rcard-face {
+  position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  border-radius: 9px; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden;
+}
+.rd-rcard-back {
+  background: linear-gradient(160deg, var(--ink-700), var(--ink-950));
+  border: 1px solid var(--ink-600);
+  font-family: var(--font-display); font-size: 22px; color: var(--gold);
+  box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.5);
+}
+.rd-rcard-face {
+  transform: rotateY(180deg);
+  background: linear-gradient(180deg, var(--ink-800), var(--ink-950));
+  border: 1.5px solid var(--frame, var(--ink-600));
+  gap: 1px; padding-bottom: 3px;
+}
+.rd-rcard-img { width: 100%; height: 62%; object-fit: contain; object-position: bottom; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5)) brightness(1.1); }
+.rd-rcard-rar { font-size: 8.5px; font-style: normal; color: var(--frame, var(--paper-dim)); letter-spacing: 0.04em; }
+.rd-rcard-name { font-size: 10px; font-weight: 800; color: var(--paper); line-height: 1.05; text-align: center; }
+
+.rd-rcard.r1 { --frame: var(--r1); }
+.rd-rcard.r2 { --frame: var(--r2); }
+.rd-rcard.r3 { --frame: var(--r3); }
+.rd-rcard.r4 { --frame: var(--r4); }
+.rd-rcard.r5 { --frame: var(--r5); }
+.rd-rcard.r4.open .rd-rcard-face { box-shadow: 0 0 12px rgba(156, 107, 192, 0.6); }
+.rd-rcard.r5.open .rd-rcard-face { box-shadow: 0 0 16px rgba(228, 197, 92, 0.78); animation: rd-r5-glow 1.4s ease-in-out infinite; }
+@keyframes rd-r5-glow { 50% { box-shadow: 0 0 26px rgba(228, 197, 92, 0.98); } }
+
+.rd-rcard.tremble { animation: rd-tremble 0.5s ease-in-out infinite; z-index: 2; }
+@keyframes rd-tremble {
+  0%, 100% { transform: translateX(-1.5px) rotate(-1.2deg); }
+  50% { transform: translateX(1.5px) rotate(1.2deg); }
+}
+
+.rd-reveal.flash-epic { animation: rd-fl-epic 0.46s ease-out; }
+.rd-reveal.flash-legend { animation: rd-fl-legend 0.8s ease-out; }
+@keyframes rd-fl-epic {
+  0% { background: radial-gradient(ellipse at 50% 42%, rgba(156, 107, 192, 0.5), rgba(10, 8, 5, 0.97)); }
+}
+@keyframes rd-fl-legend {
+  0% { background: radial-gradient(ellipse at 50% 42%, rgba(228, 197, 92, 0.62), rgba(10, 8, 5, 0.97)); }
+  45% { background: radial-gradient(ellipse at 50% 42%, rgba(228, 197, 92, 0.28), rgba(10, 8, 5, 0.97)); }
+}
+
+.rd-reveal-skip { min-width: 160px; min-height: 46px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rd-rcard-in { transition: none; }
+  .rd-rcard.tremble, .rd-reveal.omen-legend .rd-reveal-title, .rd-rcard.r5.open .rd-rcard-face { animation: none; }
+}
+@media (max-width: 340px) {
+  .rd-rcard-name { font-size: 9px; }
+  .rd-reveal-grid { gap: 6px; }
+}
