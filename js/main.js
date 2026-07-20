@@ -227,7 +227,8 @@ function boot() {
     };
 
     navigator.serviceWorker
-      .register('./sw.js')
+      // updateViaCache:'none' — sw.js를 HTTP 캐시 없이 매번 새로 받아 새 배포를 확실히 감지
+      .register('./sw.js', { updateViaCache: 'none' })
       .then((reg) => {
         swReg = reg;
         // 앱을 계속 켜둬도 ~60초 내 새 배포를 감지하도록 주기적으로 확인
