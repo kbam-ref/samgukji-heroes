@@ -6,9 +6,10 @@
 //
 // Meshy Image-to-3D (openapi/v1). 응답 스키마가 다르면 첫 실행 로그를 보고 조정한다.
 
-import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'fs';
+import { readFileSync, existsSync, writeFileSync, mkdirSync, statSync, rmSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { execSync } from 'child_process';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 // 키 파싱 — 파일에서 # 주석·빈 줄은 무시하고 첫 실제 키 줄만 사용(사용자가 주석 아래에 붙여넣어도 OK)
@@ -45,12 +46,17 @@ async function createTask(dataUri) {
   const res = await fetch(API, {
     method: 'POST',
     headers: { Authorization: 'Bearer ' + KEY, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ image_url: dataUri, enable_pbr: true, should_remesh: true, should_texture: true, ai_model: 'meshy-5' }),
+    body: JSON.stringify({ image_url: dataUri, enable_pbr: true, should_remesh: true, should_texture: true, ai_model: 'meshy-5', target_polycount: 20000 }),
   });
   const txt = await res.text();
   if (!res.ok) throw new Error(`create ${res.status}: ${txt}`);
   const j = JSON.parse(txt);
   return j.result || j.id || j.task_id;
+}
+
+// GLB 최적화 — 텍스처 1024 축소 + 양자화(three 네이티브, draco 미사용). 8.5MB→~1MB.
+function optimize(rawPath, finalPath) {
+  execSync(`npx --yes @gltf-transform/cli@latest optimize "${rawPath}" "${finalPath}" --compress quantize --texture-size 1024`, { stdio: 'pipe' });
 }
 
 async function pollTask(taskId) {
@@ -66,7 +72,10 @@ async function pollTask(taskId) {
   throw new Error('타임아웃');
 }
 
+const FORCE = process.argv.includes('--force');
 async function genOne(id, kind) {
+  const out = join(OUT, id + '.glb');
+  if (existsSync(out) && !FORCE) { console.log(`[${id}] 이미 있음 — 건너뜀`); return; }
   console.log(`\n[${id}] 생성 시작…`);
   const taskId = await createTask(pngDataUri(id, kind));
   console.log(`  task=${taskId}`);
@@ -74,9 +83,12 @@ async function genOne(id, kind) {
   const glbUrl = done.model_urls?.glb;
   if (!glbUrl) throw new Error('glb URL 없음: ' + JSON.stringify(done.model_urls));
   const glb = Buffer.from(await (await fetch(glbUrl)).arrayBuffer());
-  const out = join(OUT, id + '.glb');
-  writeFileSync(out, glb);
-  console.log(`  ✔ 저장 ${out} (${(glb.length / 1024).toFixed(0)} KB)`);
+  const raw = out + '.raw';
+  writeFileSync(raw, glb);
+  optimize(raw, out); // 최적화(텍스처·양자화)
+  const sz = statSync(out).size;
+  try { rmSync(raw); } catch { /* noop */ }
+  console.log(`  ✔ ${id}.glb  ${(glb.length / 1048576).toFixed(1)}MB → ${(sz / 1048576).toFixed(2)}MB`);
 }
 
 const args = process.argv.slice(2);
