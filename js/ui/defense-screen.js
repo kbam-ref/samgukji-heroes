@@ -1,7 +1,7 @@
 // 삼국지 랜덤 디펜스 — 화면(DOM·연출). 엔진(systems/defense.js)을 rAF로 돌리고 상태를 그린다.
 // 성능: 적/유닛 DOM을 id로 재사용하고 transform(translate3d)만 매 프레임 갱신(레이아웃 회피).
 
-import { DEFENSE, ELEMENT_COLOR, ELEMENT_LABEL, SIZE_LABEL } from '../data/defense.js';
+import { DEFENSE, ELEMENT_COLOR, ELEMENT_LABEL, SIZE_LABEL, HERO_WEAPON } from '../data/defense.js';
 import { HEROES, RARITY } from '../data/heroes.js';
 import * as engine from '../systems/defense.js';
 import * as meta from '../systems/rd-meta.js';
@@ -23,6 +23,8 @@ let revealTimers = [];
 let fieldEl = null;
 let enemyLayer = null;
 let unitLayer = null;
+let shotLayer = null; // 투사체(참격·화살)·명중 불꽃 레이어
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const enemyNodes = new Map(); // eid -> {el, hp}
 const unitNodes = new Map(); // uid -> el
 let fieldW = 0;
@@ -104,6 +106,43 @@ function place(el, x, y) {
   el.style.transform = `translate3d(${(x / 100) * fieldW}px, ${(y / 100) * fieldH}px, 0) translate(-50%, -50%)`;
 }
 
+// ── 투사체(참격·화살)가 쏜 자리에서 맞는 자리로 날아가 불꽃을 터뜨린다 ──
+function spawnShot(fx) {
+  if (!shotLayer || reduceMotion) return;
+  if (shotLayer.childElementCount > 30) return; // 저사양 보호 — 밀리면 솎아낸다
+  const sx = (fx.ux / 100) * fieldW, sy = (fx.uy / 100) * fieldH;
+  const dxpx = ((fx.ex - fx.ux) / 100) * fieldW;
+  const dypx = ((fx.ey - fx.uy) / 100) * fieldH;
+  const ang = (Math.atan2(dypx, dxpx) * 180) / Math.PI;
+  const weapon = HERO_WEAPON[fx.heroId] || 'slash';
+  const color = ELEMENT_COLOR[fx.element] || '#e9d6a0';
+  const t = weapon === 'arrow' ? 150 : 100; // 화살은 조금 더 오래 난다
+  const el = document.createElement('i');
+  el.className = `rd-shot ${weapon}`;
+  el.style.left = `${sx}px`;
+  el.style.top = `${sy}px`;
+  el.style.setProperty('--dx', `${dxpx}px`);
+  el.style.setProperty('--dy', `${dypx}px`);
+  el.style.setProperty('--ang', `${ang}deg`);
+  el.style.setProperty('--t', `${t}ms`);
+  el.style.setProperty('--c', color);
+  shotLayer.appendChild(el);
+  setTimeout(() => {
+    el.remove();
+    spawnImpact(fx.ex, fx.ey, color, weapon); // 명중 순간 불꽃
+  }, t);
+}
+function spawnImpact(x, y, color, weapon) {
+  if (!shotLayer || reduceMotion || shotLayer.childElementCount > 36) return;
+  const s = document.createElement('i');
+  s.className = `rd-impact ${weapon}`;
+  s.style.left = `${(x / 100) * fieldW}px`;
+  s.style.top = `${(y / 100) * fieldH}px`;
+  s.style.setProperty('--c', color);
+  shotLayer.appendChild(s);
+  setTimeout(() => s.remove(), 260);
+}
+
 function hud() {
   const cap = engine.stageCap();
   return `
@@ -140,6 +179,7 @@ export function render(root) {
         <div class="rd-track" style="${trackRectStyle()}" aria-hidden="true"></div>
         <div class="rd-units" id="rd-units" aria-hidden="true"></div>
         <div class="rd-enemies" id="rd-enemies" aria-hidden="true"></div>
+        <div class="rd-shots" id="rd-shots" aria-hidden="true"></div>
         <button class="rd-speed" id="rd-speed" aria-label="전투 배속">1×</button>
         <div class="rd-over" id="rd-over" hidden></div>
       </div>
@@ -166,6 +206,7 @@ export function render(root) {
   fieldEl = document.getElementById('rd-field');
   enemyLayer = document.getElementById('rd-enemies');
   unitLayer = document.getElementById('rd-units');
+  shotLayer = document.getElementById('rd-shots');
   measureField();
 
   // 전투 배속 — 저장된 값에서 이어받아 칩에 반영
@@ -434,6 +475,7 @@ function consumeFx() {
         el.classList.remove('fire'); void el.offsetWidth; el.classList.add('fire');
         setTimeout(() => el.classList.remove('fire'), 240); // 공격 끝나면 idle 숨쉬기로 복귀
       }
+      spawnShot(fx); // 참격/화살이 적에게 날아가 명중 불꽃
     } else if (fx.type === 'kill') {
       play('foehit');
     } else if (fx.type === 'stageClear') {
@@ -462,6 +504,7 @@ function wipeNodes() {
   enemyNodes.clear();
   for (const [, el] of unitNodes) el.remove();
   unitNodes.clear();
+  if (shotLayer) shotLayer.innerHTML = '';
 }
 function beginRun(newRun) {
   run = newRun;
@@ -714,6 +757,7 @@ export function destroy() {
   drag = null;
   enemyNodes.clear();
   unitNodes.clear();
-  fieldEl = enemyLayer = unitLayer = null;
+  if (shotLayer) shotLayer.innerHTML = '';
+  fieldEl = enemyLayer = unitLayer = shotLayer = null;
   // run은 null로 만들지 않는다 — 탭 전환에도 인메모리로 유지
 }

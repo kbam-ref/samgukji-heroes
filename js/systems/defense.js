@@ -385,7 +385,12 @@ export function tick(run, dt) {
       target.hit = 0.18;
       u.cd = DEFENSE.unit.byRarity[u.rarity].cooldown;
       u.face = target.x < u.x ? -1 : 1; // 공격 대상 쪽으로 몸을 돌린다
-      run.fx.push({ type: 'attack', uid: u.uid, eid: target.eid, face: u.face });
+      // 투사체 연출용 — 쏜 자리(u)·맞는 자리(target)·병기 판별용 heroId·속성색
+      run.fx.push({
+        type: 'attack', uid: u.uid, eid: target.eid, face: u.face,
+        heroId: u.heroId, element: u.element,
+        ux: u.x, uy: u.y, ex: target.x, ey: target.y,
+      });
       if (target.hp <= 0) {
         target.dead = true;
         run.gold += killGold(run.stage, target.size, target.isBoss);

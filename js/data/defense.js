@@ -32,8 +32,11 @@ export const DEFENSE = {
     //   텅 빈 시간 6%로 떨어지고 여전히 클리어 가능(엔진 헤드리스 검증). 밀도=손맛.
     spawnInterval: 0.45,
     loseAt: 100, // 살아있는 적(보스 포함, 각 1) 100 누적 = 게임오버
-    hpBase: 26,
-    hpPerStage: 1.13, // 검증: 1.22^49≈17,000배는 클리어 불가 → 1.13(≈399배)로 완화
+    // 2026-07-20: 26→48. 10라운드가 너무 쉬웠음(시뮬 숙련 후반 동시 적 ~5마리) → 초반부터 무게를 준다.
+    hpBase: 48,
+    // 2026-07-20: 1.13→1.18. buildCap 10 구간 난이도 상향. 시뮬: 숙련 r10 피크 ~27, 캐주얼 ~78/100(아슬아슬).
+    //   ※ 훗날 buildCap을 50으로 열 땐 재조정 필요(1.18^49는 과도) — 그때 신규 적 아트와 함께 별도 밸런스 패스.
+    hpPerStage: 1.18,
     hpPerIndex: 0.01,
     speed: 8,
     // 재화 — 개체당 골드에 스테이지 스케일(검증 C1: flat 수입 vs 기하 HP → 경제 붕괴).
@@ -193,6 +196,14 @@ export const ENEMY_SPRITES = [
 ];
 export const BOSS_SPRITES = ['zhangjiao', 'boss-general', 'boss-warlock'];
 export const BOSS_SPRITE = BOSS_SPRITES[0]; // 하위호환
+
+// 병기 — 공격 투사체 연출 판별. 궁수·책사는 화살/기(氣)가 날아가고, 나머지는 참격이 뻗어 나간다.
+// (연출용 데이터 — 엔진은 heroId만 fx에 실어 보내고, UI가 여기서 병기를 읽어 그린다.)
+export const HERO_WEAPON = {
+  sunshangxiang: 'arrow', ganning: 'arrow', // 궁(弓)
+  zhugeliang: 'arrow', xunyu: 'arrow',      // 책사의 기(氣) — 화살처럼 날아간다
+  // 그 외 21인은 참격(slash) — 기본값
+};
 
 // 등급별 소환 후보(영웅 id). 소환·합성 시 등급 안에서 랜덤 1명.
 export const SUMMON_POOL = [1, 2, 3, 4, 5].reduce((pool, r) => {

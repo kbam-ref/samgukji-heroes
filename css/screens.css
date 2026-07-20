@@ -1943,11 +1943,50 @@
 }
 /* 이동 중엔 걸음(멈추면 idle, 공격 시 attack이 우선) */
 .rd-unit.moving .rd-sprite { animation: rd-walk 0.42s ease-in-out infinite; }
-.rd-unit.fire .rd-sprite { animation: rd-attack 0.24s ease-out; }
+/* 공격 — 적 쪽으로 앞으로 찔렀다 뒤로 빠진다(앞뒤). 스프라이트 로컬 +X는 --face로 늘 적 방향. */
+.rd-unit.fire .rd-sprite { animation: rd-attack 0.26s cubic-bezier(0.34, 1.5, 0.5, 1); }
 @keyframes rd-attack {
-  25% { transform: translateX(-50%) translateY(-6px) scale(1.14, 0.9) rotate(-4deg); }
-  55% { transform: translateX(-50%) translateY(1px) scale(0.96, 1.06) rotate(3deg); }
+  0%   { transform: translateX(-50%); }
+  26%  { transform: translateX(calc(-50% + 12px)) translateY(-2px) scale(1.12, 0.93); } /* 앞으로 찌른다 */
+  48%  { transform: translateX(calc(-50% + 7px))  translateY(0)    scale(1.03, 1.0); }
+  72%  { transform: translateX(calc(-50% - 6px))  translateY(1px)  scale(0.94, 1.06); } /* 뒤로 빠진다 */
   100% { transform: translateX(-50%); }
+}
+
+/* 투사체 — 참격/화살이 적에게 날아가 명중 지점에서 불꽃 (v69) */
+.rd-shots { position: absolute; inset: 0; pointer-events: none; z-index: 3; }
+.rd-shot {
+  position: absolute; left: 0; top: 0; width: 0; height: 0;
+  transform: translate(-50%, -50%); will-change: transform;
+  animation: rd-shot-fly var(--t, 120ms) linear forwards;
+}
+@keyframes rd-shot-fly {
+  to { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))); }
+}
+.rd-shot::before {
+  content: ''; position: absolute; left: 0; top: 0;
+  transform: translate(-50%, -50%) rotate(var(--ang)); transform-origin: center;
+}
+.rd-shot.arrow::before {
+  width: 17px; height: 3px; border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--c) 45%, #fff);
+  box-shadow: 0 0 5px var(--c);
+}
+.rd-shot.slash::before {
+  width: 21px; height: 7px; border-radius: 50%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.92) 62%, #fff);
+  box-shadow: 0 0 6px var(--c); opacity: 0.92;
+}
+.rd-impact { position: absolute; left: 0; top: 0; transform: translate(-50%, -50%); z-index: 3; pointer-events: none; }
+.rd-impact::before {
+  content: ''; position: absolute; left: 0; top: 0; width: 16px; height: 16px; margin: -8px 0 0 -8px;
+  border-radius: 50%; background: radial-gradient(closest-side, #fff, var(--c) 55%, transparent);
+  animation: rd-impact-pop 0.26s ease-out forwards;
+}
+.rd-impact.slash::before { width: 20px; height: 20px; margin: -10px 0 0 -10px; }
+@keyframes rd-impact-pop {
+  0% { transform: scale(0.3); opacity: 1; }
+  100% { transform: scale(1.5); opacity: 0; }
 }
 
 /* 적 — 트랙을 걸어서 돈다 */
