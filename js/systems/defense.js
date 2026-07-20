@@ -422,9 +422,9 @@ function spawnEnemy(run) {
     prog: Math.random() * 0.02, // 살짝 흩어져 스폰
     hit: 0,
     face: 1, // 이동 방향으로 좌우 뒤집기
-    wPhase: Math.random() * Math.PI * 2, // 자유 이동 위상(경로 바깥 흔들림)
-    wAmp: 2 + Math.random() * 6,          // 바깥 이탈 진폭(%) — 점선 밖에서만
-    wSpeed: 0.5 + Math.random() * 0.9,    // 흔들림 속도
+    wPhase: Math.random() * Math.PI * 2, // 약한 흔들림 위상
+    wOut: 2 + Math.random() * 7,          // 고정 바깥 거리(%) — 적마다 달라 점선 밖에서 퍼져 돈다
+    wSpeed: 0.4 + Math.random() * 0.7,    // 흔들림 속도
   });
   // 이번 스테이지 첫 보스가 나오는 순간 — 긴장 단계를 알린다(경보음·배너). 스테이지당 1회.
   if (isBoss && !run.bossWarned) {
@@ -470,25 +470,31 @@ export function tick(run, dt) {
     }
   }
 
-  // 적 이동 — 경로를 돌되 수직으로 흔들려 점선 안팎을 자유롭게 다닌다(딱 선만 따라가지 않게).
+  // 적 이동 — 경로를 돌되 점선 '밖'에서 흔들려 자유롭게 다닌다.
+  //   코너에서 바깥 오프셋 벡터가 급회전하면 렌더 위치가 코너를 크게 휘돌아 '빨라' 보인다 →
+  //   실제 이동 거리를 기본 속도의 ~1.5배로 상한(cap)해 코너에서도 균일한 속도로 부드럽게 돈다.
   for (const e of run.enemies) {
     const sp = w.speed * (e.isBoss ? w.boss.speedMult : w.sizes[e.size].speed);
-    e.prog += (sp / 100) * dt;
+    const progStep = (sp / 100) * dt;
+    e.prog += progStep;
     if (e.hit > 0) e.hit -= dt;
     const pt = pathPoint(e.prog);
-    const pt2 = pathPoint(e.prog + 0.004);          // 진행 방향(접선)
-    const tx = pt2.x - pt.x, ty = pt2.y - pt.y;
+    const ta = pathPoint(e.prog - 0.014), tb = pathPoint(e.prog + 0.014); // 완만한 접선
+    const tx = tb.x - ta.x, ty = tb.y - ta.y;
     const tl = Math.hypot(tx, ty) || 1;
     e.wPhase = (e.wPhase || 0) + dt * (e.wSpeed || 1);
-    // 점선 '밖에서만' 돈다(수석) — 경로의 바깥 법선(인방향의 반대)으로 항상 양수 오프셋
-    const off = 2 + (0.5 + 0.5 * Math.sin(e.wPhase)) * (e.wAmp || 0);
-    const px = pt.x + (ty / tl) * off;
-    const py = pt.y + (-tx / tl) * off;
-    const dx = px - e.x;
-    if (dx > 0.03) e.face = 1;
-    else if (dx < -0.03) e.face = -1;
-    e.x = px;
-    e.y = py;
+    const off = (e.wOut ?? 3) + Math.sin(e.wPhase) * 1.2; // 고정 바깥거리 + 약한 흔들림
+    const targetX = pt.x + (ty / tl) * off;   // 바깥 법선
+    const targetY = pt.y + (-tx / tl) * off;
+    if (e.x === undefined) { e.x = targetX; e.y = targetY; } // 스폰 첫 프레임
+    else {
+      const cap = progStep * PERIM * 1.3 + 0.04; // 이번 프레임 이동 상한(코너 균일)
+      const ddx = targetX - e.x, ddy = targetY - e.y, dd = Math.hypot(ddx, ddy);
+      if (dd > cap) { e.x += (ddx / dd) * cap; e.y += (ddy / dd) * cap; }
+      else { e.x = targetX; e.y = targetY; }
+    }
+    if (tx > 0.03) e.face = 1;        // 진행(접선) 방향으로 좌우 뒤집기
+    else if (tx < -0.03) e.face = -1;
   }
 
   // 유닛 이동 — 드래그한 목표 지점(tx,ty)으로 걸어간다(8방향). 이동 방향으로 좌우 뒤집기.
