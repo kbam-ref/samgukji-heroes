@@ -122,7 +122,19 @@ function place(el, x, y) {
   el.style.transform = `translate3d(${(x / 100) * fieldW}px, ${(y / 100) * fieldH}px, 0) translate(-50%, -50%)`;
 }
 
-// ── 투사체(참격·화살)가 쏜 자리에서 맞는 자리로 날아가 불꽃을 터뜨린다 ──
+// ── 투사체·명중 이펙트 — DOM 오브젝트 풀 (매번 create/remove 대신 재사용 → GC 스파이크↓, 저사양·3배속 대비) ──
+const fxPool = [];
+function getFxEl() {
+  const el = fxPool.pop();
+  if (el) { el.className = ''; el.style.cssText = ''; return el; }
+  return document.createElement('i');
+}
+function releaseFxEl(el) {
+  if (el.parentNode) el.parentNode.removeChild(el);
+  if (fxPool.length < 48) fxPool.push(el);
+}
+
+// 참격·화살이 쏜 자리에서 맞는 자리로 날아가 불꽃을 터뜨린다
 function spawnShot(fx) {
   if (!shotLayer || reduceMotion) return;
   if (shotLayer.childElementCount > 30) return; // 저사양 보호 — 밀리면 솎아낸다
@@ -133,7 +145,7 @@ function spawnShot(fx) {
   const weapon = HERO_WEAPON[fx.heroId] || 'slash';
   const color = ELEMENT_COLOR[fx.element] || '#e9d6a0';
   const t = weapon === 'arrow' ? 150 : 100; // 화살은 조금 더 오래 난다
-  const el = document.createElement('i');
+  const el = getFxEl();
   el.className = `rd-shot ${weapon}`;
   el.style.left = `${sx}px`;
   el.style.top = `${sy}px`;
@@ -144,19 +156,19 @@ function spawnShot(fx) {
   el.style.setProperty('--c', color);
   shotLayer.appendChild(el);
   setTimeout(() => {
-    el.remove();
+    releaseFxEl(el);
     spawnImpact(fx.ex, fx.ey, color, weapon); // 명중 순간 불꽃
   }, t);
 }
 function spawnImpact(x, y, color, weapon) {
   if (!shotLayer || reduceMotion || shotLayer.childElementCount > 36) return;
-  const s = document.createElement('i');
+  const s = getFxEl();
   s.className = `rd-impact ${weapon}`;
   s.style.left = `${(x / 100) * fieldW}px`;
   s.style.top = `${(y / 100) * fieldH}px`;
   s.style.setProperty('--c', color);
   shotLayer.appendChild(s);
-  setTimeout(() => s.remove(), 260);
+  setTimeout(() => releaseFxEl(s), 260);
 }
 
 function hud() {
@@ -444,11 +456,19 @@ function updateSpeedChip() {
 function updatePrep() {
   const el = document.getElementById('rd-prep');
   if (!el || !run) return;
-  if (run.prepLeft > 0) {
+  const prepping = run.prepLeft > 0;
+  // 병력이 0인 채 프렙이 흐르면 첫 판을 헛되이 날릴 위험 → '10연 소환'을 강조하고 문구로 유도
+  const need = prepping && run.units.length === 0;
+  const b10 = document.getElementById('rd-summon10');
+  if (b10) b10.classList.toggle('nudge', need);
+  if (prepping) {
     if (el.hidden) el.hidden = false;
     const n = String(Math.ceil(run.prepLeft));
     const nb = el.querySelector('.rd-prep-n');
     if (nb && nb.textContent !== n) nb.textContent = n;
+    const sub = el.querySelector('.rd-prep-sub');
+    const txt = need ? "무료 '10연 소환'으로 병력을 모으세요!" : '전투 시작까지 · 장수를 배치하세요';
+    if (sub && sub.textContent !== txt) sub.textContent = txt;
   }
 }
 

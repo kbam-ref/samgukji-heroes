@@ -2103,6 +2103,12 @@
 .rd-summon10 b { font-size: 17px; font-weight: 800; }
 .rd-summon10.can-buy { animation: hs-primary-glow 2s var(--ease-out) infinite; }
 .rd-summon10.shake { animation: shake 0.3s; }
+/* 온보딩 유도 — 프렙에 병력 0일 때 강하게 맥동(무료 10연 쓰라고) */
+.rd-summon10.nudge { animation: rd-nudge 0.85s ease-in-out infinite; }
+@keyframes rd-nudge {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(236, 148, 80, 0.55); }
+  50% { transform: scale(1.035); box-shadow: 0 0 0 7px rgba(236, 148, 80, 0); }
+}
 .rd-controls .rd-summon { flex: 1; max-width: 150px; }
 .rd-controls.sub { margin-top: 2px; }
 .rd-controls.sub .btn { flex: 1; max-width: 190px; min-height: 44px; gap: 1px; }
