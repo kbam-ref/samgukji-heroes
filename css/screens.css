@@ -1973,6 +1973,15 @@
   text-shadow: 0 0 2px rgba(0, 0, 0, 0.95), 0 1px 2px rgba(0, 0, 0, 0.95), -0.5px -0.5px 1px rgba(0, 0, 0, 0.8);
   pointer-events: none;
 }
+/* 6성 왕별 — 별 하나로 크게 빛난다(속성색 + 백광 발광) v104 */
+.rd-unit .rd-stars.king {
+  font-size: 15px; bottom: 60px;
+  animation: rd-king-glow 1.4s ease-in-out infinite;
+}
+@keyframes rd-king-glow {
+  0%, 100% { filter: drop-shadow(0 0 3px currentColor); transform: translateX(-50%) scale(1); }
+  50% { filter: drop-shadow(0 0 8px currentColor) drop-shadow(0 0 3px #fff); transform: translateX(-50%) scale(1.18); }
+}
 /* 영웅 이름 — 캐릭터 발밑(v102). 방향 반전 안 됨(별처럼) */
 .rd-unit .rd-uname {
   position: absolute; left: 50%; bottom: -11px; transform: translateX(-50%);
@@ -2236,41 +2245,59 @@
 }
 .rd-rf-go { width: 100%; min-height: 44px; margin-top: 2px; font-weight: 700; justify-content: center; }
 .rd-rf-go:disabled { opacity: 0.5; }
+/* 자동 반환 스위치 (v104) */
+.rd-auto-switch {
+  appearance: none; cursor: pointer; width: 100%; margin-top: 8px;
+  display: flex; align-items: center; gap: 9px; padding: 8px 12px; border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03); border: 1px solid var(--ink-600); color: var(--paper-dim);
+  font-size: 12px; font-weight: 700; transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.rd-auto-switch:active { transform: scale(0.99); }
+.rd-auto-switch.on { background: rgba(95, 189, 134, 0.14); border-color: #57bd86; color: #8fe0b0; }
+.rd-switch { width: 34px; height: 20px; border-radius: 999px; background: var(--ink-600); position: relative; flex: none; transition: background 0.15s; }
+.rd-switch i { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #d6cbb4; transition: transform 0.18s var(--ease-spring); }
+.rd-auto-switch.on .rd-switch { background: #57bd86; }
+.rd-auto-switch.on .rd-switch i { transform: translateX(14px); background: #fff; }
 
-/* 도박 주사위 — 3D 핀홀 큐브 (v100) */
-.rd-dice { display: flex; justify-content: center; gap: 28px; margin: 10px 0 12px; perspective: 440px; }
+/* 도박 주사위 — 3D 핀홀 큐브 (v104: 강한 아이소메트릭 + 면 음영으로 확실히 서 있게) */
+.rd-dice { display: flex; justify-content: center; gap: 30px; margin: 12px 0 14px; perspective: 300px; }
 .rd-die {
-  width: 46px; height: 46px; position: relative; transform-style: preserve-3d;
-  transform: rotateX(-16deg) rotateY(-16deg);
-  filter: drop-shadow(0 5px 6px rgba(0, 0, 0, 0.5));
+  width: 52px; height: 52px; position: relative; transform-style: preserve-3d;
+  transform: rotateX(-25deg) rotateY(-32deg);
+  filter: drop-shadow(4px 8px 7px rgba(0, 0, 0, 0.55));
 }
 .rd-die.settle { transition: transform 0.5s cubic-bezier(0.2, 1.5, 0.35, 1); }
 .rd-die.rolling { animation: rd-die-tumble 0.4s linear infinite; }
 @keyframes rd-die-tumble {
   0% { transform: rotateX(0) rotateY(0) rotateZ(0); }
-  100% { transform: rotateX(360deg) rotateY(306deg) rotateZ(180deg); }
+  100% { transform: rotateX(396deg) rotateY(324deg) rotateZ(216deg); }
 }
 .rd-die-face {
-  position: absolute; inset: 0; border-radius: 9px; backface-visibility: hidden;
+  position: absolute; inset: 0; border-radius: 10px; backface-visibility: hidden;
   background: linear-gradient(150deg, #f7f0e2, #d6cab0);
-  border: 1px solid #b6a680; box-shadow: inset 0 0 8px rgba(120, 90, 40, 0.28);
-  display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr); padding: 6px; gap: 1px;
+  border: 1px solid #b6a680;
+  display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr); padding: 7px; gap: 1px;
 }
 .rd-die-face i { display: block; }
 .rd-die-face .rd-pip {
-  width: 8px; height: 8px; border-radius: 50%; align-self: center; justify-self: center;
+  width: 9px; height: 9px; border-radius: 50%; align-self: center; justify-self: center;
   background: radial-gradient(circle at 38% 32%, #4a3418, #221404);
   box-shadow: inset 0 -1px 1px rgba(0, 0, 0, 0.55);
 }
-.rd-die-face.f1 { transform: rotateY(0deg) translateZ(23px); }
-.rd-die-face.f2 { transform: rotateY(180deg) translateZ(23px); }
-.rd-die-face.f3 { transform: rotateY(90deg) translateZ(23px); }
-.rd-die-face.f4 { transform: rotateY(-90deg) translateZ(23px); }
-.rd-die-face.f5 { transform: rotateX(90deg) translateZ(23px); }
-.rd-die-face.f6 { transform: rotateX(-90deg) translateZ(23px); }
+.rd-die-face.f1 { transform: rotateY(0deg) translateZ(26px); }
+.rd-die-face.f2 { transform: rotateY(180deg) translateZ(26px); }
+.rd-die-face.f3 { transform: rotateY(90deg) translateZ(26px); }
+.rd-die-face.f4 { transform: rotateY(-90deg) translateZ(26px); }
+.rd-die-face.f5 { transform: rotateX(90deg) translateZ(26px); }
+.rd-die-face.f6 { transform: rotateX(-90deg) translateZ(26px); }
+/* 면 음영 — 윗면 밝게, 옆/아랫면 어둡게 = 큐브 볼륨감 */
+.rd-die-face.f5 { filter: brightness(1.16); }
+.rd-die-face.f3 { filter: brightness(0.82); }
+.rd-die-face.f4 { filter: brightness(0.72); }
+.rd-die-face.f6 { filter: brightness(0.66); }
 .rd-die.lucky .rd-die-face {
   background: linear-gradient(150deg, #fce6a8, #e0b24e); border-color: var(--gold-bright);
-  box-shadow: 0 0 12px rgba(228, 197, 92, 0.6), inset 0 0 8px rgba(160, 110, 30, 0.3);
+  box-shadow: 0 0 12px rgba(228, 197, 92, 0.6);
 }
 .rd-gm-info { text-align: center; font-size: 11px; color: var(--paper-dim); margin-bottom: 7px; }
 .rd-gm-info em { color: var(--gold-bright); font-style: normal; }
