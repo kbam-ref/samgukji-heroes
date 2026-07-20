@@ -198,7 +198,7 @@ button, .tab, .hero-row, .codex-card { touch-action: manipulation; } /* 더블�
   bottom: 0;
   z-index: 30;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(7, 1fr); /* 방어·소환·단련·합성·반환·도박·설정 */
   min-height: var(--nav-height);
   /* 안드로이드 시스템 버튼 위로 확실히 올라오게 — env()가 0인 기기는 --safe-b 보정 */
   padding-bottom: max(env(safe-area-inset-bottom), var(--safe-b, 0px));
@@ -221,16 +221,30 @@ button, .tab, .hero-row, .codex-card { touch-action: manipulation; } /* 더블�
   gap: 3px;
   color: var(--paper-faint);
   font-family: inherit;
-  font-size: 11px;
-  letter-spacing: 0.08em;
+  font-size: 9.5px; /* 7칸 수용 — 살짝 작게 */
+  letter-spacing: 0.02em;
   cursor: pointer;
   transition: color 0.2s var(--ease-out);
 }
 .tab svg {
-  width: 21px;
-  height: 21px;
+  width: 19px;
+  height: 19px;
   transition: transform 0.25s var(--ease-spring);
 }
+.tab span { white-space: nowrap; }
+/* 액션 버튼(소환/단련/합성/반환/도박) — 탭(방어/설정)과 살짝 구분되는 색 */
+.tab.act { color: var(--paper-dim); }
+.tab.act:active svg { transform: scale(0.86); }
+/* '합성 가능' 배지 — 우상단 금점 */
+.tab .nav-badge {
+  position: absolute; top: 6px; right: calc(50% - 15px);
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--gold-bright); box-shadow: 0 0 5px rgba(228, 197, 92, 0.7);
+}
+.tab .nav-badge[hidden] { display: none; }
+/* 프렙에 병력 0이면 '소환'을 강조 — 맥동 */
+.tab.nudge { color: var(--cta-bright); animation: tab-nudge 1s ease-in-out infinite; }
+@keyframes tab-nudge { 0%, 100% { transform: none; } 50% { transform: translateY(-2px); } }
 .tab:active svg { transform: scale(0.88); }
 .tab.active { color: var(--gold-bright); }
 .tab.active svg { transform: translateY(-1px) scale(1.08); }

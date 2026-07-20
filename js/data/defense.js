@@ -24,7 +24,8 @@ export const DEFENSE = {
   // ── 진행 — 총 50단계, 단계당 적 100 → 총 5000. 50 클리어 = 승리(단, 영구성장 전제) ──
   stages: 50,
   buildCap: 30, // 2026-07-20: 10→30 (수석 지시). 적/보스 스프라이트는 라운드마다 순환 배정이라 30까지 커버.
-  prep: { seconds: 15 }, // 2026-07-20: 시작 후 준비 시간 — 적이 나오기 전 유닛을 소환·배치하는 카운트다운
+  // 2026-07-20: 시작 준비 15초 + 매 라운드 클리어 후 정비 20초(수석) — 적 나오기 전 소환·배치·단련 시간
+  prep: { seconds: 15, betweenSeconds: 20 },
 
   wave: {
     perStage: 100, // 스테이지당 적 수 (일반 98 + 보스 스테이지엔 보스 2 포함, 아래 boss 참고)
@@ -73,17 +74,12 @@ export const DEFENSE = {
     pity: { pulls: 50, effect: 'rarityUp' }, // 50뽑마다 등급업 확정(좌절 방지)
   },
 
-  // ── 도박 — 골드 100을 걸어 0~1500. 위로금 밴드 + 희박 잭팟(검증: 200/RTP65% → 100/RTP84%) ──
+  // ── 도박 — 2026-07-20 수석: 주사위 2개. 같은 수(더블)면 '럭키!' 잭팟 500골드, 아니면 합계 × perPip.
+  //    E[지급] ≈ 258 / 비용 250 → RTP ~103%(잭팟 재미로 소폭 +. 골드 싱크는 소환 가챠 쪽이라 의도적 허용).
   gamble: {
-    cost: 100,
-    outcomes: [
-      { gold: 0, weight: 40 },
-      { gold: 50, weight: 28 }, // 위로금 — 완전강탈감 완화
-      { gold: 100, weight: 20 },
-      { gold: 300, weight: 10 },
-      { gold: 800, weight: 1.5 },
-      { gold: 1500, weight: 0.5 }, // 15배 잭팟 — 스릴
-    ], // 기대값 ≈ 83.5 (RTP ~84%)
+    cost: 250,
+    perPip: 30,      // 주사위 합계 1당 골드 (더블 아닐 때)
+    doubleGold: 500, // 같은 수(1·1, 2·2 …) 잭팟
   },
 
   // ── 합성 — 2026-07-20 수석 지시: '같은 영웅' 3장 → 상위 등급 랜덤 1장(수동). 전설은 합성 없음 ──
@@ -115,6 +111,15 @@ export const DEFENSE = {
       dmgPerLevel: 0.3, // 0.25→0.30 (DPS 천장↑ + 골드 싱크 유지)
       maxLevel: 20,
     },
+    // 속성별 단련(2026-07-20 수석) — 속성을 골라 그 속성 유닛 '전체'의 공격력·공속을 올린다(런 스코프 성장축).
+    //   전체를 올리므로 개별 단련보다 비싸고 완만하게. 라운드 상성(통일 속성)과 시너지.
+    elemUpgrade: {
+      costBase: 120,
+      costGrowth: 1.6,
+      maxLevel: 12,
+      atkPerLevel: 0.15, // 공격력 +15%/레벨 (해당 속성 전 유닛)
+      spdPerLevel: 0.06, // 공속 +6%/레벨(쿨다운 감소) — 12레벨 시 쿨 ×0.28(최소 0.25 캡)
+    },
     // 반환(판매) — 등급값 + 단련 골드 50% 환급. 등급값은 소환가(50) 이하로 캡(소환→즉매 +EV 처닝 차단)
     // 2026-07-20: 소환가 100→50에 맞춰 절반으로. 랜덤 소환 기대 반환 ≈30 < 소환가 50 → 무한증식 불가.
     refund: {
@@ -135,20 +140,23 @@ export const DEFENSE = {
   // 유일한 이월 요소는 '최고 라운드' 기록(rd-meta)뿐 — 겹치는 목표용.
 };
 
-// 속성 정의 — 물(water)·불(fire)·땅(earth)
-export const ELEMENTS = ['water', 'fire', 'earth'];
-export const ELEMENT_LABEL = { water: '물', fire: '불', earth: '땅' };
-export const ELEMENT_COLOR = { water: '#4f9dd6', fire: '#e0613a', earth: '#b0803f' };
-export const ELEMENT_BEATS = { water: 'fire', fire: 'earth', earth: 'water' }; // key가 value에게 강함
+// 속성 정의 — 물(water)·불(fire)·땅(earth)·바람(wind). 2026-07-20 수석: 바람 추가.
+// 상성 4-순환(수석): 불→바람→땅→물→불 (화살표=이김). key가 value에게 강함.
+export const ELEMENTS = ['water', 'fire', 'earth', 'wind'];
+export const ELEMENT_LABEL = { water: '물', fire: '불', earth: '땅', wind: '바람' };
+export const ELEMENT_COLOR = { water: '#4f9dd6', fire: '#e0613a', earth: '#b0803f', wind: '#57bd86' };
+export const ELEMENT_BEATS = { fire: 'wind', wind: 'earth', earth: 'water', water: 'fire' };
 
-// 영웅 24종 속성 8:8:8 (검증 C7: 속성×크기 탈상관 재배분 — 특정 조합 몰빵/사각지대 제거).
+// 영웅 24종 속성 6:6:6:6 (2026-07-20 바람 추가 — 물불땅에서 각 2명씩 바람으로 이동).
 export const HERO_ELEMENT = {
   lvbu: 'fire', zhangfei: 'fire', xiahoudun: 'fire', zhangliao: 'fire',
-  yuanshao: 'fire', huaxiong: 'fire', jiling: 'fire', liaohua: 'fire',
+  yuanshao: 'fire', liaohua: 'fire',
   zhugeliang: 'water', zhouyu: 'water', sunce: 'water', ganning: 'water',
-  sunshangxiang: 'water', handang: 'water', zhoucang: 'water', chengpu: 'water',
+  sunshangxiang: 'water', handang: 'water',
   caocao: 'earth', guanyu: 'earth', zhaoyun: 'earth', dongzhuo: 'earth',
-  liubei: 'earth', xunyu: 'earth', caohong: 'earth', yujin: 'earth',
+  liubei: 'earth', xunyu: 'earth',
+  huaxiong: 'wind', jiling: 'wind', zhoucang: 'wind', chengpu: 'wind',
+  caohong: 'wind', yujin: 'wind',
 };
 
 // 크기 상성 — 적 체급(소/중/대)에 대한 영웅별 강약. 각 영웅 한 체급 강·한 체급 약.

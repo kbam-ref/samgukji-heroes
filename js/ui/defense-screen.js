@@ -13,7 +13,7 @@ import { showModal } from './modal.js';
 import { play, vibrate } from './sound.js';
 
 const HERO_NAME = new Map(HEROES.map((h) => [h.id, h.name]));
-const ELEM_GLYPH = { water: '水', fire: '火', earth: '土' }; // 속성 배지 글자 — 색만으론 헷갈려서
+const ELEM_GLYPH = { water: '水', fire: '火', earth: '土', wind: '風' }; // 속성 배지 글자 — 색만으론 헷갈려서
 
 let run = null;
 let rafId = 0;
@@ -23,6 +23,10 @@ let revealing = false;    // 10연 소환 연출 중 — 월드를 멈춘다
 let revealTimers = [];
 let started = false;      // '시작하기'를 누르기 전엔 월드가 돌지 않는다 (로딩·타이틀 뒤 스폰 방지)
 let dangerLevel = 0;      // 패배 임박 경보 단계(0/1/2) — 임계를 넘을 때만 1회 울린다
+let sheetMode = null;     // 하단 컨텍스트 시트: null/'summon'/'refund'/'gamble'
+let rfFilter = { maxRarity: 1, element: 'all' }; // 반환 조건(성급 이하 · 성향)
+let gambleTimer = null;   // 주사위 굴림 애니메이션 타이머
+let rolling = false;      // 주사위 굴리는 중
 
 // 타이틀의 '시작하기' → 도전 1 소모하고 새 판(라운드1). 도전이 없으면 결제 화면으로.
 on('game:begin', () => startNewPlay());
@@ -40,6 +44,19 @@ on('game:load', () => {
 
 // 앱이 백그라운드로 나갔다 시작화면이 다시 뜨는 동안 — 월드 정지 + 리빌 잔재 정리
 on('game:suspend', () => { started = false; closeReveal(); });
+
+// 하단바 액션(소환/합성/반환/도박) — tabs.js가 이벤트를 쏘면 여기서 처리한다.
+// 방어 화면이 언마운트(설정 탭 등)면 nav:battle로 먼저 되살린 뒤 실행.
+function actGuard(fn) {
+  if (!fieldEl) emit('nav:battle');
+  if (fieldEl) fn();
+}
+on('rd:summon', () => actGuard(() => toggleSheet('summon')));
+on('rd:upgrade', () => actGuard(() => toggleSheet('upgrade')));
+on('rd:merge', () => actGuard(() => { closeSheet(); play('tap'); openMergePicker(); }));
+on('rd:refund', () => actGuard(() => toggleSheet('refund')));
+on('rd:gamble', () => actGuard(() => toggleSheet('gamble')));
+
 let fieldEl = null;
 let enemyLayer = null;
 let unitLayer = null;
@@ -252,22 +269,9 @@ export function render(root) {
         <div class="rd-over" id="rd-over" hidden></div>
       </div>
       <div class="rd-panel" id="rd-panel" hidden></div>
-      <p class="rd-tip" id="rd-tip">장수를 <b>탭</b>하면 단련·합성·반환</p>
-      <div class="rd-controls">
-        <button class="btn primary rd-summon10" id="rd-summon10">
-          <b>10연 소환</b><span id="rd-s10-cost">무료 10회</span>
-        </button>
-        <button class="btn rd-summon" id="rd-summon">
-          <b>소환</b><span id="rd-s1-cost">골드 ${DEFENSE.summon.cost}</span>
-        </button>
-      </div>
-      <div class="rd-controls sub">
-        <button class="btn rd-merge" id="rd-merge">
-          <b>합성</b><span id="rd-merge-sub">같은 등급 3장→상위</span>
-        </button>
-        <button class="btn rd-gamble" id="rd-gamble">
-          <b>도박</b><span>골드 ${DEFENSE.gamble.cost}에 한탕</span>
-        </button>
+      <div class="rd-dock" id="rd-dock">
+        <p class="rd-tip" id="rd-tip">아래 <b>소환</b>으로 병력을 모으고, 장수를 <b>탭</b>해 단련하세요</p>
+        <div class="rd-sheet" id="rd-sheet" hidden></div>
       </div>
     </section>`
   );
@@ -289,50 +293,8 @@ export function render(root) {
     vibrate(6);
   });
 
-  // 등급이 높을수록 크게 축포를 터뜨린다 (소환의 손맛)
-  function summonFanfare(rarity) {
-    if (rarity >= 5) { play('legend'); flash('gold'); vibrate(40); }
-    else if (rarity >= 4) { play('epic'); flash('ember'); vibrate(22); }
-    else if (rarity >= 3) { play('claim'); vibrate(10); }
-    else play('tap');
-  }
-
-  document.getElementById('rd-summon').addEventListener('click', () => {
-    const u = engine.summon(run);
-    if (!u) {
-      summonFail('rd-summon');
-      return;
-    }
-    summonFanfare(u.rarity);
-    syncUnits();
-    updateHud();
-  });
-
-  // 10연 소환 — 깃발이 하나씩 뒤집히는 리빌. 무료 소환권부터 쓰고, 모자라면 골드로.
-  document.getElementById('rd-summon10').addEventListener('click', () => {
-    const made = engine.summonMany(run, 10);
-    if (!made.length) {
-      summonFail('rd-summon10');
-      return;
-    }
-    syncUnits();
-    updateHud();
-    startReveal(made);
-  });
-
-  document.getElementById('rd-gamble').addEventListener('click', (e) => {
-    const won = engine.gamble(run);
-    if (won === null) { vibrate(8); return; }
-    play(won > 0 ? 'claim' : 'foehit');
-    floatText(e.clientX, e.clientY, won > 0 ? `+${fmt(won)} 골드!` : '꽝', won > 0 ? 'gold' : 'warn');
-    updateHud();
-  });
-
-  // 합성(상시 버튼) — 누르면 '어떤 영웅을 합칠지' 먼저 고른다 (같은 영웅 3장 필요).
-  document.getElementById('rd-merge').addEventListener('click', () => {
-    play('tap');
-    openMergePicker();
-  });
+  // 하단 컨텍스트 시트 — 소환/반환/도박 옵션을 여기 빈 공간에 펼친다(tabs.js 이벤트로 열림).
+  document.getElementById('rd-sheet').addEventListener('click', onSheetClick);
 
   // 유닛: 짧게 탭 = 패널 / 끌기 = 8방향 이동(드래그한 지점으로 걸어간다)
   unitLayer.addEventListener('pointerdown', (e) => {
@@ -427,39 +389,219 @@ function updateHud() {
     re.textContent = `${ELEM_GLYPH[run.stageElement]} ${ELEMENT_LABEL[run.stageElement]}`;
     re.style.color = ELEMENT_COLOR[run.stageElement];
   }
+  // 하단바 '합성' 배지 — 같은 영웅 3장이 모이면 점등
+  const mergeBadge = document.querySelector('#rd-nav-merge .nav-badge');
+  if (mergeBadge) mergeBadge.hidden = engine.mergeableHeroes(run).length === 0;
+
+  // 열려 있는 시트 내용 실시간 갱신(소환 비용 / 속성단련 / 반환 미리보기)
+  if (sheetMode === 'summon') updateSummonSheet();
+  else if (sheetMode === 'upgrade') updateUpgradeSheet();
+  else if (sheetMode === 'refund') updateRefundSheet();
+}
+
+// ── 등급이 높을수록 크게 축포를 터뜨린다 (소환의 손맛) ──
+function summonFanfare(rarity) {
+  if (rarity >= 5) { play('legend'); flash('gold'); vibrate(40); }
+  else if (rarity >= 4) { play('epic'); flash('ember'); vibrate(22); }
+  else if (rarity >= 3) { play('claim'); vibrate(10); }
+  else play('tap');
+}
+
+// ── 하단 컨텍스트 시트 — 소환/반환/도박 옵션을 도크 빈 공간에 펼친다 ──
+function toggleSheet(mode) {
+  if (sheetMode === mode) { closeSheet(); return; }
+  openSheet(mode);
+}
+function openSheet(mode) {
+  const sheet = document.getElementById('rd-sheet');
+  const tip = document.getElementById('rd-tip');
+  if (!sheet) return;
+  sheetMode = mode;
+  if (mode === 'summon') sheet.innerHTML = sheetSummonHtml();
+  else if (mode === 'upgrade') sheet.innerHTML = sheetUpgradeHtml();
+  else if (mode === 'refund') sheet.innerHTML = sheetRefundHtml();
+  else if (mode === 'gamble') sheet.innerHTML = sheetGambleHtml();
+  sheet.dataset.mode = mode;
+  sheet.hidden = false;
+  if (tip) tip.hidden = true;
+  play('tap');
+  if (mode === 'summon') updateSummonSheet();
+  else if (mode === 'upgrade') updateUpgradeSheet();
+  else if (mode === 'refund') updateRefundSheet();
+}
+function closeSheet() {
+  const sheet = document.getElementById('rd-sheet');
+  const tip = document.getElementById('rd-tip');
+  if (gambleTimer) { clearInterval(gambleTimer); gambleTimer = null; rolling = false; }
+  sheetMode = null;
+  if (sheet) { sheet.hidden = true; sheet.innerHTML = ''; sheet.removeAttribute('data-mode'); }
+  if (tip) tip.hidden = false;
+  // 하단바 액션 하이라이트 해제
+  for (const b of document.querySelectorAll('#tab-bar .tab.act')) b.classList.remove('sheet-open');
+}
+
+function sheetSummonHtml() {
+  return `
+    <div class="rd-sheet-head"><b>소환</b><button class="rd-sheet-x" data-x aria-label="닫기">✕</button></div>
+    <div class="rd-summon-opts">
+      <button class="btn primary" data-s="10"><b>10연 소환</b><span id="rd-s10-cost"></span></button>
+      <button class="btn" data-s="1"><b>1회 소환</b><span id="rd-s1-cost"></span></button>
+    </div>`;
+}
+function sheetUpgradeHtml() {
+  const rows = ['fire', 'wind', 'earth', 'water'].map((k) =>
+    `<div class="rd-eu-row">
+      <b class="rd-eu-name" style="color:${ELEMENT_COLOR[k]}">${ELEM_GLYPH[k]} ${ELEMENT_LABEL[k]}</b>
+      <button class="rd-eu-btn" data-eu="${k}" data-euk="atk"><span>공격 <em data-eulv="${k}-atk"></em></span><span class="rd-eu-cost" data-eucost="${k}-atk"></span></button>
+      <button class="rd-eu-btn" data-eu="${k}" data-euk="spd"><span>공속 <em data-eulv="${k}-spd"></em></span><span class="rd-eu-cost" data-eucost="${k}-spd"></span></button>
+    </div>`).join('');
+  return `
+    <div class="rd-sheet-head"><b>속성 단련 — 그 속성 전 유닛 공격력·공속</b><button class="rd-sheet-x" data-x aria-label="닫기">✕</button></div>
+    <div class="rd-eu-list">${rows}</div>`;
+}
+function sheetRefundHtml() {
+  const rar = [1, 2, 3, 4].map((r) => `<button class="rd-chip${rfFilter.maxRarity === r ? ' on' : ''}" data-mr="${r}">${r}★ 이하</button>`).join('');
+  const els = [['all', '전체'], ['fire', '火'], ['wind', '風'], ['water', '水'], ['earth', '土']]
+    .map(([k, l]) => `<button class="rd-chip${rfFilter.element === k ? ' on' : ''}" data-el="${k}">${l}</button>`).join('');
+  return `
+    <div class="rd-sheet-head"><b>반환 — 조건 선택</b><button class="rd-sheet-x" data-x aria-label="닫기">✕</button></div>
+    <div class="rd-rf-row"><span>성급</span><div class="rd-chips">${rar}</div></div>
+    <div class="rd-rf-row"><span>성향</span><div class="rd-chips">${els}</div></div>
+    <button class="btn primary rd-rf-go" data-go></button>`;
+}
+function sheetGambleHtml() {
+  const g = DEFENSE.gamble;
+  return `
+    <div class="rd-sheet-head"><b>도박 — 주사위 두 개</b><button class="rd-sheet-x" data-x aria-label="닫기">✕</button></div>
+    <div class="rd-dice"><i class="rd-die" id="rd-die1">⚀</i><i class="rd-die" id="rd-die2">⚀</i></div>
+    <div class="rd-gm-info" id="rd-gm-info">합계 ×${g.perPip}골드 · <em>더블이면 럭키! ${g.doubleGold}골드</em></div>
+    <button class="btn primary rd-gm-go" data-roll>굴리기 · 골드 ${g.cost}</button>`;
+}
+
+function updateSummonSheet() {
+  if (!run) return;
   const cost = DEFENSE.summon.cost;
   const free = run.freePulls;
-
-  // 단일 소환
-  const btn = document.getElementById('rd-summon');
   const s1 = document.getElementById('rd-s1-cost');
-  if (btn && s1) {
-    s1.textContent = free > 0 ? `무료 · ${free}회 남음` : `골드 ${cost}`;
-    btn.classList.toggle('can-buy', free > 0 || run.gold >= cost);
-  }
-
-  // 10연 소환 — 무료분부터 소진, 나머지는 골드
-  const btn10 = document.getElementById('rd-summon10');
+  if (s1) s1.textContent = free > 0 ? `무료 · ${free}회 남음` : `골드 ${cost}`;
   const s10 = document.getElementById('rd-s10-cost');
-  if (btn10 && s10) {
+  if (s10) {
     const freeUse = Math.min(10, free);
-    const paid = 10 - freeUse;
-    const goldCost = paid * cost;
-    s10.textContent =
-      freeUse >= 10 ? '무료 10회' :
-      freeUse > 0 ? `무료 ${freeUse} + 골드 ${fmt(goldCost)}` :
-      `골드 ${fmt(goldCost)}`;
-    btn10.classList.toggle('can-buy', free > 0 || run.gold >= cost);
+    const goldCost = (10 - freeUse) * cost;
+    s10.textContent = freeUse >= 10 ? '무료 10회' : freeUse > 0 ? `무료 ${freeUse} + 골드 ${fmt(goldCost)}` : `골드 ${fmt(goldCost)}`;
   }
+}
+function updateRefundSheet() {
+  if (!run) return;
+  const go = document.querySelector('#rd-sheet .rd-rf-go');
+  if (!go) return;
+  const { count, gold } = engine.refundPreview(run, rfFilter);
+  go.textContent = count ? `조건 ${count}명 반환 · +${fmt(gold)} 골드` : '해당 조건에 맞는 장수 없음';
+  go.disabled = count === 0;
+}
+function updateUpgradeSheet() {
+  if (!run) return;
+  const eu = DEFENSE.unit.elemUpgrade;
+  for (const k of ['fire', 'wind', 'earth', 'water']) {
+    for (const kind of ['atk', 'spd']) {
+      const lv = run.elemLevel?.[k]?.[kind] || 0;
+      const lvEl = document.querySelector(`[data-eulv="${k}-${kind}"]`);
+      const costEl = document.querySelector(`[data-eucost="${k}-${kind}"]`);
+      if (lvEl) lvEl.textContent = `Lv.${lv}`;
+      if (costEl) costEl.textContent = lv >= eu.maxLevel ? '최대' : fmt(engine.elemUpgradeCost(run, k, kind));
+    }
+  }
+}
+function doElemUpgrade(el, kind) {
+  if (engine.elemUpgrade(run, el, kind)) {
+    play('claim'); vibrate(10);
+    floatText(window.innerWidth / 2, window.innerHeight * 0.42, `${ELEMENT_LABEL[el]} ${kind === 'spd' ? '공속' : '공격'} +1`, 'gold');
+    syncUnits(); updateHud(); updateUpgradeSheet();
+  } else { vibrate(8); }
+}
 
-  // 합성(상시 버튼) — 같은 영웅 3장이 모인 종류 수를 안내하고, 없으면 흐리게
-  const mb = document.getElementById('rd-merge');
-  const ms = document.getElementById('rd-merge-sub');
-  if (mb) {
-    const groups = engine.mergeableHeroes(run);
-    mb.classList.toggle('can-buy', groups.length > 0);
-    if (ms) ms.textContent = groups.length ? `합성 가능 ${groups.length}종` : '같은 영웅 3장';
+function doSummon1() {
+  const u = engine.summon(run);
+  if (!u) { summonFail(); return; }
+  summonFanfare(u.rarity);
+  syncUnits();
+  updateHud();
+}
+function doSummon10() {
+  const made = engine.summonMany(run, 10);
+  if (!made.length) { summonFail(); return; }
+  syncUnits();
+  updateHud();
+  startReveal(made);
+}
+function doRefundBulk() {
+  const { count, gold } = engine.refundBulk(run, rfFilter);
+  if (!count) { vibrate(8); return; }
+  play('claim'); vibrate(12);
+  floatText(window.innerWidth / 2, window.innerHeight * 0.42, `${count}명 반환 · +${fmt(gold)} 골드`, 'jade');
+  syncUnits();
+  updateHud();
+  updateRefundSheet();
+}
+function doGamble() {
+  if (rolling) return;
+  if (run.gold < DEFENSE.gamble.cost) {
+    vibrate(8);
+    floatText(window.innerWidth / 2, window.innerHeight * 0.42, '골드가 부족해요', 'warn');
+    return;
   }
+  const res = engine.gamble(run); // {won,d1,d2,jackpot} — 골드는 즉시 차감·지급
+  if (!res) { vibrate(8); return; }
+  rolling = true;
+  play('tap');
+  const faces = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+  const die1 = document.getElementById('rd-die1');
+  const die2 = document.getElementById('rd-die2');
+  let ticks = 0;
+  gambleTimer = setInterval(() => {
+    if (die1) die1.textContent = faces[Math.floor(Math.random() * 6)];
+    if (die2) die2.textContent = faces[Math.floor(Math.random() * 6)];
+    if (++ticks >= 12) {
+      clearInterval(gambleTimer); gambleTimer = null; rolling = false;
+      if (die1) die1.textContent = faces[res.d1 - 1];
+      if (die2) die2.textContent = faces[res.d2 - 1];
+      const info = document.getElementById('rd-gm-info');
+      if (res.jackpot) {
+        if (info) info.innerHTML = `<b class="rd-gm-lucky">럭키!</b> ${res.d1}·${res.d2} → +${fmt(res.won)}골드`;
+        die1?.classList.add('lucky'); die2?.classList.add('lucky');
+        play('legend'); flash('gold'); vibrate(50);
+        floatText(window.innerWidth / 2, window.innerHeight * 0.4, `럭키! +${fmt(res.won)} 골드`, 'gold');
+      } else {
+        if (info) info.textContent = `${res.d1}+${res.d2}=${res.d1 + res.d2} → +${fmt(res.won)}골드`;
+        play('claim'); vibrate(10);
+        floatText(window.innerWidth / 2, window.innerHeight * 0.42, `+${fmt(res.won)} 골드`, 'gold');
+      }
+      updateHud();
+    }
+  }, 55);
+}
+
+function onSheetClick(e) {
+  if (e.target.closest('[data-x]')) { closeSheet(); return; }
+  const s = e.target.closest('[data-s]');
+  if (s) { s.dataset.s === '10' ? doSummon10() : doSummon1(); return; }
+  const eu = e.target.closest('[data-eu]');
+  if (eu) { doElemUpgrade(eu.dataset.eu, eu.dataset.euk); return; }
+  const mr = e.target.closest('[data-mr]');
+  if (mr) { rfFilter.maxRarity = Number(mr.dataset.mr); refreshRefundChips(); return; }
+  const el = e.target.closest('[data-el]');
+  if (el) { rfFilter.element = el.dataset.el; refreshRefundChips(); return; }
+  if (e.target.closest('[data-go]')) { doRefundBulk(); return; }
+  if (e.target.closest('[data-roll]')) { doGamble(); return; }
+}
+// 반환 칩 선택 상태만 다시 칠하고 미리보기 갱신(시트 통째 재렌더 대신 — 입력 흐름 유지)
+function refreshRefundChips() {
+  const sheet = document.getElementById('rd-sheet');
+  if (!sheet) return;
+  for (const c of sheet.querySelectorAll('[data-mr]')) c.classList.toggle('on', Number(c.dataset.mr) === rfFilter.maxRarity);
+  for (const c of sheet.querySelectorAll('[data-el]')) c.classList.toggle('on', c.dataset.el === rfFilter.element);
+  updateRefundSheet();
+  play('tap');
 }
 
 // 합성 대상 선택 모달 — 같은 영웅 3장 모인 것만 보여주고, 고르면 상위 등급 랜덤으로 합성한다.
@@ -519,10 +661,10 @@ function updatePrep() {
   const el = document.getElementById('rd-prep');
   if (!el || !run) return;
   const prepping = run.prepLeft > 0;
-  // 병력이 0인 채 프렙이 흐르면 첫 판을 헛되이 날릴 위험 → '10연 소환'을 강조하고 문구로 유도
+  // 병력이 0인 채 프렙이 흐르면 첫 판을 헛되이 날릴 위험 → 하단바 '소환'을 강조하고 문구로 유도
   const need = prepping && run.units.length === 0;
-  const b10 = document.getElementById('rd-summon10');
-  if (b10) b10.classList.toggle('nudge', need);
+  const bSummon = document.getElementById('rd-nav-summon');
+  if (bSummon) bSummon.classList.toggle('nudge', need);
   if (prepping) {
     if (el.hidden) el.hidden = false;
     const n = String(Math.ceil(run.prepLeft));
@@ -700,6 +842,7 @@ function wipeNodes() {
 }
 function beginRun(newRun) {
   closeReveal(); // 진행 중이던 10연 리빌 정리 — 안 그러면 revealing=true로 새 런 루프가 영구 정지(소프트락)
+  closeSheet();  // 열려 있던 소환/반환/도박 시트 정리
   run = newRun;
   dangerLevel = 0; // 새 판 — 경보 단계 초기화
   saveTick = 0;    // 자동저장 주기 초기화
@@ -909,6 +1052,8 @@ function loop(now) {
 
 export function destroy() {
   closeReveal(); // 리빌 오버레이가 떠 있으면 걷어낸다
+  if (gambleTimer) { clearInterval(gambleTimer); gambleTimer = null; rolling = false; } // 주사위 타이머 정리
+  sheetMode = null;
   if (rafId) cancelAnimationFrame(rafId);
   rafId = 0;
   // 세이브는 loop()의 연속 자동저장 + main.js의 백그라운드/종료 스냅샷이 담당. 탭 전환엔 인메모리 run 유지.

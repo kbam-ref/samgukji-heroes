@@ -2137,38 +2137,70 @@
   100% { transform: translateX(-50%); filter: none; }
 }
 
-/* 컨트롤 */
-.rd-controls { display: flex; justify-content: center; gap: 10px; padding: 0 16px; }
-.rd-summon { flex: 1; max-width: 240px; min-height: 54px; gap: 2px; }
-.rd-summon.can-buy { animation: hs-primary-glow 2s var(--ease-out) infinite; }
-.rd-summon b { font-size: 17px; font-weight: 800; }
-.rd-summon.shake { animation: shake 0.3s; }
-.rd-gamble { min-width: 88px; min-height: 54px; gap: 1px; border-color: rgba(216, 114, 46, 0.5); }
-.rd-gamble b { font-size: 15px; font-weight: 800; color: var(--cta-bright); }
-
-/* 10연 소환 · 단일 소환 · 하위 컨트롤 (v68) */
-.rd-summon10 { flex: 1.6; min-height: 54px; gap: 2px; }
-.rd-summon10 b { font-size: 17px; font-weight: 800; }
-.rd-summon10.can-buy { animation: hs-primary-glow 2s var(--ease-out) infinite; }
-.rd-summon10.shake { animation: shake 0.3s; }
-/* 온보딩 유도 — 프렙에 병력 0일 때 강하게 맥동(무료 10연 쓰라고) */
-.rd-summon10.nudge { animation: rd-nudge 0.85s ease-in-out infinite; }
-@keyframes rd-nudge {
-  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(236, 148, 80, 0.55); }
-  50% { transform: scale(1.035); box-shadow: 0 0 0 7px rgba(236, 148, 80, 0); }
+/* ── 하단 도크 + 컨텍스트 시트 (v92) — 6버튼 바에서 소환/단련/반환/도박 옵션을 여기 펼친다 ── */
+.rd-dock {
+  position: relative; margin: 0 14px; min-height: 96px;
+  display: flex; align-items: center; justify-content: center;
 }
-.rd-controls .rd-summon { flex: 1; max-width: 150px; }
-.rd-controls.sub { margin-top: 2px; }
-.rd-controls.sub .btn { flex: 1; max-width: 190px; min-height: 44px; gap: 1px; }
-
-/* 합성 상시 버튼 + 탭 안내 (v74) */
 .rd-tip {
   text-align: center; font-size: 11.5px; color: var(--paper-faint);
-  margin: 0 16px; letter-spacing: 0.02em; line-height: 1.1;
+  letter-spacing: 0.02em; line-height: 1.3; padding: 0 8px;
 }
 .rd-tip b { color: var(--gold-bright); font-weight: 700; }
 .rd-tip[hidden] { display: none; }
-.rd-merge b { font-weight: 800; }
+
+.rd-sheet {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(180deg, rgba(28, 23, 16, 0.96), rgba(20, 16, 11, 0.98));
+  border: 1px solid var(--ink-600); border-radius: 12px;
+  padding: 8px 10px 10px; box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.4);
+  animation: rd-sheet-up 0.2s var(--ease-out);
+}
+.rd-sheet[hidden] { display: none; }
+@keyframes rd-sheet-up { from { transform: translateY(10px); opacity: 0; } }
+.rd-sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.rd-sheet-head b { font-size: 12.5px; font-weight: 700; color: var(--paper); }
+.rd-sheet-x { appearance: none; background: none; border: 0; color: var(--paper-faint); font-size: 15px; line-height: 1; padding: 4px 6px; cursor: pointer; }
+
+/* 소환 옵션 — 10연 / 1회 */
+.rd-summon-opts { display: flex; gap: 8px; }
+.rd-summon-opts .btn { flex: 1; min-height: 52px; gap: 2px; }
+.rd-summon-opts .btn b { font-size: 15px; font-weight: 800; }
+
+/* 속성 단련 — 4속성 × (공격/공속) */
+.rd-eu-list { display: flex; flex-direction: column; gap: 5px; }
+.rd-eu-row { display: grid; grid-template-columns: 58px 1fr 1fr; gap: 6px; align-items: stretch; }
+.rd-eu-name { font-size: 13px; font-weight: 800; display: flex; align-items: center; }
+.rd-eu-btn {
+  appearance: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  background: rgba(255, 255, 255, 0.03); border: 1px solid var(--ink-600); border-radius: 8px;
+  padding: 5px 4px; cursor: pointer; color: var(--paper); font-size: 11px;
+}
+.rd-eu-btn:active { transform: scale(0.97); }
+.rd-eu-btn em { font-style: normal; color: var(--paper-dim); }
+.rd-eu-cost { font-size: 10px; color: var(--gold-bright); font-weight: 700; }
+
+/* 반환 조건 */
+.rd-rf-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.rd-rf-row > span { font-size: 11px; color: var(--paper-dim); width: 30px; flex: none; }
+.rd-chips { display: flex; gap: 5px; flex-wrap: wrap; }
+.rd-chip {
+  appearance: none; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--ink-600);
+  color: var(--paper-dim); border-radius: 999px; padding: 5px 10px; font-size: 11px; cursor: pointer;
+}
+.rd-chip.on { background: rgba(228, 197, 92, 0.18); border-color: var(--gold-bright); color: var(--gold-bright); font-weight: 700; }
+.rd-rf-go { width: 100%; min-height: 44px; margin-top: 2px; font-weight: 700; }
+.rd-rf-go:disabled { opacity: 0.5; }
+
+/* 도박 주사위 */
+.rd-dice { display: flex; justify-content: center; gap: 18px; margin: 2px 0 6px; }
+.rd-die { font-style: normal; font-size: 46px; line-height: 1; color: var(--paper); filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); }
+.rd-die.lucky { color: var(--gold-bright); animation: rd-die-pop 0.4s var(--ease-spring); }
+@keyframes rd-die-pop { 0% { transform: scale(1.4); } 100% { transform: scale(1); } }
+.rd-gm-info { text-align: center; font-size: 11px; color: var(--paper-dim); margin-bottom: 7px; }
+.rd-gm-info em { color: var(--gold-bright); font-style: normal; }
+.rd-gm-lucky { color: var(--gold-bright); font-weight: 800; }
+.rd-gm-go { width: 100%; min-height: 44px; font-weight: 700; }
 .rd-merge.can-buy { border-color: var(--gold); box-shadow: 0 0 9px rgba(201, 162, 39, 0.4); }
 .rd-merge.can-buy b { color: var(--gold-bright); }
 .rd-merge.shake { animation: shake 0.3s; }

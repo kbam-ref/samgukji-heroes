@@ -5,7 +5,7 @@
 import { HEROES } from '../data/heroes.js';
 import {
   DEFENSE, SUMMON_POOL, HERO_ELEMENT, HERO_SIZE_ROLE,
-  ELEMENT_BEATS, SIZE_ROLE_MULT, ENEMY_SPRITES, BOSS_SPRITES,
+  ELEMENT_BEATS, SIZE_ROLE_MULT, ENEMY_SPRITES, BOSS_SPRITES, ELEMENTS,
 } from '../data/defense.js';
 
 const BASE = new Map(HEROES.map((h) => [h.id, h.base]));
@@ -72,12 +72,11 @@ function rollSize() {
   ).k;
 }
 function randElement() {
-  const es = ['water', 'fire', 'earth'];
-  return es[Math.floor(Math.random() * es.length)];
+  return ELEMENTS[Math.floor(Math.random() * ELEMENTS.length)];
 }
 // 라운드 속성 — 한 라운드는 한 속성으로 통일(2026-07-20 수석). 직전 라운드와 다른 속성을 뽑아 변화를 준다.
 function pickStageElement(prev) {
-  const es = ['water', 'fire', 'earth'].filter((e) => e !== prev);
+  const es = ELEMENTS.filter((e) => e !== prev);
   return es[Math.floor(Math.random() * es.length)];
 }
 
@@ -160,6 +159,32 @@ export function upgrade(run, uid) {
   return true;
 }
 
+// ── 속성별 단련 — 속성 하나의 '공격력(atk)' 또는 '공속(spd)'을 올리면 그 속성 유닛 전체에 적용(런 스코프) ──
+export function freshElemLevel() {
+  return { water: { atk: 0, spd: 0 }, fire: { atk: 0, spd: 0 }, earth: { atk: 0, spd: 0 }, wind: { atk: 0, spd: 0 } };
+}
+function ensureElemLevel(run) {
+  if (!run.elemLevel) run.elemLevel = freshElemLevel();
+  for (const k of ELEMENTS) if (!run.elemLevel[k]) run.elemLevel[k] = { atk: 0, spd: 0 };
+}
+export function elemUpgradeCost(run, element, kind) {
+  const e = DEFENSE.unit.elemUpgrade;
+  const lv = run.elemLevel?.[element]?.[kind] || 0;
+  return Math.round(e.costBase * Math.pow(e.costGrowth, lv));
+}
+export function elemUpgrade(run, element, kind) {
+  const e = DEFENSE.unit.elemUpgrade;
+  ensureElemLevel(run);
+  const lv = run.elemLevel[element][kind] || 0;
+  if (lv >= e.maxLevel) return false;
+  const cost = elemUpgradeCost(run, element, kind);
+  if (run.gold < cost) return false;
+  run.gold -= cost;
+  run.elemLevel[element][kind] = lv + 1;
+  run.fx.push({ type: 'elemUpgrade', element, kind, level: lv + 1 });
+  return true;
+}
+
 // ── 반환(판매) — 등급값 + 단련 골드 50% 환급, 등급값은 소환가 이하 캡(데이터에서 이미 캡) ──
 export function refundValue(u) {
   const base = DEFENSE.unit.refund.goldByRarity[u.rarity] ?? 0;
@@ -173,6 +198,35 @@ export function refund(run, uid) {
   run.gold += val;
   run.fx.push({ type: 'refund', uid, gold: val });
   return val;
+}
+
+// ── 조건부 일괄 반환(2026-07-20 수석) — 성급(maxRarity 이하) + 성향(element)에 맞는 유닛을 한 번에 반환.
+//    빠른 판 정리·골드 회수용. filter.element === 'all'이면 성향 무관, maxRarity null이면 성급 무관. ──
+function matchRefund(u, f) {
+  if (!f) return false;
+  if (f.maxRarity != null && u.rarity > f.maxRarity) return false;
+  if (f.element && f.element !== 'all' && u.element !== f.element) return false;
+  return true;
+}
+/** 미리보기 — 조건에 맞는 유닛 수와 반환 골드 합계(변이 없음). */
+export function refundPreview(run, filter) {
+  let count = 0, gold = 0;
+  for (const u of run.units) if (matchRefund(u, filter)) { count++; gold += refundValue(u); }
+  return { count, gold };
+}
+/** 실제 일괄 반환 — 조건에 맞는 유닛 제거 + 골드 지급. {count, gold} 반환. */
+export function refundBulk(run, filter) {
+  const keep = [];
+  let count = 0, gold = 0;
+  for (const u of run.units) {
+    if (matchRefund(u, filter)) { count += 1; gold += refundValue(u); }
+    else keep.push(u);
+  }
+  if (count === 0) return { count: 0, gold: 0 };
+  run.units = keep;
+  run.gold += gold;
+  run.fx.push({ type: 'refundBulk', count, gold });
+  return { count, gold };
 }
 
 // ── 합성 — 2026-07-20 수석 지시: '같은 영웅' 3장 → 상위 등급 랜덤 1장 (같은 등급 아무거나 X).
@@ -214,14 +268,17 @@ export function mergeHero(run, heroId) {
   return unit;
 }
 
-// ── 도박 — 골드 걸어 랜덤 획득(0이 최빈, 희박 잭팟) ──
+// ── 도박 — 주사위 2개. 같은 수(더블)면 잭팟, 아니면 합계 × perPip ──
 export function gamble(run) {
   if (run.gold < DEFENSE.gamble.cost) return null;
   run.gold -= DEFENSE.gamble.cost;
-  const won = pickWeighted(DEFENSE.gamble.outcomes, 'weight').gold;
+  const d1 = 1 + Math.floor(Math.random() * 6);
+  const d2 = 1 + Math.floor(Math.random() * 6);
+  const jackpot = d1 === d2;
+  const won = jackpot ? DEFENSE.gamble.doubleGold : (d1 + d2) * DEFENSE.gamble.perPip;
   run.gold += won;
-  run.fx.push({ type: 'gamble', won });
-  return won;
+  run.fx.push({ type: 'gamble', won, d1, d2, jackpot });
+  return { won, d1, d2, jackpot };
 }
 
 // ── 데미지 계산 ──
@@ -286,6 +343,7 @@ export function serializeRun(run) {
     stageElement: run.stageElement || 'fire',
     units: run.units, enemies: run.enemies,
     dmgMult: run.dmgMult || 1,
+    elemLevel: run.elemLevel || freshElemLevel(),
     prepLeft: run.prepLeft || 0,
     unitSeq, enemySeq,
   };
@@ -299,6 +357,7 @@ export function deserializeRun(o) {
     gameOver: false, won: false,
     spawned: o.spawned || 0, killedThisStage: o.killedThisStage || 0, spawnTimer: 0,
     dmgMult: o.dmgMult || 1,
+    elemLevel: o.elemLevel || freshElemLevel(),
     prepLeft: o.prepLeft || 0,
   };
   run.bossStage = isBossStage(run.stage);
@@ -329,6 +388,7 @@ export function createRun(boot = {}) {
     freePulls: 0, // 보스 보상 등 무료 소환 대기분
     prepLeft: DEFENSE.prep?.seconds ?? 0, // 준비 카운트다운(초) — 이 동안 적이 안 나온다
     dmgMult: boot.dmgMult || 1, // 영구성장: 전 유닛 데미지 배수
+    elemLevel: freshElemLevel(), // 속성별 단련(공격력·공속) 레벨
   };
   beginStage(run);
   run.freePulls = DEFENSE.summon.openingPulls + (boot.openingPulls || 0); // 오프닝 무료 소환(+영구성장)
@@ -430,10 +490,14 @@ export function tick(run, dt) {
       if (d <= best) { best = d; target = e; }
     }
     if (target) {
-      const dmg = damage(u, target) * (run.dmgMult || 1); // 영구성장 데미지 배수
+      const eu = DEFENSE.unit.elemUpgrade; // 속성별 단련(공격력·공속)
+      const lv = run.elemLevel?.[u.element] || null;
+      const atkBoost = 1 + eu.atkPerLevel * (lv?.atk || 0);
+      const spdMul = Math.max(0.25, 1 - eu.spdPerLevel * (lv?.spd || 0));
+      const dmg = damage(u, target) * (run.dmgMult || 1) * atkBoost;
       target.hp -= dmg;
       target.hit = 0.18;
-      u.cd = DEFENSE.unit.byRarity[u.rarity].cooldown;
+      u.cd = DEFENSE.unit.byRarity[u.rarity].cooldown * spdMul;
       u.face = target.x < u.x ? -1 : 1; // 공격 대상 쪽으로 몸을 돌린다
       // 투사체 연출용 — 쏜 자리(u)·맞는 자리(target)·병기 판별용 heroId·속성색
       run.fx.push({
@@ -473,6 +537,7 @@ export function tick(run, dt) {
     run.stage += 1;
     run.fx.push({ type: 'stageClear', stage: run.stage });
     beginStage(run);
+    run.prepLeft = DEFENSE.prep?.betweenSeconds ?? 20; // 라운드 사이 정비 시간(수석)
   }
 }
 
