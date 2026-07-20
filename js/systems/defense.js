@@ -569,23 +569,22 @@ export function tick(run, dt) {
     return;
   }
 
-  // 스테이지 클리어 — 다 스폰하고 다 잡음
-  if (run.spawned >= run.toSpawn && run.enemies.length === 0) {
-    if (run.stage >= stageCap()) {
-      run.won = true;
-      run.fx.push({ type: 'win' });
-      return;
-    }
-    run.stage += 1;
-    run.fx.push({ type: 'stageClear', stage: run.stage });
-    beginStage(run);
-    run.roundLeft = DEFENSE.wave.roundTime; // 라운드 사이 정비 없음(수석) — 새 라운드 60초 타이머만 리셋
-  }
-
-  // 라운드 제한 시간 — 전투 중(프렙 아님) 시간을 못 지키면 패배. 방금 클리어로 프렙 들어갔으면 제외.
+  // 라운드는 '타이머'로 끝난다(2026-07-20 수석) — 다 잡아도 일찍 안 넘어가고, 남은 시간은 다음 라운드 준비.
+  // 살아있는 적 100 누적(loseAt)이 유일한 패배. 타이머가 0이 되면 남은 적을 정리하고 다음 라운드(또는 승리).
   if (run.prepLeft <= 0 && !run.won && !run.gameOver) {
     run.roundLeft = (run.roundLeft ?? w.roundTime) - dt;
-    if (run.roundLeft <= 0) { run.gameOver = true; run.fx.push({ type: 'gameover' }); }
+    if (run.roundLeft <= 0) {
+      if (run.stage >= stageCap()) {
+        run.won = true;
+        run.fx.push({ type: 'win' });
+        return;
+      }
+      run.enemies = []; // 라운드 종료 — 남은 적 정리
+      run.stage += 1;
+      run.fx.push({ type: 'stageClear', stage: run.stage });
+      beginStage(run);
+      run.roundLeft = w.roundTime;
+    }
   }
 }
 

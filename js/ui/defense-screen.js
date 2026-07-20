@@ -162,14 +162,16 @@ function releaseFxEl(el) {
 
 // 참격·화살이 쏜 자리에서 맞는 자리로 날아가 불꽃을 터뜨린다
 function spawnShot(fx) {
-  if (!shotLayer || reduceMotion) return;
-  if (shotLayer.childElementCount > 30) return; // 저사양 보호 — 밀리면 솎아낸다
+  if (!shotLayer) return;
   const sx = (fx.ux / 100) * fieldW, sy = (fx.uy / 100) * fieldH;
   const dxpx = ((fx.ex - fx.ux) / 100) * fieldW;
   const dypx = ((fx.ey - fx.uy) / 100) * fieldH;
   const ang = (Math.atan2(dypx, dxpx) * 180) / Math.PI;
   const weapon = HERO_WEAPON[fx.heroId] || 'slash';
   const color = ELEMENT_COLOR[fx.element] || '#e9d6a0';
+  // 동작 줄이기(reduce motion) 폰에서도 공격 피드백은 남긴다 — 날아가는 연출 없이 명중 불꽃만.
+  if (reduceMotion) { spawnImpact(fx.ex, fx.ey, color, weapon, ang); return; }
+  if (shotLayer.childElementCount > 30) return; // 저사양 보호 — 밀리면 솎아낸다
   const t = weapon === 'arrow' ? 240 : 100; // 화살은 더 오래 날아 잘 보인다(원거리)
   const el = getFxEl();
   el.className = `rd-shot ${weapon}`;
@@ -187,7 +189,7 @@ function spawnShot(fx) {
   }, t);
 }
 function spawnImpact(x, y, color, weapon, ang = 0) {
-  if (!shotLayer || reduceMotion || shotLayer.childElementCount > 36) return;
+  if (!shotLayer || shotLayer.childElementCount > 36) return; // 명중 불꽃은 동작줄이기에서도 남긴다(공격 피드백)
   const s = getFxEl();
   s.className = `rd-impact ${weapon}`;
   s.style.left = `${(x / 100) * fieldW}px`;
@@ -286,7 +288,7 @@ export function render(root) {
       </div>
       <div class="rd-panel" id="rd-panel" hidden></div>
       <div class="rd-dock" id="rd-dock">
-        <p class="rd-tip" id="rd-tip">아래 <b>소환</b>으로 병력을 모으고, 장수를 <b>탭</b>해 단련하세요</p>
+        <p class="rd-tip" id="rd-tip"><b>소환</b>한 장수를 <b>끌어</b> 가장자리(적 길목)에 배치하세요 · <b>탭</b>하면 단련</p>
         <div class="rd-sheet" id="rd-sheet" hidden></div>
       </div>
     </section>`
@@ -760,10 +762,10 @@ function syncUnits() {
       el.className = `rd-unit r${u.rarity}`;
       el.dataset.uid = u.uid;
       el.dataset.weapon = HERO_WEAPON[u.heroId] || 'slash'; // 참격/화살 — 공격 연출 판별
+      // 별 개수 = 등급, 별 '색' = 속성(수석) — 색으로 속성을 알 수 있어 별도 속성 배지는 뺐다.
       el.innerHTML = `
-        <b class="rd-stars">${'★'.repeat(u.rarity)}</b>
-        <div class="rd-body"><img class="rd-sprite" src="${heroCut(u.heroId)}" alt="" draggable="false"></div>
-        <i class="rd-elem" style="background:${ELEMENT_COLOR[u.element]}">${ELEM_GLYPH[u.element]}</i>`;
+        <b class="rd-stars" style="color:${ELEMENT_COLOR[u.element]}">${'★'.repeat(u.rarity)}</b>
+        <div class="rd-body"><img class="rd-sprite" src="${heroCut(u.heroId)}" alt="" draggable="false"></div>`;
       unitLayer.appendChild(el);
       unitNodes.set(u.uid, el);
       place(el, u.x, u.y);
