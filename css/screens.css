@@ -1932,6 +1932,26 @@
 .rd-units { pointer-events: none; }
 .rd-enemies { pointer-events: none; }
 
+/* ── 3D 필드(Three.js 빌보드) — 캔버스 아래, 이름표/이펙트/버튼은 위 ── */
+.rd-3d-wrap { position: absolute; inset: 0; }
+.rd-3d { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.rd-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.rd-star3d, .rd-name3d { position: absolute; left: 0; top: 0; white-space: nowrap; will-change: transform; font-style: normal; }
+.rd-star3d {
+  font-size: 12px; line-height: 1; letter-spacing: -0.3px; font-weight: 800; color: #9a9186;
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.95), 0 1px 2px rgba(0, 0, 0, 0.95), -0.5px -0.5px 1px rgba(0, 0, 0, 0.8);
+}
+.rd-star3d.king { font-size: 16px; animation: rd-king-glow2 1.4s ease-in-out infinite; }
+@keyframes rd-king-glow2 {
+  0%, 100% { filter: drop-shadow(0 0 3px currentColor); }
+  50% { filter: drop-shadow(0 0 9px currentColor) drop-shadow(0 0 3px #fff); }
+}
+.rd-name3d {
+  font-size: 9px; font-weight: 700; line-height: 1; color: #f0e6cf;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
+  padding: 1px 4px; border-radius: 3px; background: rgba(12, 9, 6, 0.5);
+}
+
 /* 유닛(소환한 영웅) — 탭하면 단련/합성/반환 패널 */
 .rd-unit { position: absolute; left: 0; top: 0; width: 0; height: 0; will-change: transform; pointer-events: auto; cursor: pointer; }
 .rd-unit::before {

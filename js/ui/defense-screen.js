@@ -4,6 +4,7 @@
 import { DEFENSE, ELEMENT_COLOR, ELEMENT_LABEL, SIZE_LABEL, HERO_WEAPON } from '../data/defense.js';
 import { HEROES, RARITY } from '../data/heroes.js';
 import * as engine from '../systems/defense.js';
+import * as r3d from './defense-3d.js'; // 3D 필드 렌더러(Three.js 빌보드)
 import * as meta from '../systems/rd-meta.js';
 import { on, emit } from '../core/events.js';
 import { getState, setSetting } from '../core/state.js';
@@ -79,12 +80,10 @@ on('rd:refund', () => actGuard(() => toggleSheet('refund')));
 on('rd:gamble', () => actGuard(() => toggleSheet('gamble')));
 
 let fieldEl = null;
-let enemyLayer = null;
-let unitLayer = null;
+let labelLayer = null; // 유닛 이름·별 오버레이(3D 위에 투영)
 let shotLayer = null; // 투사체(참격·화살)·명중 불꽃 레이어
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const enemyNodes = new Map(); // eid -> {el, hp}
-const unitNodes = new Map(); // uid -> el
+const labelNodes = new Map(); // uid -> {el, rarity, element}
 let fieldW = 0;
 let fieldH = 0;
 let saveTick = 0;
@@ -93,22 +92,40 @@ let drag = null; // { uid, startX, startY, moved }
 // 폰 가로 전환 — 세로 전용이라 가로에선 게임 루프를 멈춘다(CSS #rotate-guard가 화면을 덮음)
 const landscapeMQ = matchMedia('(orientation: landscape) and (max-height: 600px) and (pointer: coarse)');
 
-// 화면 좌표 → 필드 % (드래그 위치 계산)
-function fieldPct(clientX, clientY) {
+// 화면 좌표 → 필드 %(3D 바닥 레이캐스트)
+function fieldFromClient(clientX, clientY) {
   const r = fieldEl.getBoundingClientRect();
-  return { x: ((clientX - r.left) / r.width) * 100, y: ((clientY - r.top) / r.height) * 100 };
+  return r3d.fieldFromPx(clientX - r.left, clientY - r.top);
+}
+// 누른 지점에서 가장 가까운 유닛을 잡는다(9% 이내). 배치 드래그 대상 선택.
+function pickUnitAt(clientX, clientY) {
+  if (!run) return null;
+  const p = fieldFromClient(clientX, clientY);
+  if (!p) return null;
+  let best = null, bestD = 1e9;
+  for (const u of run.units) {
+    const d = Math.hypot(u.x - p.x, u.y - p.y);
+    if (d < bestD) { bestD = d; best = u; }
+  }
+  return best && bestD <= 9 ? best.uid : null;
 }
 function onDragMove(e) {
   if (!drag || !run) return;
   if (!drag.moved && Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) > 16) drag.moved = true; // 탭 관대하게(모바일 손가락 오차 — Z.ai 리뷰 반영 11→16)
   if (!drag.moved) return;
-  const p = fieldPct(e.clientX, e.clientY);
+  const p = fieldFromClient(e.clientX, e.clientY);
+  if (!p) return;
   const b = DEFENSE.unit.bounds;
   const u = run.units.find((x) => x.uid === drag.uid);
   if (u) {
     u.tx = Math.max(b.x1, Math.min(b.x2, p.x)); // 네모 안으로 제한
     u.ty = Math.max(b.y1, Math.min(b.y2, p.y));
   }
+}
+// 리사이즈 — 필드 크기 재측정 + 3D 렌더러 리사이즈
+function onResize() {
+  measureField();
+  r3d.resize(fieldW, fieldH);
 }
 function onDragUp() {
   window.removeEventListener('pointermove', onDragMove);
@@ -183,9 +200,12 @@ function releaseFxEl(el) {
 // 참격·화살이 쏜 자리에서 맞는 자리로 날아가 불꽃을 터뜨린다
 function spawnShot(fx) {
   if (!shotLayer) return;
-  const sx = (fx.ux / 100) * fieldW, sy = (fx.uy / 100) * fieldH;
-  const dxpx = ((fx.ex - fx.ux) / 100) * fieldW;
-  const dypx = ((fx.ey - fx.uy) / 100) * fieldH;
+  // 3D 투영 — 유닛 몸통(0.55h)에서 적 몸통(0.42h)으로. 원근에 맞게 화면 좌표로.
+  const a = r3d.project(fx.ux, fx.uy, 0.55);
+  const c = r3d.project(fx.ex, fx.ey, 0.42);
+  const sx = a.sx, sy = a.sy;
+  const dxpx = c.sx - a.sx;
+  const dypx = c.sy - a.sy;
   const ang = (Math.atan2(dypx, dxpx) * 180) / Math.PI;
   const weapon = HERO_WEAPON[fx.heroId] || 'slash';
   const color = ELEMENT_COLOR[fx.element] || '#e9d6a0';
@@ -210,10 +230,11 @@ function spawnShot(fx) {
 }
 function spawnImpact(x, y, color, weapon, ang = 0) {
   if (!shotLayer || shotLayer.childElementCount > 36) return; // 명중 불꽃은 동작줄이기에서도 남긴다(공격 피드백)
+  const p = r3d.project(x, y, 0.42);
   const s = getFxEl();
   s.className = `rd-impact ${weapon}`;
-  s.style.left = `${(x / 100) * fieldW}px`;
-  s.style.top = `${(y / 100) * fieldH}px`;
+  s.style.left = `${p.sx}px`;
+  s.style.top = `${p.sy}px`;
   s.style.setProperty('--c', color);
   shotLayer.appendChild(s);
   setTimeout(() => releaseFxEl(s), 260);
@@ -221,8 +242,8 @@ function spawnImpact(x, y, color, weapon, ang = 0) {
   if (weapon === 'arrow' && shotLayer.childElementCount < 40) {
     const a = getFxEl();
     a.className = 'rd-stuck';
-    a.style.left = `${(x / 100) * fieldW}px`;
-    a.style.top = `${(y / 100) * fieldH}px`;
+    a.style.left = `${p.sx}px`;
+    a.style.top = `${p.sy}px`;
     a.style.setProperty('--ang', `${ang}deg`);
     shotLayer.appendChild(a);
     setTimeout(() => releaseFxEl(a), 460);
@@ -232,10 +253,11 @@ function spawnImpact(x, y, color, weapon, ang = 0) {
 // 초월 광역기 파문 — 유닛 자리에서 링이 전장 크기로 퍼진다
 function aoeRing(x, y, element) {
   if (!fieldEl || reduceMotion) return;
+  const p = r3d.project(x, y, 0.1);
   const r = document.createElement('i');
   r.className = 'rd-aoe';
-  r.style.left = `${(x / 100) * fieldW}px`;
-  r.style.top = `${(y / 100) * fieldH}px`;
+  r.style.left = `${p.sx}px`;
+  r.style.top = `${p.sy}px`;
   r.style.setProperty('--c', ELEMENT_COLOR[element] || '#ffe6a2');
   (shotLayer || fieldEl).appendChild(r);
   setTimeout(() => r.remove(), 640);
@@ -292,10 +314,8 @@ export function render(root) {
     <section class="screen rd-screen">
       ${hud()}
       <div class="rd-field" id="rd-field">
-        <div class="rd-bg" id="rd-bg" aria-hidden="true"></div>
-        <div class="rd-track" style="${trackRectStyle()}" aria-hidden="true"></div>
-        <div class="rd-units" id="rd-units" aria-hidden="true"></div>
-        <div class="rd-enemies" id="rd-enemies" aria-hidden="true"></div>
+        <div class="rd-3d-wrap" id="rd-3d-wrap" aria-hidden="true"></div>
+        <div class="rd-labels" id="rd-labels" aria-hidden="true"></div>
         <div class="rd-shots" id="rd-shots" aria-hidden="true"></div>
         <button class="rd-gear" id="rd-gear" aria-label="설정"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.1" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 3.8 V6 M12 18 V20.2 M3.8 12 H6 M18 12 H20.2 M6.3 6.3 L7.9 7.9 M16.1 16.1 L17.7 17.7 M17.7 6.3 L16.1 7.9 M7.9 16.1 L6.3 17.7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button>
         <button class="rd-speed" id="rd-speed" aria-label="전투 배속">1×</button>
@@ -315,10 +335,12 @@ export function render(root) {
   );
 
   fieldEl = document.getElementById('rd-field');
-  enemyLayer = document.getElementById('rd-enemies');
-  unitLayer = document.getElementById('rd-units');
+  labelLayer = document.getElementById('rd-labels');
   shotLayer = document.getElementById('rd-shots');
   measureField();
+  // 3D 필드 렌더러 — 캔버스를 rd-3d-wrap에 마운트(엔진 좌표를 빌보드로)
+  r3d.dispose();
+  r3d.init(document.getElementById('rd-3d-wrap'), fieldW, fieldH);
 
   // 설정 — 상단 톱니 버튼이 설정 오버레이를 연다
   document.getElementById('rd-gear').addEventListener('click', () => { play('tap'); emit('nav:settings'); });
@@ -353,22 +375,24 @@ export function render(root) {
   sheetEl.addEventListener('pointercancel', stopHold);
   sheetEl.addEventListener('pointerleave', stopHold);
 
-  // 유닛: 짧게 탭 = 패널 / 끌기 = 8방향 이동(드래그한 지점으로 걸어간다)
-  unitLayer.addEventListener('pointerdown', (e) => {
-    const el = e.target.closest('.rd-unit');
-    if (!el) return;
-    drag = { uid: Number(el.dataset.uid), startX: e.clientX, startY: e.clientY, moved: false };
+  // 유닛 배치 — 필드를 눌러 가장 가까운 유닛을 잡고 끌면 그 지점으로 걸어간다(레이캐스트로 바닥 히트).
+  fieldEl.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('button, .rd-over, .rd-prep')) return; // 버튼/오버레이 위는 제외
+    const uid = pickUnitAt(e.clientX, e.clientY);
+    if (uid == null) return;
+    drag = { uid, startX: e.clientX, startY: e.clientY, moved: false };
     window.addEventListener('pointermove', onDragMove);
     window.addEventListener('pointerup', onDragUp, { once: true });
   });
 
-  window.addEventListener('resize', measureField);
+  window.addEventListener('resize', onResize);
 
   updateHud();
   updatePrep();
   shownArena = '';
-  syncUnits();
   syncEnemies();
+  syncUnits();
+  r3d.frame(0); // 첫 페인트
   updateBg();
   last = performance.now();
   rafId = requestAnimationFrame(loop);
@@ -816,87 +840,49 @@ function updatePrep() {
   }
 }
 
+function styleLabel(n, u) {
+  const king = u.rarity >= 6; // 6성은 '왕별' 하나로 빛남
+  n.starEl.className = `rd-star3d${king ? ' king' : ''}`;
+  n.starEl.style.color = ELEMENT_COLOR[u.element];
+  n.starEl.textContent = king ? '★' : '★'.repeat(u.rarity);
+  n.nameEl.textContent = HERO_NAME.get(u.heroId);
+  n.rarity = u.rarity; n.element = u.element;
+}
 function syncUnits() {
   if (!run) return;
+  r3d.syncUnits(run.units); // 3D 빌보드 갱신(생성·이동·제거)
+  // 별(머리 위)·이름(발밑) 오버레이 — 화면 좌표로 투영
   const seen = new Set();
   for (const u of run.units) {
     seen.add(u.uid);
-    let el = unitNodes.get(u.uid);
-    if (!el) {
-      el = document.createElement('div');
-      el.className = `rd-unit r${u.rarity}`;
-      el.dataset.uid = u.uid;
-      el.dataset.weapon = HERO_WEAPON[u.heroId] || 'slash'; // 참격/화살 — 공격 연출 판별
-      // 별 개수 = 등급(6성은 '왕별' 하나로 빛남), 별 '색' = 속성(수석). 이름은 캐릭터 아래에.
-      const king = u.rarity >= 6;
-      el.innerHTML = `
-        <b class="rd-stars${king ? ' king' : ''}" style="color:${ELEMENT_COLOR[u.element]}">${king ? '★' : '★'.repeat(u.rarity)}</b>
-        <div class="rd-body"><img class="rd-sprite" src="${heroCut(u.heroId)}" alt="" draggable="false"></div>
-        <b class="rd-uname">${HERO_NAME.get(u.heroId)}</b>`;
-      unitLayer.appendChild(el);
-      unitNodes.set(u.uid, el);
-      place(el, u.x, u.y);
+    let n = labelNodes.get(u.uid);
+    if (!n) {
+      const starEl = document.createElement('div');
+      const nameEl = document.createElement('div'); nameEl.className = 'rd-name3d';
+      labelLayer.append(starEl, nameEl);
+      n = { starEl, nameEl, rarity: -1, element: '' };
+      labelNodes.set(u.uid, n);
+      styleLabel(n, u);
+    } else if (n.rarity !== u.rarity || n.element !== u.element) {
+      styleLabel(n, u); // 합성/변경 반영
     }
-    if (u.face) el.style.setProperty('--face', u.face);
-    el.classList.toggle('moving', !!u.moving);
-    place(el, u.x, u.y); // 이동/드래그 위치 매 프레임 반영
+    const head = r3d.project(u.x, u.y, 1.06);
+    const feet = r3d.project(u.x, u.y, 0.0);
+    n.starEl.style.transform = `translate(${head.sx}px, ${head.sy}px) translate(-50%, -100%)`;
+    n.nameEl.style.transform = `translate(${feet.sx}px, ${feet.sy}px) translate(-50%, 2px)`;
   }
-  for (const [uid, el] of unitNodes) {
-    if (!seen.has(uid)) { el.remove(); unitNodes.delete(uid); }
-  }
+  for (const [uid, n] of labelNodes) if (!seen.has(uid)) { n.starEl.remove(); n.nameEl.remove(); labelNodes.delete(uid); }
 }
 
 function syncEnemies() {
   if (!run) return;
-  const seen = new Set();
-  for (const e of run.enemies) {
-    seen.add(e.eid);
-    let node = enemyNodes.get(e.eid);
-    if (!node) {
-      const el = document.createElement('div');
-      el.className = `rd-enemy${e.isBoss ? ' boss' : ''} sz-${e.size}`;
-      el.style.setProperty('--sz', DEFENSE.wave.sizes[e.size].scale * (e.isBoss ? DEFENSE.wave.boss.scale : 1));
-      el.innerHTML = `
-        <div class="rd-hpbar"><i></i></div>
-        <div class="rd-body"><img class="rd-sprite" src="${enemyCut(e.spriteId)}" alt="" draggable="false"></div>
-        <i class="rd-elem" style="background:${ELEMENT_COLOR[e.element]}"></i>`;
-      enemyLayer.appendChild(el);
-      node = { el, hp: -1, hitOn: false, face: 1 };
-      enemyNodes.set(e.eid, node);
-    }
-    place(node.el, e.x, e.y);
-    if (e.face !== node.face) { node.el.style.setProperty('--face', e.face); node.face = e.face; }
-    // 체력은 숫자 대신 줄어드는 바 — node.hp에 마지막 비율을 저장해 바뀔 때만 갱신
-    const pct = Math.max(0, e.hp / e.maxHp);
-    if (pct !== node.hp) {
-      node.el.style.setProperty('--hppct', pct);
-      node.el.classList.toggle('hp-low', pct <= 0.35); // 낮으면 빨갛게
-      node.hp = pct;
-    }
-    const hitOn = e.hit > 0;
-    if (hitOn !== node.hitOn) { node.el.classList.toggle('hit', hitOn); node.hitOn = hitOn; }
-  }
-  for (const [eid, node] of enemyNodes) {
-    if (!seen.has(eid)) {
-      const el = node.el;
-      el.classList.add('dying'); // 사망 연출 후 제거
-      enemyNodes.delete(eid);
-      setTimeout(() => el.remove(), 280);
-    }
-  }
+  r3d.syncEnemies(run.enemies); // 3D 빌보드 갱신(위치·좌우·피격). 사망은 다음 sync에서 제거.
 }
 
 function consumeFx() {
   for (const fx of engine.drainFx(run)) {
     if (fx.type === 'attack') {
-      const el = unitNodes.get(fx.uid);
-      if (el) {
-        // 적이 위면 위로, 아래면 아래로 몸을 던진다 — '그 적'을 향해 찌르는 느낌 (세로는 안 뒤집힘)
-        const ly = Math.max(-9, Math.min(9, (fx.ey - fx.uy) * 0.5));
-        el.style.setProperty('--ly', `${ly.toFixed(1)}px`);
-        el.classList.remove('fire'); void el.offsetWidth; el.classList.add('fire');
-        setTimeout(() => el.classList.remove('fire'), 240); // 공격 끝나면 idle 숨쉬기로 복귀
-      }
+      r3d.lunge(fx.uid, fx.ex, fx.ey); // 3D 빌보드가 그 적을 향해 살짝 몸을 던진다
       spawnShot(fx); // 참격/화살이 적에게 날아가 명중 불꽃
     } else if (fx.type === 'kill') {
       play('foehit');
@@ -940,10 +926,9 @@ function consumeFx() {
 }
 
 function wipeNodes() {
-  for (const [, node] of enemyNodes) node.el.remove();
-  enemyNodes.clear();
-  for (const [, el] of unitNodes) el.remove();
-  unitNodes.clear();
+  for (const [, n] of labelNodes) { n.starEl.remove(); n.nameEl.remove(); }
+  labelNodes.clear();
+  if (r3d.ready()) { r3d.syncUnits([]); r3d.syncEnemies([]); } // 3D 풀 비우기
   if (shotLayer) shotLayer.innerHTML = '';
 }
 function beginRun(newRun) {
@@ -956,8 +941,9 @@ function beginRun(newRun) {
   if (over) { over.hidden = true; over.innerHTML = ''; }
   wipeNodes();
   shownArena = '';
-  syncUnits();
   syncEnemies();
+  syncUnits();
+  r3d.frame(0);
   updateHud();
   updateBg();
   last = performance.now();
@@ -1147,6 +1133,7 @@ function loop(now) {
   syncEnemies();
   syncUnits(); // 유닛이 이동하므로 매 프레임 위치·방향 갱신
   consumeFx();
+  r3d.frame(dt); // 3D 씬 렌더(빌보드 facing·bob·돌진·피격 반영)
   updateHud();
   updateBg();
   updatePrep();
@@ -1165,12 +1152,13 @@ export function destroy() {
   if (rafId) cancelAnimationFrame(rafId);
   rafId = 0;
   // 세이브는 loop()의 연속 자동저장 + main.js의 백그라운드/종료 스냅샷이 담당. 탭 전환엔 인메모리 run 유지.
-  window.removeEventListener('resize', measureField);
+  window.removeEventListener('resize', onResize);
   window.removeEventListener('pointermove', onDragMove);
   drag = null;
-  enemyNodes.clear();
-  unitNodes.clear();
+  for (const [, n] of labelNodes) { n.starEl.remove(); n.nameEl.remove(); }
+  labelNodes.clear();
   if (shotLayer) shotLayer.innerHTML = '';
-  fieldEl = enemyLayer = unitLayer = shotLayer = null;
+  r3d.dispose(); // 3D 씬·캔버스 해제
+  fieldEl = labelLayer = shotLayer = null;
   // run은 null로 만들지 않는다 — 탭 전환에도 인메모리로 유지
 }
