@@ -5,3 +5,7 @@
 node_modules/
 tools/output-raw/
 assets/heroes-v1-backup/
+
+# 3D 생성 API 키(절대 커밋 금지)
+tools/3d/meshy-key.txt
+tools/3d/*.key

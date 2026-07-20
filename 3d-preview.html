@@ -1,0 +1,88 @@
+<!doctype html><html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>관우 · 실시간 3D 미리보기</title>
+<style>
+  :root{--gold:#e8c463;--ink:#1a120a}
+  *{margin:0;box-sizing:border-box}
+  html,body{height:100%;background:radial-gradient(120% 90% at 50% 15%,#3a2c1a,#140d07 70%);overflow:hidden;font-family:system-ui,'Malgun Gothic',sans-serif;touch-action:none}
+  #c{position:fixed;inset:0;width:100vw;height:100vh;display:block}
+  .top{position:fixed;top:calc(env(safe-area-inset-top) + 18px);left:0;right:0;text-align:center;pointer-events:none;z-index:2}
+  .eyebrow{color:var(--gold);letter-spacing:.4em;font-size:12px;font-weight:700;opacity:.85}
+  .title{color:#fff;font-size:26px;font-weight:800;margin-top:6px;text-shadow:0 2px 12px #000}
+  .hint{position:fixed;bottom:calc(env(safe-area-inset-bottom) + 22px);left:0;right:0;text-align:center;color:#e9d7b0;font-size:14px;z-index:2;pointer-events:none;opacity:.9}
+  .hint b{color:var(--gold)}
+  .load{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#e9d7b0;font-size:15px;z-index:3}
+  .spin{width:22px;height:22px;border:2px solid #ffffff33;border-top-color:var(--gold);border-radius:50%;margin-right:10px;animation:s 0.8s linear infinite}
+  @keyframes s{to{transform:rotate(360deg)}}
+</style></head>
+<body>
+<canvas id="c"></canvas>
+<div class="top"><div class="eyebrow">삼국지 랜덤 디펜스</div><div class="title">관우 · 실시간 3D</div></div>
+<div class="hint"><b>손가락으로 드래그</b>해서 돌려보세요 · 핀치로 확대</div>
+<div class="load" id="load"><span class="spin"></span>관우 불러오는 중…</div>
+<script type="module">
+import * as THREE from './js/vendor/three.module.js';
+import { GLTFLoader } from './js/vendor/GLTFLoader.js';
+import { OrbitControls } from './js/vendor/OrbitControls.js';
+
+const cv = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true });
+renderer.setClearAlpha(0); // CSS 그라디언트 배경이 비치게
+renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+const cam = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
+cam.position.set(0, 1.4, 6);
+
+scene.add(new THREE.HemisphereLight(0xfff1da, 0x40301c, 1.25));
+const key = new THREE.DirectionalLight(0xffe6b4, 1.7);
+key.position.set(3, 6, 5); key.castShadow = true;
+key.shadow.mapSize.set(1024, 1024); key.shadow.camera.near = 1; key.shadow.camera.far = 20;
+key.shadow.camera.left = -4; key.shadow.camera.right = 4; key.shadow.camera.top = 5; key.shadow.camera.bottom = -3;
+scene.add(key);
+const fill = new THREE.DirectionalLight(0x88bbff, 0.5); fill.position.set(-4, 3, -3); scene.add(fill);
+
+// 받침 — 원형 발판
+const disc = new THREE.Mesh(new THREE.CylinderGeometry(1.9, 2.05, 0.18, 48),
+  new THREE.MeshStandardMaterial({ color: 0x4a3826, roughness: 0.85 }));
+disc.position.y = -0.09; disc.receiveShadow = true; scene.add(disc);
+const ring = new THREE.Mesh(new THREE.TorusGeometry(1.9, 0.04, 12, 60),
+  new THREE.MeshStandardMaterial({ color: 0xe8c463, emissive: 0x6b4e16, roughness: 0.4, metalness: 0.6 }));
+ring.rotation.x = Math.PI / 2; ring.position.y = 0.02; scene.add(ring);
+
+const controls = new OrbitControls(cam, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.minDistance = 3; controls.maxDistance = 10;
+controls.maxPolarAngle = Math.PI * 0.52; controls.target.set(0, 1.0, 0);
+controls.autoRotate = true; controls.autoRotateSpeed = 1.1;
+
+const H0 = 2.3; // 목표 높이(월드)
+new GLTFLoader().load('./assets/models/guanyu.glb', (gltf) => {
+  const m = gltf.scene;
+  const box = new THREE.Box3().setFromObject(m);
+  const size = box.getSize(new THREE.Vector3());
+  m.scale.setScalar(H0 / (size.y || 1));
+  scene.add(m);
+  m.updateWorldMatrix(true, true); // 스케일 반영 후 매트릭스 갱신(중요)
+  // 스케일 후 실제 박스로 정확히 재중심(발밑=0, x·z 중앙)
+  const box2 = new THREE.Box3().setFromObject(m);
+  const c2 = box2.getCenter(new THREE.Vector3());
+  m.position.x -= c2.x; m.position.z -= c2.z; m.position.y -= box2.min.y;
+  m.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+  // 카메라·타깃을 모델 크기에 맞춰 자동 프레이밍
+  controls.target.set(0, H0 * 0.46, 0);
+  cam.position.set(0, H0 * 0.55, H0 * 2.7);
+  controls.update();
+  document.getElementById('load').style.display = 'none';
+}, undefined, () => { document.getElementById('load').textContent = '모델 로드 실패'; });
+
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix();
+}
+addEventListener('resize', resize); resize();
+renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, cam); });
+</script>
+</body></html>
