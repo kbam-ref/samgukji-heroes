@@ -2230,11 +2230,41 @@
 .rd-rf-go { width: 100%; min-height: 44px; margin-top: 2px; font-weight: 700; }
 .rd-rf-go:disabled { opacity: 0.5; }
 
-/* 도박 주사위 */
-.rd-dice { display: flex; justify-content: center; gap: 18px; margin: 2px 0 6px; }
-.rd-die { font-style: normal; font-size: 46px; line-height: 1; color: var(--paper); filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); }
-.rd-die.lucky { color: var(--gold-bright); animation: rd-die-pop 0.4s var(--ease-spring); }
-@keyframes rd-die-pop { 0% { transform: scale(1.4); } 100% { transform: scale(1); } }
+/* 도박 주사위 — 3D 핀홀 큐브 (v100) */
+.rd-dice { display: flex; justify-content: center; gap: 28px; margin: 10px 0 12px; perspective: 440px; }
+.rd-die {
+  width: 46px; height: 46px; position: relative; transform-style: preserve-3d;
+  transform: rotateX(-16deg) rotateY(-16deg);
+  filter: drop-shadow(0 5px 6px rgba(0, 0, 0, 0.5));
+}
+.rd-die.settle { transition: transform 0.5s cubic-bezier(0.2, 1.5, 0.35, 1); }
+.rd-die.rolling { animation: rd-die-tumble 0.4s linear infinite; }
+@keyframes rd-die-tumble {
+  0% { transform: rotateX(0) rotateY(0) rotateZ(0); }
+  100% { transform: rotateX(360deg) rotateY(306deg) rotateZ(180deg); }
+}
+.rd-die-face {
+  position: absolute; inset: 0; border-radius: 9px; backface-visibility: hidden;
+  background: linear-gradient(150deg, #f7f0e2, #d6cab0);
+  border: 1px solid #b6a680; box-shadow: inset 0 0 8px rgba(120, 90, 40, 0.28);
+  display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr); padding: 6px; gap: 1px;
+}
+.rd-die-face i { display: block; }
+.rd-die-face .rd-pip {
+  width: 8px; height: 8px; border-radius: 50%; align-self: center; justify-self: center;
+  background: radial-gradient(circle at 38% 32%, #4a3418, #221404);
+  box-shadow: inset 0 -1px 1px rgba(0, 0, 0, 0.55);
+}
+.rd-die-face.f1 { transform: rotateY(0deg) translateZ(23px); }
+.rd-die-face.f2 { transform: rotateY(180deg) translateZ(23px); }
+.rd-die-face.f3 { transform: rotateY(90deg) translateZ(23px); }
+.rd-die-face.f4 { transform: rotateY(-90deg) translateZ(23px); }
+.rd-die-face.f5 { transform: rotateX(90deg) translateZ(23px); }
+.rd-die-face.f6 { transform: rotateX(-90deg) translateZ(23px); }
+.rd-die.lucky .rd-die-face {
+  background: linear-gradient(150deg, #fce6a8, #e0b24e); border-color: var(--gold-bright);
+  box-shadow: 0 0 12px rgba(228, 197, 92, 0.6), inset 0 0 8px rgba(160, 110, 30, 0.3);
+}
 .rd-gm-info { text-align: center; font-size: 11px; color: var(--paper-dim); margin-bottom: 7px; }
 .rd-gm-info em { color: var(--gold-bright); font-style: normal; }
 .rd-gm-lucky { color: var(--gold-bright); font-weight: 800; }

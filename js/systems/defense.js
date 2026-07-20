@@ -37,13 +37,18 @@ export function slotPos(i) {
   const b = DEFENSE.unit.bounds;
   const cx = (b.x1 + b.x2) / 2; // 가로 중앙
   const cy = (b.y1 + b.y2) / 2; // 세로 중앙
-  // 2026-07-20 수석: 가운데를 중심으로 촘촘히 모아 배치(소환/합성이 중앙 위주로 출현). 중앙 살짝 위에서 아래로.
-  const cols = 6, gx = 6.5, gy = 6;
-  const col = i % cols;
-  const row = Math.floor(i / cols);
-  const x = cx + (col - (cols - 1) / 2) * gx;
-  const y = cy - gy + row * gy;
-  return { x: Math.max(b.x1, Math.min(b.x2, x)), y: Math.max(b.y1, Math.min(b.y2, y)) };
+  // 가운데를 중심으로 6×5 그리드에 모아 배치(수석). 많이 소환하면 경계 대신 중앙에 겹쳐 쌓아
+  //   발끝이 점선 밖으로 튀어나오지 않게 한다(마진 확보).
+  const cols = 6, rows = 5, per = cols * rows;
+  const cell = ((i % per) + per) % per;
+  const col = cell % cols;
+  const row = Math.floor(cell / cols);
+  const wrap = Math.floor(i / per) * 2.5; // 30명 초과분은 중앙에서 살짝 어긋나 겹침
+  const gx = 6.2, gy = 5.4;
+  const x = cx + (col - (cols - 1) / 2) * gx + wrap;
+  const y = cy + (row - (rows - 1) / 2) * gy + wrap;
+  const mx = 3, my = 5; // 경계 여유 — 가장자리에 딱 붙지 않게
+  return { x: Math.max(b.x1 + mx, Math.min(b.x2 - mx, x)), y: Math.max(b.y1 + my, Math.min(b.y2 - my, y)) };
 }
 
 // ── 확률 유틸 ──
@@ -178,7 +183,7 @@ function ensureElemLevel(run) {
 export function elemUpgradeCost(run, element, kind) {
   const e = DEFENSE.unit.elemUpgrade;
   const lv = run.elemLevel?.[element]?.[kind] || 0;
-  return Math.round(e.costBase * Math.pow(e.costGrowth, lv));
+  return e.costBase + lv * (e.costStep ?? 1); // 선형 — 50골드부터 레벨당 +1
 }
 export function elemUpgrade(run, element, kind) {
   const e = DEFENSE.unit.elemUpgrade;

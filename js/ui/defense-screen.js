@@ -15,6 +15,25 @@ import { play, vibrate } from './sound.js';
 const HERO_NAME = new Map(HEROES.map((h) => [h.id, h.name]));
 const ELEM_GLYPH = { water: '水', fire: '火', earth: '土', wind: '風' }; // 속성 배지 글자 — 색만으론 헷갈려서
 
+// ── 3D 주사위 — 6면 핀홀 큐브. 굴릴 땐 텀블 애니, 멈추면 결과 면을 앞으로 회전(입체적으로 굴러가는 느낌) ──
+const DIE_PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
+const DIE_ROT = { // 결과 값을 앞면으로 오게 하는 큐브 회전(+살짝 기울여 입체감)
+  1: 'rotateX(-16deg) rotateY(-16deg)',
+  2: 'rotateX(-16deg) rotateY(164deg)',
+  3: 'rotateX(-16deg) rotateY(-106deg)',
+  4: 'rotateX(-16deg) rotateY(74deg)',
+  5: 'rotateX(-106deg) rotateY(-16deg)',
+  6: 'rotateX(74deg) rotateY(-16deg)',
+};
+function dieFaceHtml(val, cls) {
+  let s = '';
+  for (let c = 0; c < 9; c++) s += DIE_PIPS[val].includes(c) ? '<i class="rd-pip"></i>' : '<i></i>';
+  return `<span class="rd-die-face ${cls}">${s}</span>`;
+}
+function dieCubeHtml(id) {
+  return `<span class="rd-die" id="${id}">${[1, 2, 3, 4, 5, 6].map((v) => dieFaceHtml(v, 'f' + v)).join('')}</span>`;
+}
+
 let run = null;
 let rafId = 0;
 let last = 0;
@@ -519,7 +538,7 @@ function sheetGambleHtml() {
   const g = DEFENSE.gamble;
   return `
     <div class="rd-sheet-head"><b>도박 — 주사위 두 개</b><button class="rd-sheet-x" data-x aria-label="닫기">✕</button></div>
-    <div class="rd-dice"><i class="rd-die" id="rd-die1">⚀</i><i class="rd-die" id="rd-die2">⚀</i></div>
+    <div class="rd-dice">${dieCubeHtml('rd-die1')}${dieCubeHtml('rd-die2')}</div>
     <div class="rd-gm-info" id="rd-gm-info">합계 ×${g.perPip}골드 · <em>더블이면 럭키! ${g.doubleGold}골드</em></div>
     <button class="btn primary rd-gm-go" data-roll>굴리기 · 골드 ${g.cost}</button>`;
 }
@@ -622,31 +641,27 @@ function doGamble() {
   if (!res) { vibrate(8); return; }
   rolling = true;
   play('tap');
-  const faces = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
   const die1 = document.getElementById('rd-die1');
   const die2 = document.getElementById('rd-die2');
-  let ticks = 0;
-  gambleTimer = setInterval(() => {
-    if (die1) die1.textContent = faces[Math.floor(Math.random() * 6)];
-    if (die2) die2.textContent = faces[Math.floor(Math.random() * 6)];
-    if (++ticks >= 12) {
-      clearInterval(gambleTimer); gambleTimer = null; rolling = false;
-      if (die1) die1.textContent = faces[res.d1 - 1];
-      if (die2) die2.textContent = faces[res.d2 - 1];
-      const info = document.getElementById('rd-gm-info');
-      if (res.jackpot) {
-        if (info) info.innerHTML = `<b class="rd-gm-lucky">럭키!</b> ${res.d1}·${res.d2} → +${fmt(res.won)}골드`;
-        die1?.classList.add('lucky'); die2?.classList.add('lucky');
-        play('legend'); flash('gold'); vibrate(50);
-        floatText(window.innerWidth / 2, window.innerHeight * 0.4, `럭키! +${fmt(res.won)} 골드`, 'gold');
-      } else {
-        if (info) info.textContent = `${res.d1}+${res.d2}=${res.d1 + res.d2} → +${fmt(res.won)}골드`;
-        play('claim'); vibrate(10);
-        floatText(window.innerWidth / 2, window.innerHeight * 0.42, `+${fmt(res.won)} 골드`, 'gold');
-      }
-      updateHud();
+  [die1, die2].forEach((d) => { if (d) { d.classList.remove('lucky', 'settle'); d.style.transform = ''; d.classList.add('rolling'); } });
+  gambleTimer = setTimeout(() => {
+    gambleTimer = null; rolling = false;
+    [die1, die2].forEach((d) => d && d.classList.remove('rolling'));
+    if (die1) { die1.style.transform = DIE_ROT[res.d1]; die1.classList.add('settle'); }
+    if (die2) { die2.style.transform = DIE_ROT[res.d2]; die2.classList.add('settle'); }
+    const info = document.getElementById('rd-gm-info');
+    if (res.jackpot) {
+      if (info) info.innerHTML = `<b class="rd-gm-lucky">럭키!</b> ${res.d1}·${res.d2} → +${fmt(res.won)}골드`;
+      die1?.classList.add('lucky'); die2?.classList.add('lucky');
+      play('legend'); flash('gold'); vibrate(50);
+      floatText(window.innerWidth / 2, window.innerHeight * 0.4, `럭키! +${fmt(res.won)} 골드`, 'gold');
+    } else {
+      if (info) info.textContent = `${res.d1}+${res.d2}=${res.d1 + res.d2} → +${fmt(res.won)}골드`;
+      play('claim'); vibrate(10);
+      floatText(window.innerWidth / 2, window.innerHeight * 0.42, `+${fmt(res.won)} 골드`, 'gold');
     }
-  }, 55);
+    updateHud();
+  }, 750);
 }
 
 // 홀드 반복 — 소환 1회·속성 단련 버튼을 꾹 누르면 연속 실행 (수석: 버튼 누르고 있으면 반복)
