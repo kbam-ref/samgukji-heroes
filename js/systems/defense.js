@@ -162,16 +162,28 @@ export function refund(run, uid) {
   return val;
 }
 
-// ── 합성 — 같은 등급 아무 영웅 3장 → 상위 등급 랜덤 1장. 최고 단련 계승 + 나머지 50% 환급 ──
-export function sameRarityCount(run, rarity) {
-  return run.units.filter((u) => u.rarity === rarity).length;
+// ── 합성 — 2026-07-20 수석 지시: '같은 영웅' 3장 → 상위 등급 랜덤 1장 (같은 등급 아무거나 X).
+//    소환가 50·작은 등급별 풀 덕에 같은 장수 3장 모으기가 실제로 가능해짐. 최고 단련 계승 + 나머지 50% 환급.
+export function sameHeroCount(run, heroId) {
+  return run.units.filter((u) => u.heroId === heroId).length;
 }
-export function canMerge(run, rarity) {
-  return rarity < 5 && sameRarityCount(run, rarity) >= DEFENSE.merge.need;
+export function canMergeHero(run, heroId) {
+  return RARITY.get(heroId) < 5 && sameHeroCount(run, heroId) >= DEFENSE.merge.need;
 }
-export function merge(run, rarity) {
-  if (!canMerge(run, rarity)) return null;
-  const mats = run.units.filter((u) => u.rarity === rarity).slice(0, DEFENSE.merge.need);
+/** 3장 이상 모인 '같은 영웅' 목록 — 합성 대상 선택 UI용. [{heroId, count, rarity}] */
+export function mergeableHeroes(run) {
+  const byHero = new Map();
+  for (const u of run.units) byHero.set(u.heroId, (byHero.get(u.heroId) || 0) + 1);
+  const out = [];
+  for (const [heroId, count] of byHero) {
+    const rarity = RARITY.get(heroId);
+    if (count >= DEFENSE.merge.need && rarity < 5) out.push({ heroId, count, rarity });
+  }
+  return out.sort((a, b) => b.rarity - a.rarity || b.count - a.count);
+}
+export function mergeHero(run, heroId) {
+  if (!canMergeHero(run, heroId)) return null;
+  const mats = run.units.filter((u) => u.heroId === heroId).slice(0, DEFENSE.merge.need);
   const topLv = Math.max(...mats.map((m) => m.upgradeLv));
   const totalSpent = mats.reduce((s, m) => s + sumUpgradeSpent(m.upgradeLv), 0);
   const refundGold = Math.round((totalSpent - sumUpgradeSpent(topLv)) * DEFENSE.merge.consumedUpgradeReturn);
@@ -179,10 +191,10 @@ export function merge(run, rarity) {
   const matUids = new Set(mats.map((m) => m.uid));
   run.units = run.units.filter((u) => !matUids.has(u.uid));
   run.gold += refundGold;
-  const nr = rarity + 1;
+  const nr = RARITY.get(heroId) + 1;
   const pool = SUMMON_POOL[nr];
-  const heroId = pool[Math.floor(Math.random() * pool.length)];
-  const unit = makeUnit(heroId, slot);
+  const newHeroId = pool[Math.floor(Math.random() * pool.length)];
+  const unit = makeUnit(newHeroId, slot);
   unit.upgradeLv = topLv; // 최고 단련 계승
   run.units.push(unit);
   run.fx.push({ type: 'merge', rarity: nr, uid: unit.uid });

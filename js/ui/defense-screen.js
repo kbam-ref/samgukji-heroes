@@ -9,6 +9,7 @@ import { on } from '../core/events.js';
 import { getState, setSetting } from '../core/state.js';
 import { fmt } from './format.js';
 import { floatText, flash } from './effects.js';
+import { showModal } from './modal.js';
 import { play, vibrate } from './sound.js';
 
 const HERO_NAME = new Map(HEROES.map((h) => [h.id, h.name]));
@@ -273,22 +274,10 @@ export function render(root) {
     updateHud();
   });
 
-  // 합성(상시 버튼) — 유닛을 탭하지 않아도 여기서. 3장 모인 '가장 낮은 등급'을 상위로 올려친다.
-  document.getElementById('rd-merge').addEventListener('click', (e) => {
-    const r = lowestMergeable(run);
-    if (!r) {
-      vibrate(8);
-      const btn = document.getElementById('rd-merge');
-      btn.classList.remove('shake'); void btn.offsetWidth; btn.classList.add('shake');
-      floatText(e.clientX, e.clientY, '같은 등급 3장이 필요해요', 'warn');
-      return;
-    }
-    const nu = engine.merge(run, r);
-    if (nu) {
-      play('epic'); vibrate(18);
-      floatText(e.clientX, e.clientY, `합성! ${RARITY[nu.rarity].name}`, 'gold');
-      syncUnits(); updateHud();
-    }
+  // 합성(상시 버튼) — 누르면 '어떤 영웅을 합칠지' 먼저 고른다 (같은 영웅 3장 필요).
+  document.getElementById('rd-merge').addEventListener('click', () => {
+    play('tap');
+    openMergePicker();
   });
 
   // 유닛: 짧게 탭 = 패널 / 끌기 = 8방향 이동(드래그한 지점으로 걸어간다)
@@ -314,8 +303,8 @@ export function render(root) {
       if (engine.upgrade(run, uid)) { play('claim'); floatText(cx, cy, '단련 +1', 'gold'); syncUnits(); openPanel(uid); updateHud(); }
       else vibrate(8);
     } else if (act.dataset.act === 'merge') {
-      const nu = engine.merge(run, u.rarity);
-      if (nu) { play('epic'); floatText(cx, cy, `합성! ${RARITY[nu.rarity].name}`, 'gold'); closePanel(); syncUnits(); updateHud(); }
+      const nu = engine.mergeHero(run, u.heroId);
+      if (nu) { play('epic'); floatText(cx, cy, `합성! ${RARITY[nu.rarity].name} ${HERO_NAME.get(nu.heroId)}`, 'gold'); closePanel(); syncUnits(); updateHud(); }
       else vibrate(8);
     } else if (act.dataset.act === 'refund') {
       const v = engine.refund(run, uid);
@@ -373,20 +362,55 @@ function updateHud() {
     btn10.classList.toggle('can-buy', free > 0 || run.gold >= cost);
   }
 
-  // 합성(상시 버튼) — 가능한 최저 등급을 안내하고, 없으면 흐리게
+  // 합성(상시 버튼) — 같은 영웅 3장이 모인 종류 수를 안내하고, 없으면 흐리게
   const mb = document.getElementById('rd-merge');
   const ms = document.getElementById('rd-merge-sub');
   if (mb) {
-    const r = lowestMergeable(run);
-    mb.classList.toggle('can-buy', !!r);
-    if (ms) ms.textContent = r ? `${RARITY[r].name} 3장 → 상위` : '같은 등급 3장';
+    const groups = engine.mergeableHeroes(run);
+    mb.classList.toggle('can-buy', groups.length > 0);
+    if (ms) ms.textContent = groups.length ? `합성 가능 ${groups.length}종` : '같은 영웅 3장';
   }
 }
 
-// 3장 모여 합성 가능한 '가장 낮은' 등급 (없으면 0)
-function lowestMergeable(run) {
-  for (let r = 1; r <= 4; r++) if (engine.canMerge(run, r)) return r;
-  return 0;
+// 합성 대상 선택 모달 — 같은 영웅 3장 모인 것만 보여주고, 고르면 상위 등급 랜덤으로 합성한다.
+function openMergePicker() {
+  const box = document.createElement('div');
+  box.className = 'rd-merge-picker';
+  const render = () => {
+    const groups = engine.mergeableHeroes(run);
+    if (!groups.length) {
+      box.innerHTML = `<p class="rd-merge-empty"><b>같은 영웅 3장</b>을 모으면 상위 등급으로 합성할 수 있어요.<br>소환으로 같은 장수를 모아 보세요.</p>`;
+      return;
+    }
+    box.innerHTML = groups
+      .map(
+        (g) => `
+      <button class="rd-merge-opt r${g.rarity}" data-hero="${g.heroId}">
+        <img src="${heroCut(g.heroId)}" alt="" draggable="false">
+        <span class="rd-mo-body">
+          <b class="rd-mo-name">${HERO_NAME.get(g.heroId)}</b>
+          <span class="rd-mo-info">${RARITY[g.rarity].name} <em>×${g.count}</em> → ${RARITY[g.rarity + 1].name} 랜덤</span>
+        </span>
+        <span class="rd-mo-go">합성 ›</span>
+      </button>`
+      )
+      .join('');
+  };
+  render();
+  box.addEventListener('click', (e) => {
+    const btn = e.target.closest('.rd-merge-opt');
+    if (!btn) return;
+    const nu = engine.mergeHero(run, btn.dataset.hero);
+    if (nu) {
+      play('epic'); vibrate(18);
+      floatText(window.innerWidth / 2, window.innerHeight * 0.4, `합성! ${RARITY[nu.rarity].name} ${HERO_NAME.get(nu.heroId)}`, 'gold');
+      syncUnits(); updateHud();
+      render(); // 남은 합성 가능 목록 갱신 (연속 합성)
+    } else {
+      vibrate(8);
+    }
+  });
+  showModal({ title: '영웅 합성 — 같은 장수 3장', body: box, actions: [{ label: '닫기' }] });
 }
 
 function clampSpeed(v) {
@@ -455,8 +479,8 @@ function openPanel(uid) {
   const upCost = engine.upgradeCost(u.upgradeLv);
   const maxed = u.upgradeLv >= DEFENSE.unit.upgrade.maxLevel;
   const refVal = engine.refundValue(u);
-  const mergeable = engine.canMerge(run, u.rarity);
-  const haveN = engine.sameRarityCount(run, u.rarity);
+  const mergeable = engine.canMergeHero(run, u.heroId);
+  const haveN = engine.sameHeroCount(run, u.heroId);
   panel.hidden = false;
   panel.dataset.uid = uid;
   panel.innerHTML = `
@@ -470,7 +494,7 @@ function openPanel(uid) {
         <b>단련</b><span>${maxed ? '최대' : `골드 ${fmt(upCost)}`}</span>
       </button>
       <button class="btn rd-act" data-act="merge" ${mergeable ? '' : 'disabled'}>
-        <b>합성</b><span>${u.rarity >= 5 ? '최고 등급' : `${RARITY[u.rarity].name} ${haveN}/3 → 상위`}</span>
+        <b>합성</b><span>${u.rarity >= 5 ? '최고 등급' : `같은 영웅 ${haveN}/3`}</span>
       </button>
       <button class="btn rd-act refund" data-act="refund">
         <b>반환</b><span>+골드 ${fmt(refVal)}</span>

@@ -2067,6 +2067,27 @@
 .rd-merge.can-buy b { color: var(--gold-bright); }
 .rd-merge.shake { animation: shake 0.3s; }
 
+/* 합성 선택 모달 — 같은 영웅 3장 모인 것만 골라 상위로 (v77) */
+.rd-merge-picker { display: flex; flex-direction: column; gap: 8px; max-height: 60vh; overflow-y: auto; }
+.rd-merge-empty { text-align: center; font-size: 13px; color: var(--paper-dim); line-height: 1.65; padding: 10px 4px; }
+.rd-merge-empty b { color: var(--gold-bright); }
+.rd-merge-opt {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  padding: 7px 12px; border-radius: 12px; background: var(--ink-700);
+  border: 1px solid var(--r1); cursor: pointer;
+}
+.rd-merge-opt.r2 { border-color: var(--r2); }
+.rd-merge-opt.r3 { border-color: var(--r3); }
+.rd-merge-opt.r4 { border-color: var(--r4); box-shadow: 0 0 8px rgba(156, 107, 192, 0.35); }
+.rd-merge-opt.r5 { border-color: var(--r5); box-shadow: 0 0 9px rgba(201, 162, 39, 0.4); }
+.rd-merge-opt img { width: 42px; height: 50px; object-fit: contain; object-position: bottom; flex: none;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5)); }
+.rd-mo-body { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.rd-mo-name { font-size: 15px; font-weight: 700; color: var(--paper); }
+.rd-mo-info { font-size: 11px; color: var(--paper-dim); }
+.rd-mo-info em { font-style: normal; color: var(--gold-bright); font-weight: 700; }
+.rd-mo-go { font-size: 13px; font-weight: 800; color: var(--cta-bright); flex: none; }
+
 /* 배속 칩 — 필드 우상단 토글 (x1/x2/x3) */
 .rd-field .rd-over { z-index: 8; } /* 게임오버·티켓없음 오버레이가 배속 칩을 덮게 */
 .rd-speed {
