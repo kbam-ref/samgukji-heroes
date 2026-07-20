@@ -1,7 +1,7 @@
 // 서비스워커 — 전체 에셋을 캐시해 비행기 모드에서도 완전히 플레이 가능하게 한다.
 // 에셋이 바뀌면 CACHE 버전을 올린다.
 
-const CACHE = 'samgukji-v75';
+const CACHE = 'samgukji-v76';
 
 // 영웅 초상 — js/data/heroes.js의 id와 일치 (24명)
 const HERO_IDS = [
@@ -24,6 +24,7 @@ const BG_IDS = [
   'village-plain', 'fortress-gate', 'burning-city', 'river-shore', 'red-cliffs',
   'mountain-pass', 'palace-court', 'jungle', 'night-camp', 'gacha-sky',
   'arena-plain', 'arena-camp', 'arena-stone', 'arena-snow',
+  'loading', // 로딩 화면 전장 배경 (Scenario 생성)
 ];
 
 // 오디오 — ElevenLabs로 만든 정적 파일(있으면 재생, 없으면 합성음 폴백). best-effort 캐시.

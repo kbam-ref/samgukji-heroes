@@ -17,7 +17,7 @@ export function showLoading(done, ms = 2000) {
     .join('');
 
   el.innerHTML = `
-    <div class="load-sky" aria-hidden="true"></div>
+    <div class="load-sky" aria-hidden="true" style="background-image:url('./assets/bg/loading.png')"></div>
     <div class="load-title">
       <em class="load-eyebrow">천하통일</em>
       <b class="load-logo">삼국지</b>
