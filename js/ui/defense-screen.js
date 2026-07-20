@@ -26,16 +26,18 @@ let started = false;      // '시작하기'를 누르기 전엔 월드가 돌지
 // 타이틀의 '시작하기' → 도전 1 소모하고 새 판(라운드1). 도전이 없으면 결제 화면으로.
 on('game:begin', () => startNewPlay());
 
-// 타이틀의 '이어하기' → 저장해 둔 판을 불러온다. 불러오면 세이브는 소모(1저장=1이어하기 → 횟수 장사).
+// 저장해 둔 판을 불러온다. 불러오면 세이브 소모(1저장=1이어하기). 방어 화면 준비 후에만
+// 부작용(clearRun) 실행 — 설정탭 등 fieldEl 없을 때 세이브만 지워지고 로드 안 되는 버그 방지.
 on('game:load', () => {
+  if (!fieldEl) return;
   const saved = loadRun();
   clearRun();
   started = true;
-  if (fieldEl) beginRun(saved || engine.createRun({}));
+  beginRun(saved || engine.createRun({}));
 });
 
-// 앱이 백그라운드로 나갔다 시작화면이 다시 뜨는 동안 — 월드를 멈춰 둔다
-on('game:suspend', () => { started = false; });
+// 앱이 백그라운드로 나갔다 시작화면이 다시 뜨는 동안 — 월드 정지 + 리빌 잔재 정리
+on('game:suspend', () => { started = false; closeReveal(); });
 let fieldEl = null;
 let enemyLayer = null;
 let unitLayer = null;
@@ -47,6 +49,8 @@ let fieldW = 0;
 let fieldH = 0;
 let saveTick = 0;
 let drag = null; // { uid, startX, startY, moved }
+// 폰 가로 전환 — 세로 전용이라 가로에선 게임 루프를 멈춘다(CSS #rotate-guard가 화면을 덮음)
+const landscapeMQ = matchMedia('(orientation: landscape) and (max-height: 600px) and (pointer: coarse)');
 
 // 화면 좌표 → 필드 % (드래그 위치 계산)
 function fieldPct(clientX, clientY) {
@@ -191,9 +195,11 @@ function trackRectStyle() {
 
 export function render(root) {
   destroy();
-  // 탭 전환에는 인메모리 run 유지. 없으면 새 판(자동 이어하기 없음 — '이어하기'는 타이틀에서 game:load로만).
-  if (!run || run.gameOver || run.won) {
+  // 탭 전환엔 인메모리 run 유지. 아예 없을 때만(콜드 부팅) 표시용 새 런을 만들고, 시작 전까진 정지.
+  // 게임오버/승리 run은 그대로 두고 아래에서 결과화면을 다시 그린다 — 탭 왕복으로 도전 무소모 재도전하는 우회 차단.
+  if (!run) {
     run = engine.createRun({});
+    started = false;
   }
 
   root.insertAdjacentHTML(
@@ -352,6 +358,8 @@ export function render(root) {
   updateBg();
   last = performance.now();
   rafId = requestAnimationFrame(loop);
+  // 게임오버/승리 상태로 재진입(탭 복귀)했으면 결과화면을 다시 띄운다(새 판은 '다시 시작'=도전 소모로만)
+  if (run.gameOver || run.won) showOver(run.won);
 }
 
 function updateHud() {
@@ -631,6 +639,7 @@ function wipeNodes() {
   if (shotLayer) shotLayer.innerHTML = '';
 }
 function beginRun(newRun) {
+  closeReveal(); // 진행 중이던 10연 리빌 정리 — 안 그러면 revealing=true로 새 런 루프가 영구 정지(소프트락)
   run = newRun;
   const over = document.getElementById('rd-over');
   if (over) { over.hidden = true; over.innerHTML = ''; }
@@ -667,10 +676,12 @@ function showOver(won) {
 }
 
 // 새 판 시작 — 도전 1 소모(라운드1부터). 남은 도전이 없으면 결제 화면(plays:empty)으로.
+// 방어 화면 준비(fieldEl) 후에만 소모 — 아니면 도전만 날리고 판이 안 열리는 버그 방지.
 function startNewPlay() {
+  if (!fieldEl) return;
   if (!meta.consumePlay()) { emit('plays:empty'); return; }
   started = true;
-  if (fieldEl) beginRun(engine.createRun({}));
+  beginRun(engine.createRun({}));
 }
 
 // ── 10연 소환 리빌 — 깃발을 하나씩 뒤집는다. 등급이 높을수록 빛·소리가 커진다(헌장 #3 가챠 연출). ──
@@ -789,6 +800,8 @@ function startReveal(units) {
 
 function loop(now) {
   if (!run) { rafId = 0; return; }
+  // 폰 가로 전환 중엔 월드 정지 — 세로 전용이라 화면이 '세로로 돌려주세요'로 덮여 있다
+  if (landscapeMQ.matches) { last = now; if (rafId) rafId = requestAnimationFrame(loop); return; }
   // '시작하기' 전엔 월드 정지 — 로딩·타이틀 뒤에서 적이 미리 스폰되지 않게
   if (!started) { last = now; if (rafId) rafId = requestAnimationFrame(loop); return; }
   // 소환 리빌 중엔 월드를 멈춘다 — 깃발을 뒤집는 순간의 긴장을 온전히 (적이 새지 않게)

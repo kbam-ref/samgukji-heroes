@@ -288,8 +288,9 @@ export function deserializeRun(o) {
   run.bossIdx = run.bossStage
     ? new Set([Math.floor(per * 0.5), per - 1].slice(0, DEFENSE.wave.boss.count))
     : new Set();
-  if (o.unitSeq) unitSeq = Math.max(unitSeq, o.unitSeq);
-  if (o.enemySeq) enemySeq = Math.max(enemySeq, o.enemySeq);
+  // 저장된 시퀀스 + 실제 로드된 유닛/적 id에서도 하한을 잡는다(구버전 세이브에 unitSeq 필드가 없어도 uid 충돌 방지)
+  unitSeq = Math.max(unitSeq, o.unitSeq || 0, ...run.units.map((u) => (u.uid || 0) + 1), 1);
+  enemySeq = Math.max(enemySeq, o.enemySeq || 0, ...run.enemies.map((e) => (e.eid || 0) + 1), 1);
   return run;
 }
 

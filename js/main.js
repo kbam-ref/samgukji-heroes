@@ -214,7 +214,10 @@ function boot() {
       bgAt = performance.now();
       persist(getState());
     } else {
-      if (bgAt && performance.now() - bgAt > 1500 && !document.getElementById('title-screen') && !document.getElementById('no-plays')) {
+      // 이미 시작화면·결제화면·모달·리빌이 떠 있으면 건드리지 않는다(런 교체·상태 오염 방지)
+      const busy = document.getElementById('title-screen') || document.getElementById('no-plays')
+        || document.getElementById('rd-reveal') || document.getElementById('modal-root')?.hasChildNodes();
+      if (bgAt && performance.now() - bgAt > 1500 && !busy) {
         if (hasSavedRun()) {
           emit('game:load');   // 저장돼 있으면 자동으로 그 판 이어서(도전 안 씀)
         } else {
