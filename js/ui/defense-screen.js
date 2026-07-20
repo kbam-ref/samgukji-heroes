@@ -37,7 +37,7 @@ function fieldPct(clientX, clientY) {
 }
 function onDragMove(e) {
   if (!drag || !run) return;
-  if (!drag.moved && Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) > 6) drag.moved = true;
+  if (!drag.moved && Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) > 11) drag.moved = true; // 탭 관대하게(6→11)
   if (!drag.moved) return;
   const p = fieldPct(e.clientX, e.clientY);
   const b = DEFENSE.unit.bounds;
@@ -181,6 +181,7 @@ export function render(root) {
         <div class="rd-over" id="rd-over" hidden></div>
       </div>
       <div class="rd-panel" id="rd-panel" hidden></div>
+      <p class="rd-tip" id="rd-tip">장수를 <b>탭</b>하면 단련·합성·반환</p>
       <div class="rd-controls">
         <button class="btn primary rd-summon10" id="rd-summon10">
           <b>10연 소환</b><span id="rd-s10-cost">무료 10회</span>
@@ -190,6 +191,9 @@ export function render(root) {
         </button>
       </div>
       <div class="rd-controls sub">
+        <button class="btn rd-merge" id="rd-merge">
+          <b>합성</b><span id="rd-merge-sub">같은 등급 3장→상위</span>
+        </button>
         <button class="btn rd-gamble" id="rd-gamble">
           <b>도박</b><span>골드 ${DEFENSE.gamble.cost}에 한탕</span>
         </button>
@@ -255,6 +259,24 @@ export function render(root) {
     play(won > 0 ? 'claim' : 'foehit');
     floatText(e.clientX, e.clientY, won > 0 ? `+${fmt(won)} 골드!` : '꽝', won > 0 ? 'gold' : 'warn');
     updateHud();
+  });
+
+  // 합성(상시 버튼) — 유닛을 탭하지 않아도 여기서. 3장 모인 '가장 낮은 등급'을 상위로 올려친다.
+  document.getElementById('rd-merge').addEventListener('click', (e) => {
+    const r = lowestMergeable(run);
+    if (!r) {
+      vibrate(8);
+      const btn = document.getElementById('rd-merge');
+      btn.classList.remove('shake'); void btn.offsetWidth; btn.classList.add('shake');
+      floatText(e.clientX, e.clientY, '같은 등급 3장이 필요해요', 'warn');
+      return;
+    }
+    const nu = engine.merge(run, r);
+    if (nu) {
+      play('epic'); vibrate(18);
+      floatText(e.clientX, e.clientY, `합성! ${RARITY[nu.rarity].name}`, 'gold');
+      syncUnits(); updateHud();
+    }
   });
 
   // 유닛: 짧게 탭 = 패널 / 끌기 = 8방향 이동(드래그한 지점으로 걸어간다)
@@ -337,6 +359,21 @@ function updateHud() {
       `골드 ${fmt(goldCost)}`;
     btn10.classList.toggle('can-buy', free > 0 || run.gold >= cost);
   }
+
+  // 합성(상시 버튼) — 가능한 최저 등급을 안내하고, 없으면 흐리게
+  const mb = document.getElementById('rd-merge');
+  const ms = document.getElementById('rd-merge-sub');
+  if (mb) {
+    const r = lowestMergeable(run);
+    mb.classList.toggle('can-buy', !!r);
+    if (ms) ms.textContent = r ? `${RARITY[r].name} 3장 → 상위` : '같은 등급 3장';
+  }
+}
+
+// 3장 모여 합성 가능한 '가장 낮은' 등급 (없으면 0)
+function lowestMergeable(run) {
+  for (let r = 1; r <= 4; r++) if (engine.canMerge(run, r)) return r;
+  return 0;
 }
 
 function clampSpeed(v) {
@@ -379,12 +416,16 @@ function syncUnits() {
 function closePanel() {
   const panel = document.getElementById('rd-panel');
   if (panel) { panel.hidden = true; panel.removeAttribute('data-uid'); }
+  const tip = document.getElementById('rd-tip');
+  if (tip) tip.hidden = false; // 패널 닫히면 안내 다시 표시
   for (const [, el] of unitNodes) el.classList.remove('picked');
 }
 function openPanel(uid) {
   const u = run.units.find((x) => x.uid === uid);
   const panel = document.getElementById('rd-panel');
   if (!u || !panel) return;
+  const tip = document.getElementById('rd-tip');
+  if (tip) tip.hidden = true; // 패널 열리면 안내 숨김(공간 양보)
   for (const [id, el] of unitNodes) el.classList.toggle('picked', id === uid);
   const upCost = engine.upgradeCost(u.upgradeLv);
   const maxed = u.upgradeLv >= DEFENSE.unit.upgrade.maxLevel;
@@ -457,6 +498,9 @@ function consumeFx() {
     if (fx.type === 'attack') {
       const el = unitNodes.get(fx.uid);
       if (el) {
+        // 적이 위면 위로, 아래면 아래로 몸을 던진다 — '그 적'을 향해 찌르는 느낌 (세로는 안 뒤집힘)
+        const ly = Math.max(-9, Math.min(9, (fx.ey - fx.uy) * 0.5));
+        el.style.setProperty('--ly', `${ly.toFixed(1)}px`);
         el.classList.remove('fire'); void el.offsetWidth; el.classList.add('fire');
         setTimeout(() => el.classList.remove('fire'), 240); // 공격 끝나면 idle 숨쉬기로 복귀
       }

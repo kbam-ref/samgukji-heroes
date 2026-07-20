@@ -1945,14 +1945,15 @@
 }
 /* 이동 중엔 걸음(멈추면 idle, 공격 시 attack이 우선) */
 .rd-unit.moving .rd-sprite { animation: rd-walk 0.42s ease-in-out infinite; }
-/* 공격 — 적 쪽으로 앞으로 찔렀다 뒤로 빠진다(앞뒤). 스프라이트 로컬 +X는 --face로 늘 적 방향. */
+/* 공격 — '그 적'을 향해 찌른다. 가로는 --face로 앞(+X), 세로는 --ly(적이 위면 -, 아래면 +)로
+   기울여 실제 적 방향으로 몸을 던진다. 스프라이트 로컬 +X는 늘 적 쪽(scaleX(face)), translateY는 안 뒤집힘. */
 .rd-unit.fire .rd-sprite { animation: rd-attack 0.26s cubic-bezier(0.34, 1.5, 0.5, 1); }
 @keyframes rd-attack {
-  0%   { transform: translateX(-50%); }
-  26%  { transform: translateX(calc(-50% + 12px)) translateY(-2px) scale(1.12, 0.93); } /* 앞으로 찌른다 */
-  48%  { transform: translateX(calc(-50% + 7px))  translateY(0)    scale(1.03, 1.0); }
-  72%  { transform: translateX(calc(-50% - 6px))  translateY(1px)  scale(0.94, 1.06); } /* 뒤로 빠진다 */
-  100% { transform: translateX(-50%); }
+  0%   { transform: translateX(-50%) translateY(0); }
+  26%  { transform: translateX(calc(-50% + 12px)) translateY(calc(var(--ly, 0px) - 2px)) scale(1.12, 0.93); } /* 적을 향해 찌른다 */
+  48%  { transform: translateX(calc(-50% + 7px))  translateY(calc(var(--ly, 0px) * 0.55)) scale(1.03, 1.0); }
+  72%  { transform: translateX(calc(-50% - 6px))  translateY(calc(var(--ly, 0px) * -0.2 + 1px)) scale(0.94, 1.06); } /* 뒤로 빠진다 */
+  100% { transform: translateX(-50%) translateY(0); }
 }
 
 /* 투사체 — 참격/화살이 적에게 날아가 명중 지점에서 불꽃 (v69) */
@@ -2053,6 +2054,18 @@
 .rd-controls .rd-summon { flex: 1; max-width: 150px; }
 .rd-controls.sub { margin-top: 2px; }
 .rd-controls.sub .btn { flex: 1; max-width: 190px; min-height: 44px; gap: 1px; }
+
+/* 합성 상시 버튼 + 탭 안내 (v74) */
+.rd-tip {
+  text-align: center; font-size: 11.5px; color: var(--paper-faint);
+  margin: 0 16px; letter-spacing: 0.02em; line-height: 1.1;
+}
+.rd-tip b { color: var(--gold-bright); font-weight: 700; }
+.rd-tip[hidden] { display: none; }
+.rd-merge b { font-weight: 800; }
+.rd-merge.can-buy { border-color: var(--gold); box-shadow: 0 0 9px rgba(201, 162, 39, 0.4); }
+.rd-merge.can-buy b { color: var(--gold-bright); }
+.rd-merge.shake { animation: shake 0.3s; }
 
 /* 배속 칩 — 필드 우상단 토글 (x1/x2/x3) */
 .rd-field .rd-over { z-index: 8; } /* 게임오버·티켓없음 오버레이가 배속 칩을 덮게 */
