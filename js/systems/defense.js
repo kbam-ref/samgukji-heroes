@@ -422,8 +422,8 @@ function spawnEnemy(run) {
     prog: Math.random() * 0.02, // 살짝 흩어져 스폰
     hit: 0,
     face: 1, // 이동 방향으로 좌우 뒤집기
-    wPhase: Math.random() * Math.PI * 2, // 자유 이동 위상(경로 수직 흔들림)
-    wAmp: 3 + Math.random() * 6,          // 경로 이탈 진폭(%) — 점선 안팎으로
+    wPhase: Math.random() * Math.PI * 2, // 자유 이동 위상(경로 바깥 흔들림)
+    wAmp: 2 + Math.random() * 6,          // 바깥 이탈 진폭(%) — 점선 밖에서만
     wSpeed: 0.5 + Math.random() * 0.9,    // 흔들림 속도
   });
   // 이번 스테이지 첫 보스가 나오는 순간 — 긴장 단계를 알린다(경보음·배너). 스테이지당 1회.
@@ -480,9 +480,10 @@ export function tick(run, dt) {
     const tx = pt2.x - pt.x, ty = pt2.y - pt.y;
     const tl = Math.hypot(tx, ty) || 1;
     e.wPhase = (e.wPhase || 0) + dt * (e.wSpeed || 1);
-    const off = Math.sin(e.wPhase) * (e.wAmp || 0);  // 경로 법선으로 오프셋
-    const px = pt.x + (-ty / tl) * off;
-    const py = pt.y + (tx / tl) * off;
+    // 점선 '밖에서만' 돈다(수석) — 경로의 바깥 법선(인방향의 반대)으로 항상 양수 오프셋
+    const off = 2 + (0.5 + 0.5 * Math.sin(e.wPhase)) * (e.wAmp || 0);
+    const px = pt.x + (ty / tl) * off;
+    const py = pt.y + (-tx / tl) * off;
     const dx = px - e.x;
     if (dx > 0.03) e.face = 1;
     else if (dx < -0.03) e.face = -1;
