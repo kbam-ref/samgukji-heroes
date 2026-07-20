@@ -236,12 +236,14 @@ button, .tab, .hero-row, .codex-card { touch-action: manipulation; } /* 더블�
 .tab span { white-space: nowrap; }
 /* 액션 버튼(소환/단련/합성/반환/도박) — 금빛 브라스 타일로 '누르고 싶게' (v96 디자인 고도화) */
 .tab.act {
+  position: relative; overflow: hidden;
   margin: 7px 4px 8px; border-radius: 13px; gap: 3px;
-  background: linear-gradient(180deg, rgba(74, 58, 36, 0.5), rgba(34, 26, 17, 0.72));
-  border: 1px solid rgba(228, 197, 92, 0.18); color: #f0e6cf;
-  box-shadow: inset 0 1px 0 rgba(255, 238, 205, 0.08), inset 0 -7px 12px rgba(0, 0, 0, 0.22), 0 2px 5px rgba(0, 0, 0, 0.35);
+  background: linear-gradient(180deg, #574328 0%, #3b2d1b 52%, #241a10 100%);
+  border: 1px solid rgba(228, 197, 92, 0.3); color: #f0e6cf;
+  box-shadow: inset 0 1.5px 0 rgba(255, 240, 208, 0.16), inset 0 -8px 14px rgba(0, 0, 0, 0.3), 0 3px 7px rgba(0, 0, 0, 0.45);
   transition: transform 0.12s var(--ease-out), box-shadow 0.15s, border-color 0.15s, background 0.15s;
 }
+.tab.act::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 45%; background: linear-gradient(180deg, rgba(255, 245, 220, 0.14), transparent); pointer-events: none; }
 .tab.act svg { width: 20px; height: 20px; color: var(--gold-bright); }
 .tab.act span { color: #f0e6cf; font-weight: 700; letter-spacing: 0.02em; }
 .tab.act:active {

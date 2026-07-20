@@ -130,9 +130,9 @@ function onDragMove(e) {
   if (!p) return;
   const b = DEFENSE.unit.bounds;
   const u = run.units.find((x) => x.uid === drag.uid);
-  if (u) {
-    u.tx = Math.max(b.x1, Math.min(b.x2, p.x)); // 네모 안으로 제한
-    u.ty = Math.max(b.y1, Math.min(b.y2, p.y));
+  if (u) { // 링 안에 확실히 들어오게 여유(inset). 아래(y2)·왼쪽(x1)은 원근상 더 안쪽으로.
+    u.tx = Math.max(b.x1 + 4, Math.min(b.x2 - 3, p.x));
+    u.ty = Math.max(b.y1 + 2, Math.min(b.y2 - 5, p.y));
   }
 }
 // 리사이즈 — 필드 크기 재측정 + 3D 렌더러 리사이즈

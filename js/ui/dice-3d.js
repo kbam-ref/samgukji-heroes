@@ -4,7 +4,7 @@ import * as THREE from '../vendor/three.module.js';
 let renderer, scene, cam, mount;
 const dice = [];
 let raf = 0, last = 0, rolling = false, phaseT = 0;
-const BOUNCE_DUR = 1.35, SETTLE_DUR = 0.45, GRAV = 16, REST = 0.85; // REST=큐브 반높이
+const BOUNCE_DUR = 1.15, SETTLE_DUR = 0.5, GRAV = 12, REST = 0.65; // 작고 부드럽게(REST=큐브 반높이)
 let onDone = null;
 
 const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
@@ -36,23 +36,23 @@ export function init(canvas, w, h) {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   scene = new THREE.Scene();
-  cam = new THREE.PerspectiveCamera(32, w / h, 0.1, 100); cam.position.set(0, 4.2, 6.4); cam.lookAt(0, 0.4, 0);
+  cam = new THREE.PerspectiveCamera(32, w / h, 0.1, 100); cam.position.set(0, 3.6, 5.8); cam.lookAt(0, 0.3, 0);
   scene.add(new THREE.HemisphereLight(0xfff2dc, 0x2a3a2c, 1.05));
   const key = new THREE.DirectionalLight(0xffffff, 1.6); key.position.set(2.5, 7, 4); key.castShadow = true;
   key.shadow.mapSize.set(512, 512); key.shadow.camera.near = 1; key.shadow.camera.far = 20;
   key.shadow.camera.left = -5; key.shadow.camera.right = 5; key.shadow.camera.top = 5; key.shadow.camera.bottom = -5; scene.add(key);
   const fill = new THREE.DirectionalLight(0xa8c8ff, 0.35); fill.position.set(-3, 3, -2); scene.add(fill);
   // 펠트 테이블(금테)
-  const felt = new THREE.Mesh(new THREE.CircleGeometry(5, 48), new THREE.MeshStandardMaterial({ color: 0x2b4c38, roughness: 0.95 }));
+  const felt = new THREE.Mesh(new THREE.CircleGeometry(3.8, 48), new THREE.MeshStandardMaterial({ color: 0x2b4c38, roughness: 0.95 }));
   felt.rotation.x = -Math.PI / 2; felt.receiveShadow = true; scene.add(felt);
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(3.4, 0.06, 10, 60), new THREE.MeshStandardMaterial({ color: 0xe8c463, emissive: 0x5a4212, roughness: 0.4, metalness: 0.6 }));
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(2.5, 0.05, 10, 60), new THREE.MeshStandardMaterial({ color: 0xe8c463, emissive: 0x5a4212, roughness: 0.4, metalness: 0.6 }));
   ring.rotation.x = Math.PI / 2; ring.position.y = 0.02; scene.add(ring);
 
   const mats = FACE_VALUES.map((v) => new THREE.MeshStandardMaterial({ map: pipTex(v), roughness: 0.42, metalness: 0.02 }));
-  const geo = new THREE.BoxGeometry(1.7, 1.7, 1.7);
+  const geo = new THREE.BoxGeometry(1.3, 1.3, 1.3);
   for (let i = 0; i < 2; i++) {
     const cube = new THREE.Mesh(geo, mats); cube.castShadow = true;
-    cube.userData.baseX = i ? 1.5 : -1.5;
+    cube.userData.baseX = i ? 1.2 : -1.2;
     cube.position.set(cube.userData.baseX, REST, 0);
     cube.rotation.set(-0.35, -0.5 + i * 0.3, 0.15);
     scene.add(cube); dice.push(cube);

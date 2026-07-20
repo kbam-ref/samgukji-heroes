@@ -524,7 +524,8 @@ export function lunge(uid, tx, ty) {
   const n = units.get(uid); if (!n || !n.sized) return;
   const dx = wx(tx) - n.group.position.x, dz = wz(ty) - n.group.position.z;
   const m = Math.hypot(dx, dz) || 1;
-  n.lx = (dx / m) * 0.45; n.lz = (dz / m) * 0.45; n.lungeAmt = 1; // 그 적으로 돌진
+  const amt = n.isAttacker ? 0.13 : 0.45; // 스켈레탈은 클립이 팔다리를 움직이니 돌진 최소화(앞뒤 슬라이드 방지)
+  n.lx = (dx / m) * amt; n.lz = (dz / m) * amt; n.lungeAmt = 1;
   n.atkYaw = Math.atan2(dx / m, dz / m); n.faceT = 0.45; // 그 적을 바라보며 공격
 }
 

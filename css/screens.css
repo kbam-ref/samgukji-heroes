@@ -2206,7 +2206,7 @@
 /* ── 하단 도크 + 컨텍스트 시트 — 액션 옵션을 여기 펼친다. 도크는 고정 높이라 필드가 안 흔들리고,
       시트는 도크 안에 담겨(overflow) 전투 화면을 침범하지 않는다 (v94 수석: 메인화면과 분리). ── */
 .rd-dock {
-  position: relative; margin: 0 14px; height: 190px; flex: none;
+  position: relative; margin: 0 14px; height: 198px; flex: none;
   display: flex; align-items: center; justify-content: center;
 }
 .rd-tip {
@@ -2339,7 +2339,7 @@
 }
 .rd-die.lucky .rd-die-face .rd-pip { background: radial-gradient(circle at 36% 30%, #7a4a12, #3a2205 70%); }
 /* 3D 주사위 캔버스(Three.js 육면체) */
-.rd-dice3d { display: block; width: 100%; height: 104px; margin: 2px 0 8px; touch-action: none; }
+.rd-dice3d { display: block; width: 100%; height: 78px; margin: 1px 0 6px; touch-action: none; }
 .rd-gm-info { text-align: center; font-size: 11.5px; color: var(--paper-dim); margin-bottom: 9px; }
 .rd-gm-info em { color: var(--gold-bright); font-style: normal; font-weight: 700; }
 .rd-gm-lucky {
@@ -2371,16 +2371,19 @@
 
 /* 다음 라운드 버튼 (v103) — 다 잡았는데 타이머 남으면 중앙에 떠서 즉시 넘어가기 */
 .rd-next {
-  position: absolute; left: 50%; top: 40%; transform: translateX(-50%); z-index: 8;
-  appearance: none; cursor: pointer; padding: 12px 30px; border-radius: 14px;
-  background: linear-gradient(160deg, var(--cta-bright), var(--cta) 55%, var(--cta-deep));
-  border: 1px solid var(--cta-deep); color: var(--cta-ink);
+  position: absolute; left: 50%; top: 41%; transform: translateX(-50%); z-index: 8;
+  appearance: none; cursor: pointer; padding: 13px 34px; border-radius: 15px; overflow: hidden;
+  background: linear-gradient(180deg, #ffcf86 0%, var(--cta) 52%, var(--cta-deep) 100%);
+  border: 0; color: var(--cta-ink);
   font-family: var(--font-display); font-size: 21px; font-weight: 800; letter-spacing: 0.04em;
-  text-shadow: 0 1px 0 rgba(255, 228, 200, 0.4);
+  text-shadow: 0 1px 0 rgba(255, 236, 210, 0.55);
+  box-shadow: inset 0 2px 0 rgba(255, 246, 228, 0.7), inset 0 -3px 7px rgba(150, 74, 20, 0.4), 0 6px 16px rgba(0, 0, 0, 0.5), 0 0 0 1.5px var(--cta-deep);
   animation: rd-next-pulse 1.3s ease-in-out infinite;
+  transition: transform 0.08s, box-shadow 0.08s;
 }
+.rd-next::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 48%; background: linear-gradient(180deg, rgba(255, 255, 255, 0.4), transparent); border-radius: 15px 15px 40% 40% / 15px 15px 100% 100%; pointer-events: none; }
+.rd-next:active { transform: translateX(-50%) translateY(2px) scale(0.97); box-shadow: inset 0 1px 0 rgba(255, 246, 228, 0.5), inset 0 -1px 3px rgba(150, 74, 20, 0.4), 0 2px 6px rgba(0, 0, 0, 0.45), 0 0 0 1.5px var(--cta-deep); }
 .rd-next[hidden] { display: none; }
-.rd-next:active { transform: translateX(-50%) scale(0.95); }
 @keyframes rd-next-pulse {
   0%, 100% { box-shadow: inset 0 1px 0 rgba(255, 240, 224, 0.4), 0 6px 20px rgba(0, 0, 0, 0.5), 0 0 0 0 rgba(236, 148, 80, 0.55); }
   50% { box-shadow: inset 0 1px 0 rgba(255, 240, 224, 0.4), 0 6px 20px rgba(0, 0, 0, 0.5), 0 0 0 11px rgba(236, 148, 80, 0); }
