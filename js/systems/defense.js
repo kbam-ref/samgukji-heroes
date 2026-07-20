@@ -256,6 +256,17 @@ export function mergeableHeroes(run) {
   }
   return out.sort((a, b) => b.rarity - a.rarity || b.count - a.count);
 }
+// 자동 합성 — 성급 maxRarity 이하의 '같은 영웅 3장' 그룹을 전부 합성한다(더 없을 때까지 반복).
+//   합성으로 생긴 상위 등급이 다시 3장이면 그것도 maxRarity 이하인 한 이어서 합성(연쇄).
+export function mergeAuto(run, maxRarity) {
+  let merged = 0, guard = 0;
+  while (guard++ < 300) {
+    const g = mergeableHeroes(run).find((x) => x.rarity <= maxRarity);
+    if (!g || !mergeHero(run, g.heroId)) break;
+    merged += 1;
+  }
+  return merged;
+}
 export function mergeHero(run, heroId) {
   if (!canMergeHero(run, heroId)) return null;
   const mats = run.units.filter((u) => u.heroId === heroId).slice(0, DEFENSE.merge.need);

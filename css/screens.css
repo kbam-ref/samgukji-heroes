@@ -2270,6 +2270,12 @@
 
 /* 합성 선택 모달 — 같은 영웅 3장 모인 것만 골라 상위로 (v77) */
 .rd-merge-picker { display: flex; flex-direction: column; gap: 8px; max-height: 60vh; overflow-y: auto; }
+/* 자동 합성 행 — N성 이하 전부 합성 */
+.rd-merge-auto {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding-bottom: 9px; margin-bottom: 3px; border-bottom: 1px solid var(--ink-700);
+}
+.rd-merge-auto > span { font-size: 12px; font-weight: 700; color: var(--paper-dim); }
 .rd-merge-empty { text-align: center; font-size: 13px; color: var(--paper-dim); line-height: 1.65; padding: 10px 4px; }
 .rd-merge-empty b { color: var(--gold-bright); }
 .rd-merge-opt {

@@ -685,26 +685,39 @@ function openMergePicker() {
   box.className = 'rd-merge-picker';
   const render = () => {
     const groups = engine.mergeableHeroes(run);
-    if (!groups.length) {
-      box.innerHTML = `<p class="rd-merge-empty"><b>같은 영웅 3장</b>을 모으면 상위 등급으로 합성할 수 있어요.<br>소환으로 같은 장수를 모아 보세요.</p>`;
-      return;
-    }
-    box.innerHTML = groups
-      .map(
-        (g) => `
-      <button class="rd-merge-opt r${g.rarity}" data-hero="${g.heroId}">
-        <img src="${heroCut(g.heroId)}" alt="" draggable="false">
-        <span class="rd-mo-body">
-          <b class="rd-mo-name">${HERO_NAME.get(g.heroId)}</b>
-          <span class="rd-mo-info">${RARITY[g.rarity].name} <em>×${g.count}</em> → ${RARITY[g.rarity + 1].name} 랜덤</span>
-        </span>
-        <span class="rd-mo-go">합성 ›</span>
-      </button>`
-      )
-      .join('');
+    // 자동 합성 — N성 이하 '같은 영웅 3장' 그룹을 한 번에 전부 합성 (수석)
+    const autoRow = `
+      <div class="rd-merge-auto">
+        <span>자동 합성</span>
+        <div class="rd-chips">
+          ${[2, 3, 4, 5].map((r) => `<button class="rd-chip" data-auto="${r}">${r}★ 이하</button>`).join('')}
+        </div>
+      </div>`;
+    const list = groups.length
+      ? groups.map((g) => `
+        <button class="rd-merge-opt r${g.rarity}" data-hero="${g.heroId}">
+          <img src="${heroCut(g.heroId)}" alt="" draggable="false">
+          <span class="rd-mo-body">
+            <b class="rd-mo-name">${HERO_NAME.get(g.heroId)}</b>
+            <span class="rd-mo-info">${RARITY[g.rarity].name} <em>×${g.count}</em> → ${RARITY[g.rarity + 1].name} 랜덤</span>
+          </span>
+          <span class="rd-mo-go">합성 ›</span>
+        </button>`).join('')
+      : `<p class="rd-merge-empty"><b>같은 영웅 3장</b>을 모으면 상위 등급으로 합성할 수 있어요.<br>소환으로 같은 장수를 모아 보세요.</p>`;
+    box.innerHTML = autoRow + list;
   };
   render();
   box.addEventListener('click', (e) => {
+    const auto = e.target.closest('[data-auto]');
+    if (auto) {
+      const n = engine.mergeAuto(run, Number(auto.dataset.auto));
+      if (n) {
+        play('epic'); vibrate(20);
+        floatText(window.innerWidth / 2, window.innerHeight * 0.4, `자동 합성 ${n}회!`, 'gold');
+        syncUnits(); updateHud(); render();
+      } else { vibrate(8); }
+      return;
+    }
     const btn = e.target.closest('.rd-merge-opt');
     if (!btn) return;
     const nu = engine.mergeHero(run, btn.dataset.hero);
