@@ -5,6 +5,7 @@ import { DEFENSE, ELEMENT_COLOR, ELEMENT_LABEL, SIZE_LABEL, HERO_WEAPON } from '
 import { HEROES, RARITY } from '../data/heroes.js';
 import * as engine from '../systems/defense.js';
 import * as r3d from './defense-3d.js'; // 3D 필드 렌더러(Three.js 빌보드)
+import * as dice3d from './dice-3d.js'; // 3D 주사위(Three.js 육면체)
 import * as meta from '../systems/rd-meta.js';
 import { on, emit } from '../core/events.js';
 import { getState, setSetting } from '../core/state.js';
@@ -502,6 +503,10 @@ function openSheet(mode) {
   sheet.dataset.mode = mode;
   sheet.hidden = false;
   if (tip) tip.hidden = true;
+  if (mode === 'gamble') { // 3D 주사위 캔버스 초기화(레이아웃 후)
+    const cv = document.getElementById('rd-dice3d');
+    if (cv) requestAnimationFrame(() => { const w = Math.round(cv.clientWidth) || 260, h = Math.round(cv.clientHeight) || 96; dice3d.dispose(); dice3d.init(cv, w, h); });
+  }
   play('tap');
   if (mode === 'summon') updateSummonSheet();
   else if (mode === 'upgrade') updateUpgradeSheet();
@@ -512,7 +517,9 @@ function closeSheet() {
   const sheet = document.getElementById('rd-sheet');
   const tip = document.getElementById('rd-tip');
   stopHold();
-  if (gambleTimer) { clearInterval(gambleTimer); gambleTimer = null; rolling = false; }
+  if (gambleTimer) { clearInterval(gambleTimer); gambleTimer = null; }
+  if (dice3d.ready()) dice3d.dispose(); // 3D 주사위 렌더러 해제
+  rolling = false;
   sheetMode = null;
   if (sheet) { sheet.hidden = true; sheet.innerHTML = ''; sheet.removeAttribute('data-mode'); }
   if (tip) tip.hidden = false;
@@ -556,7 +563,7 @@ function sheetGambleHtml() {
   const g = DEFENSE.gamble;
   return `
     <div class="rd-sheet-head"><b>도박 — 주사위 두 개</b><button class="rd-sheet-x" data-x aria-label="닫기">✕</button></div>
-    <div class="rd-dice">${dieCubeHtml('rd-die1')}${dieCubeHtml('rd-die2')}</div>
+    <canvas class="rd-dice3d" id="rd-dice3d"></canvas>
     <div class="rd-gm-info" id="rd-gm-info">합계 ×${g.perPip}골드 · <em>더블이면 럭키! ${g.doubleGold}골드</em></div>
     <button class="btn primary rd-gm-go" data-roll>굴리기 · 골드 ${g.cost}</button>`;
 }
@@ -660,19 +667,14 @@ function doGamble() {
   const res = engine.gamble(run); // {won,d1,d2,jackpot} — 골드는 즉시 차감·지급
   if (!res) { vibrate(8); return; }
   rolling = true;
-  play('tap');
-  const die1 = document.getElementById('rd-die1');
-  const die2 = document.getElementById('rd-die2');
-  [die1, die2].forEach((d) => { if (d) { d.classList.remove('lucky', 'settle'); d.style.transform = ''; d.classList.add('rolling'); } });
-  gambleTimer = setTimeout(() => {
-    gambleTimer = null; rolling = false;
-    [die1, die2].forEach((d) => d && d.classList.remove('rolling'));
-    if (die1) { die1.style.transform = DIE_ROT[res.d1]; die1.classList.add('settle'); }
-    if (die2) { die2.style.transform = DIE_ROT[res.d2]; die2.classList.add('settle'); }
+  play('tap'); vibrate(8);
+  dice3d.lucky(false);
+  dice3d.roll(res.d1, res.d2, () => { // 3D 주사위가 물리적으로 굴러 결과 면이 앞으로 안착
+    rolling = false;
     const info = document.getElementById('rd-gm-info');
     if (res.jackpot) {
       if (info) info.innerHTML = `<b class="rd-gm-lucky">럭키!</b> ${res.d1}·${res.d2} → +${fmt(res.won)}골드`;
-      die1?.classList.add('lucky'); die2?.classList.add('lucky');
+      dice3d.lucky(true);
       play('legend'); flash('gold'); vibrate(50);
       floatText(window.innerWidth / 2, window.innerHeight * 0.4, `럭키! +${fmt(res.won)} 골드`, 'gold');
     } else {
@@ -681,7 +683,7 @@ function doGamble() {
       floatText(window.innerWidth / 2, window.innerHeight * 0.42, `+${fmt(res.won)} 골드`, 'gold');
     }
     updateHud();
-  }, 750);
+  });
 }
 
 // 홀드 반복 — 소환 1회·속성 단련 버튼을 꾹 누르면 연속 실행 (수석: 버튼 누르고 있으면 반복)

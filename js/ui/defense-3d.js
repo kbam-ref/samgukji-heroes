@@ -224,6 +224,30 @@ export function init(mount, w, h) {
   burstGeo = new THREE.PlaneGeometry(1, 1);
   arrowGeo = new THREE.BoxGeometry(0.06, 0.06, 0.5);
   ringGeo = new THREE.RingGeometry(0.86, 1.0, 40);
+
+  scatterRocks(); // 실제 3D 바위로 전장 입체감(평면 회화 보완)
+}
+
+// 필드 가장자리(배치박스 밖)에 저폴리 3D 바위 산개 — 진짜 입체 지형감
+function scatterRocks() {
+  const geo = new THREE.IcosahedronGeometry(1, 2);
+  const p = geo.attributes.position;
+  for (let i = 0; i < p.count; i++) { const f = 0.78 + Math.abs(Math.sin(i * 12.9898) * 43758.5453 % 1) * 0.4; p.setXYZ(i, p.getX(i) * f, p.getY(i) * f * 0.72, p.getZ(i) * f); }
+  geo.computeVertexNormals();
+  const mat = new THREE.MeshStandardMaterial({ color: 0xaa9573, roughness: 1, metalness: 0, flatShading: true }); // 사막 바위 톤
+  const spots = [[7, 12, 1.2], [93, 15, 1.3], [5, 42, 1.0], [95, 48, 1.1], [8, 86, 1.3], [92, 84, 1.2], [50, 7, 0.9], [28, 9, 0.8], [72, 9, 0.85], [50, 95, 1.1]];
+  let seed = 7;
+  const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+  for (const [x, y, sc] of spots) {
+    const s = sc * (0.42 + rnd() * 0.3);
+    const r = new THREE.Mesh(geo, mat);
+    r.scale.set(s * (0.9 + rnd() * 0.4), s * (0.6 + rnd() * 0.3), s * (0.9 + rnd() * 0.4));
+    r.position.set(wx(x), s * 0.28, wz(y)); r.rotation.y = rnd() * 6.28;
+    scene.add(r);
+    const sh = new THREE.Mesh(shadowGeo, shadowMat);
+    sh.rotation.x = -Math.PI / 2; sh.position.set(wx(x), 0.02, wz(y)); sh.scale.set(s * 1.7, s * 1.2, 1);
+    scene.add(sh);
+  }
 }
 
 // 이펙트 메시 풀 — 종류별 재사용(GC 스파이크 방지)

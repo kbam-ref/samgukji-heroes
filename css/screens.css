@@ -2331,6 +2331,8 @@
   box-shadow: inset 0 0 0 2px rgba(255, 240, 190, 0.7), 0 0 16px rgba(240, 196, 78, 0.75);
 }
 .rd-die.lucky .rd-die-face .rd-pip { background: radial-gradient(circle at 36% 30%, #7a4a12, #3a2205 70%); }
+/* 3D 주사위 캔버스(Three.js 육면체) */
+.rd-dice3d { display: block; width: 100%; height: 104px; margin: 2px 0 8px; touch-action: none; }
 .rd-gm-info { text-align: center; font-size: 11.5px; color: var(--paper-dim); margin-bottom: 9px; }
 .rd-gm-info em { color: var(--gold-bright); font-style: normal; font-weight: 700; }
 .rd-gm-lucky {
