@@ -256,6 +256,7 @@ export function serializeRun(run) {
     spawned: run.spawned, killedThisStage: run.killedThisStage,
     units: run.units, enemies: run.enemies,
     dmgMult: run.dmgMult || 1,
+    prepLeft: run.prepLeft || 0,
     unitSeq, enemySeq,
   };
 }
@@ -267,6 +268,7 @@ export function deserializeRun(o) {
     gameOver: false, won: false,
     spawned: o.spawned || 0, killedThisStage: o.killedThisStage || 0, spawnTimer: 0,
     dmgMult: o.dmgMult || 1,
+    prepLeft: o.prepLeft || 0,
   };
   run.bossStage = isBossStage(run.stage);
   const per = DEFENSE.wave.perStage;
@@ -290,6 +292,7 @@ export function createRun(boot = {}) {
     won: false,
     elapsed: 0,
     freePulls: 0, // 보스 보상 등 무료 소환 대기분
+    prepLeft: DEFENSE.prep?.seconds ?? 0, // 준비 카운트다운(초) — 이 동안 적이 안 나온다
     dmgMult: boot.dmgMult || 1, // 영구성장: 전 유닛 데미지 배수
   };
   beginStage(run);
@@ -325,8 +328,15 @@ export function tick(run, dt) {
   run.elapsed += dt;
   const w = DEFENSE.wave;
 
-  // 스폰
-  if (run.spawned < run.toSpawn) {
+  // 준비 시간(프렙) — 적이 아직 안 나온다. 유닛 소환·이동만 진행. 0이 되면 전투 개시.
+  if (run.prepLeft > 0) {
+    run.prepLeft -= dt;
+    if (run.prepLeft <= 0) { run.prepLeft = 0; run.fx.push({ type: 'prepEnd' }); }
+  }
+  const prepping = run.prepLeft > 0;
+
+  // 스폰 (준비 중엔 멈춤)
+  if (!prepping && run.spawned < run.toSpawn) {
     run.spawnTimer += dt;
     while (run.spawned < run.toSpawn && run.spawnTimer >= w.spawnInterval) {
       run.spawnTimer -= w.spawnInterval;

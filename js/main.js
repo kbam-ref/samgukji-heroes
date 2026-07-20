@@ -2,7 +2,7 @@
 
 import { loadOrCreate, persist } from './core/save.js';
 import { initState, getState, addCoin, addJade, offlineDoubled, markOfflineDoubled, freePullUsed, setFlag } from './core/state.js';
-import { on } from './core/events.js';
+import { on, emit } from './core/events.js';
 import { startLoop } from './core/loop.js';
 import * as battle from './systems/battle.js';
 import { computeOfflineGain } from './systems/offline.js';
@@ -14,6 +14,7 @@ import { renderTabs } from './ui/tabs.js';
 import { showModal } from './ui/modal.js';
 import { maybeShowAttendance } from './ui/attendance-modal.js';
 import { showTitle } from './ui/title-screen.js';
+import { showLoading } from './ui/loading-screen.js';
 import { fmt, formatDuration } from './ui/format.js';
 import { countUp, flyCoins } from './ui/effects.js';
 import { initSound, play, vibrate } from './ui/sound.js';
@@ -140,9 +141,9 @@ function boot() {
   }
   on('attendance:claim', () => setTimeout(maybeShowFtue, 400));
 
-  // 순수 아케이드(2026-07-20) — 옥구슬 제거로 복귀보상·출석·온보딩 모달을 걷어냈다.
-  // 시작하기를 누르면 곧장 전장으로 (보상 흐름 없음).
-  showTitle();
+  // 부팅: 로딩 화면(~2초) → 타이틀 → '시작하기'를 누르면 game:begin으로 전장이 깨어난다(준비 카운트다운 시작).
+  // 순수 아케이드라 복귀보상·출석·온보딩 모달은 없다.
+  showLoading(() => showTitle(() => emit('game:begin')));
 
   // 전투 배속 — 설정의 speed 배율 (x1/x2). 방치 계산(killRate)은 실측 기준 유지
   const loop = startLoop((dt) => battle.tick(dt * (getState().settings?.speed || 1)));

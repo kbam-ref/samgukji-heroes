@@ -5,6 +5,7 @@ import { DEFENSE, ELEMENT_COLOR, ELEMENT_LABEL, SIZE_LABEL, HERO_WEAPON } from '
 import { HEROES, RARITY } from '../data/heroes.js';
 import * as engine from '../systems/defense.js';
 import * as meta from '../systems/rd-meta.js';
+import { on } from '../core/events.js';
 import { getState, setSetting } from '../core/state.js';
 import { fmt } from './format.js';
 import { floatText, flash } from './effects.js';
@@ -18,6 +19,13 @@ let last = 0;
 let speed = 1;            // 전투 배속 x1/x2/x3 (설정에 영속)
 let revealing = false;    // 10연 소환 연출 중 — 월드를 멈춘다
 let revealTimers = [];
+let started = false;      // '시작하기'를 누르기 전엔 월드가 돌지 않는다 (로딩·타이틀 뒤 스폰 방지)
+
+// 타이틀의 '시작하기' → 게임을 깨운다. 이때부터 준비 카운트다운이 흐른다.
+on('game:begin', () => {
+  started = true;
+  last = performance.now();
+});
 let fieldEl = null;
 let enemyLayer = null;
 let unitLayer = null;
@@ -178,6 +186,10 @@ export function render(root) {
         <div class="rd-enemies" id="rd-enemies" aria-hidden="true"></div>
         <div class="rd-shots" id="rd-shots" aria-hidden="true"></div>
         <button class="rd-speed" id="rd-speed" aria-label="전투 배속">1×</button>
+        <div class="rd-prep" id="rd-prep" hidden>
+          <b class="rd-prep-n">15</b>
+          <span class="rd-prep-sub">전투 시작까지 · 장수를 배치하세요</span>
+        </div>
         <div class="rd-over" id="rd-over" hidden></div>
       </div>
       <div class="rd-panel" id="rd-panel" hidden></div>
@@ -316,6 +328,7 @@ export function render(root) {
   window.addEventListener('pagehide', saveRun);
 
   updateHud();
+  updatePrep();
   shownArena = '';
   syncUnits();
   syncEnemies();
@@ -385,6 +398,18 @@ function updateSpeedChip() {
   if (!chip) return;
   chip.textContent = `${speed}×`;
   chip.classList.toggle('boosted', speed > 1);
+}
+
+// 준비 카운트다운 — prepLeft>0 동안 남은 초를 크게 보여준다. 0에서 prepEnd fx가 마무리.
+function updatePrep() {
+  const el = document.getElementById('rd-prep');
+  if (!el || !run) return;
+  if (run.prepLeft > 0) {
+    if (el.hidden) el.hidden = false;
+    const n = String(Math.ceil(run.prepLeft));
+    const nb = el.querySelector('.rd-prep-n');
+    if (nb && nb.textContent !== n) nb.textContent = n;
+  }
 }
 
 function syncUnits() {
@@ -519,6 +544,16 @@ function consumeFx() {
       syncUnits();
     } else if (fx.type === 'summon') {
       syncUnits();
+    } else if (fx.type === 'prepEnd') {
+      // 준비 끝 — '전투 개시!' 한 번 번쩍이고 카운트다운을 걷는다
+      play('drum'); vibrate(30);
+      const el = document.getElementById('rd-prep');
+      if (el) {
+        el.classList.add('go');
+        el.querySelector('.rd-prep-n').textContent = '';
+        el.querySelector('.rd-prep-sub').textContent = '전투 개시!';
+        setTimeout(() => { el.hidden = true; el.classList.remove('go'); }, 850);
+      }
     } else if (fx.type === 'gameover') {
       showOver(false);
     } else if (fx.type === 'win') {
@@ -691,6 +726,8 @@ function startReveal(units) {
 
 function loop(now) {
   if (!run) { rafId = 0; return; }
+  // '시작하기' 전엔 월드 정지 — 로딩·타이틀 뒤에서 적이 미리 스폰되지 않게
+  if (!started) { last = now; if (rafId) rafId = requestAnimationFrame(loop); return; }
   // 소환 리빌 중엔 월드를 멈춘다 — 깃발을 뒤집는 순간의 긴장을 온전히 (적이 새지 않게)
   if (revealing) { last = now; if (rafId) rafId = requestAnimationFrame(loop); return; }
   const dt = Math.min(0.05, (now - last) / 1000);
@@ -705,6 +742,7 @@ function loop(now) {
   consumeFx();
   updateHud();
   updateBg();
+  updatePrep();
   if (++saveTick >= 180) { saveTick = 0; saveRun(); } // ~3초마다 이어하기 저장
   if (rafId) rafId = requestAnimationFrame(loop);
 }
