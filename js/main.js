@@ -16,6 +16,7 @@ import { maybeShowAttendance } from './ui/attendance-modal.js';
 import { showTitle } from './ui/title-screen.js';
 import { showLoading } from './ui/loading-screen.js';
 import { hasSavedRun } from './ui/defense-screen.js';
+import { playsLeft, playsInfo, grantPaid } from './systems/rd-meta.js';
 import { fmt, formatDuration } from './ui/format.js';
 import { countUp, flyCoins } from './ui/effects.js';
 import { initSound, play, vibrate } from './ui/sound.js';
@@ -142,13 +143,14 @@ function boot() {
   }
   on('attendance:claim', () => setTimeout(maybeShowFtue, 400));
 
-  // 부팅: 로딩(~2초) → 시작화면. '시작하기'=새 판(game:begin), 저장이 있으면 '이어하기'(game:load)도.
-  const openTitle = () =>
-    showTitle(
-      () => emit('game:begin'),
-      hasSavedRun() ? { onContinue: () => emit('game:load') } : {}
-    );
-  showLoading(openTitle);
+  // 부팅: 저장된 판이 있으면 로딩 후 '바로 이어서'(도전 소모 없음 — 이미 쓴 도전).
+  //       없으면 시작화면 → '시작하기'가 도전 1을 소모하고 새 판(라운드1)을 연다.
+  on('plays:empty', showNoPlays); // 도전 소진 시 결제 화면
+  if (hasSavedRun()) {
+    showLoading(() => emit('game:load'));
+  } else {
+    showLoading(openTitle);
+  }
 
   // 전투 배속 — 설정의 speed 배율 (x1/x2). 방치 계산(killRate)은 실측 기준 유지
   const loop = startLoop((dt) => battle.tick(dt * (getState().settings?.speed || 1)));
@@ -212,9 +214,13 @@ function boot() {
       bgAt = performance.now();
       persist(getState());
     } else {
-      if (bgAt && performance.now() - bgAt > 1500 && !document.getElementById('title-screen')) {
-        emit('game:suspend');
-        openTitle();
+      if (bgAt && performance.now() - bgAt > 1500 && !document.getElementById('title-screen') && !document.getElementById('no-plays')) {
+        if (hasSavedRun()) {
+          emit('game:load');   // 저장돼 있으면 자동으로 그 판 이어서(도전 안 씀)
+        } else {
+          emit('game:suspend'); // 저장 안 했으면 시작화면 다시(다음 시작은 도전 1 소모)
+          openTitle();
+        }
       }
       bgAt = 0;
       loop.resetClock(); // 같은 시간이 루프에서 한 번 더 계산되지 않게
@@ -258,6 +264,34 @@ function boot() {
       if (!document.hidden) swReg?.update?.().catch(() => {});
     });
   }
+}
+
+// 시작화면 — '시작하기'가 도전 1을 소모(game:begin→defense-screen). 남은 도전 수를 함께 보여준다.
+function openTitle() {
+  showTitle(() => emit('game:begin'), { plays: playsLeft() });
+}
+
+// 도전 횟수 소진 → 충전 안내. 실 인앱결제는 스토어 출시 후 연동, 지금은 테스트 충전(+5).
+function showNoPlays() {
+  if (document.getElementById('no-plays')) return;
+  const info = playsInfo();
+  const el = document.createElement('div');
+  el.id = 'no-plays';
+  el.className = 'no-plays';
+  el.innerHTML = `
+    <div class="np-card">
+      <b>도전 횟수를 다 썼어요</b>
+      <p>내일 무료 ${info.dailyFree}회가 다시 채워집니다.<br>지금 이어서 도전하려면 충전하세요.</p>
+      <button class="btn primary np-buy">도전 충전 <em>(테스트 +5)</em></button>
+      <button class="btn np-close">나중에</button>
+    </div>`;
+  document.body.appendChild(el);
+  el.querySelector('.np-buy').addEventListener('click', () => {
+    grantPaid(5); // TODO: 실제 인앱결제(스토어 결제) 연동. 지금은 테스트 충전.
+    el.remove();
+    openTitle();
+  });
+  el.querySelector('.np-close').addEventListener('click', () => { el.remove(); openTitle(); });
 }
 
 // 업데이트 반영 직전 잠깐 뜨는 안내 — 갑작스러운 새로고침이 멈춤처럼 느껴지지 않게

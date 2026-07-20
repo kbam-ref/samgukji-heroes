@@ -5,7 +5,7 @@ import { DEFENSE, ELEMENT_COLOR, ELEMENT_LABEL, SIZE_LABEL, HERO_WEAPON } from '
 import { HEROES, RARITY } from '../data/heroes.js';
 import * as engine from '../systems/defense.js';
 import * as meta from '../systems/rd-meta.js';
-import { on } from '../core/events.js';
+import { on, emit } from '../core/events.js';
 import { getState, setSetting } from '../core/state.js';
 import { fmt } from './format.js';
 import { floatText, flash } from './effects.js';
@@ -23,11 +23,8 @@ let revealing = false;    // 10연 소환 연출 중 — 월드를 멈춘다
 let revealTimers = [];
 let started = false;      // '시작하기'를 누르기 전엔 월드가 돌지 않는다 (로딩·타이틀 뒤 스폰 방지)
 
-// 타이틀의 '시작하기' → 언제나 '새 판(라운드1)'부터 (수석 지시: 자동 이어하기 없음).
-on('game:begin', () => {
-  started = true;
-  if (fieldEl) beginRun(engine.createRun({}));
-});
+// 타이틀의 '시작하기' → 도전 1 소모하고 새 판(라운드1). 도전이 없으면 결제 화면으로.
+on('game:begin', () => startNewPlay());
 
 // 타이틀의 '이어하기' → 저장해 둔 판을 불러온다. 불러오면 세이브는 소모(1저장=1이어하기 → 횟수 장사).
 on('game:load', () => {
@@ -644,14 +641,16 @@ function showOver(won) {
     <div class="rd-over-card">
       <b>${won ? `${engine.stageCap()}라운드 클리어!` : '패배'}</b>
       <span>${won ? '천하를 지켜냈다' : `${reachedStage}라운드에서 무너졌다`} · 최고 ${b.stage}라운드${newBest ? ' · 신기록!' : ''}</span>
-      <button class="btn primary" id="rd-retry">다시 시작</button>
+      <button class="btn primary" id="rd-retry">다시 시작 <em>도전 ${meta.playsLeft()}회</em></button>
     </div>`;
-  document.getElementById('rd-retry').addEventListener('click', () => beginRun(startFreshRun()));
+  document.getElementById('rd-retry').addEventListener('click', () => startNewPlay());
 }
 
-// 새 런 시작 — 아케이드: 티켓 없이 언제나 가능
-function startFreshRun() {
-  return engine.createRun({});
+// 새 판 시작 — 도전 1 소모(라운드1부터). 남은 도전이 없으면 결제 화면(plays:empty)으로.
+function startNewPlay() {
+  if (!meta.consumePlay()) { emit('plays:empty'); return; }
+  started = true;
+  if (fieldEl) beginRun(engine.createRun({}));
 }
 
 // ── 10연 소환 리빌 — 깃발을 하나씩 뒤집는다. 등급이 높을수록 빛·소리가 커진다(헌장 #3 가챠 연출). ──
