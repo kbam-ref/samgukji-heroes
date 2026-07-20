@@ -55,7 +55,7 @@ function fieldPct(clientX, clientY) {
 }
 function onDragMove(e) {
   if (!drag || !run) return;
-  if (!drag.moved && Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) > 11) drag.moved = true; // 탭 관대하게(6→11)
+  if (!drag.moved && Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) > 16) drag.moved = true; // 탭 관대하게(모바일 손가락 오차 — Z.ai 리뷰 반영 11→16)
   if (!drag.moved) return;
   const p = fieldPct(e.clientX, e.clientY);
   const b = DEFENSE.unit.bounds;

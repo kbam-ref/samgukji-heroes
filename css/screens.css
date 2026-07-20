@@ -2080,7 +2080,8 @@
   position: absolute; left: 50%; bottom: -2px; transform: translateX(-50%);
   width: 6px; height: 6px; border-radius: 50%; box-shadow: 0 0 3px rgba(0,0,0,0.7);
 }
-/* 피격 액션 — 번쩍이며 뒤로 움찔 */
+/* 피격 액션 — 번쩍이며 뒤로 움찔. 맞은 적은 잠깐 앞으로(z-index) 올려 밀집 전투서도 '내가 때린 적'이 보이게 */
+.rd-enemy.hit { z-index: 5; }
 .rd-enemy.hit .rd-sprite { animation: rd-enemy-hit 0.18s ease-out; }
 @keyframes rd-enemy-hit {
   0% { filter: brightness(2.4) saturate(0.5); }
