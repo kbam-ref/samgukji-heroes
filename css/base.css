@@ -598,6 +598,22 @@ body.modal-open #tab-bar { visibility: hidden; }
   font-family: var(--font-display);
   animation: cta-breathe 2.2s ease-in-out infinite;
 }
+/* 시작하기 + 이어하기 묶음 (v82) — 위치는 그룹이 담당, 개별 버튼 여백은 리셋 */
+.title-actions {
+  margin-top: auto;
+  margin-bottom: calc(14dvh + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+}
+.title-actions .title-start { margin: 0; }
+.title-continue {
+  margin: 0; min-width: 210px; min-height: 58px; font-size: 19px; letter-spacing: 0.18em;
+  padding-left: calc(16px + 0.18em); font-family: var(--font-display);
+  animation: cta-breathe 2.2s ease-in-out infinite;
+}
+/* 저장이 있을 때 '새로 시작'은 보조 버튼으로 (이어하기가 주) */
+.title-actions.has-continue .title-start {
+  min-width: 170px; min-height: 46px; font-size: 15px; animation: none;
+}
 /* 버전 표시 — 최신인지 한눈에 (배포 확인용) */
 .title-version {
   position: absolute;

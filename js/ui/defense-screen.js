@@ -23,14 +23,22 @@ let revealing = false;    // 10연 소환 연출 중 — 월드를 멈춘다
 let revealTimers = [];
 let started = false;      // '시작하기'를 누르기 전엔 월드가 돌지 않는다 (로딩·타이틀 뒤 스폰 방지)
 
-// 타이틀의 '시작하기' → 게임을 깨운다. 이때부터 준비 카운트다운이 흐른다.
+// 타이틀의 '시작하기' → 언제나 '새 판(라운드1)'부터 (수석 지시: 자동 이어하기 없음).
 on('game:begin', () => {
   started = true;
-  last = performance.now();
+  if (fieldEl) beginRun(engine.createRun({}));
 });
 
-// 업데이트 반영 직전 — 진행 중인 런을 즉시 저장(공격적 자동 업데이트에 대비)
-on('app:save', () => { try { saveRun(); } catch { /* noop */ } });
+// 타이틀의 '이어하기' → 저장해 둔 판을 불러온다. 불러오면 세이브는 소모(1저장=1이어하기 → 횟수 장사).
+on('game:load', () => {
+  const saved = loadRun();
+  clearRun();
+  started = true;
+  if (fieldEl) beginRun(saved || engine.createRun({}));
+});
+
+// 앱이 백그라운드로 나갔다 시작화면이 다시 뜨는 동안 — 월드를 멈춰 둔다
+on('game:suspend', () => { started = false; });
 let fieldEl = null;
 let enemyLayer = null;
 let unitLayer = null;
@@ -83,8 +91,9 @@ function loadRun() {
 function clearRun() {
   try { localStorage.removeItem(RD_KEY); } catch { /* noop */ }
 }
-function onHide() {
-  if (document.hidden) saveRun();
+/** 저장된 판이 있는가 — 타이틀에서 '이어하기'를 보여줄지 판단 */
+export function hasSavedRun() {
+  try { return !!localStorage.getItem(RD_KEY); } catch { return false; }
 }
 
 function heroCut(id) {
@@ -173,10 +182,9 @@ function trackRectStyle() {
 
 export function render(root) {
   destroy();
-  // 탭 전환·앱 재실행에도 런 유지(인메모리) → 없으면 이어하기 세이브 → 없으면 새 런(아케이드: 언제나 가능).
+  // 탭 전환에는 인메모리 run 유지. 없으면 새 판(자동 이어하기 없음 — '이어하기'는 타이틀에서 game:load로만).
   if (!run || run.gameOver || run.won) {
-    run = loadRun();
-    if (!run) run = engine.createRun({});
+    run = engine.createRun({});
   }
 
   root.insertAdjacentHTML(
@@ -190,6 +198,7 @@ export function render(root) {
         <div class="rd-units" id="rd-units" aria-hidden="true"></div>
         <div class="rd-enemies" id="rd-enemies" aria-hidden="true"></div>
         <div class="rd-shots" id="rd-shots" aria-hidden="true"></div>
+        <button class="rd-save" id="rd-save" aria-label="저장">저장</button>
         <button class="rd-speed" id="rd-speed" aria-label="전투 배속">1×</button>
         <div class="rd-prep" id="rd-prep" hidden>
           <b class="rd-prep-n">15</b>
@@ -233,6 +242,14 @@ export function render(root) {
     updateSpeedChip();
     play('tap');
     vibrate(6);
+  });
+
+  // 저장 — 지금 판을 저장해 두면 다음에 타이틀에서 '이어하기'로 불러올 수 있다(1저장=1이어하기).
+  document.getElementById('rd-save').addEventListener('click', () => {
+    if (!run || run.gameOver || run.won) { vibrate(8); return; }
+    saveRun();
+    play('claim'); vibrate(12);
+    floatText(window.innerWidth / 2, window.innerHeight * 0.42, '저장됨 — 다음에 이어하기', 'gold');
   });
 
   // 등급이 높을수록 크게 축포를 터뜨린다 (소환의 손맛)
@@ -317,8 +334,6 @@ export function render(root) {
   });
 
   window.addEventListener('resize', measureField);
-  document.addEventListener('visibilitychange', onHide);
-  window.addEventListener('pagehide', saveRun);
 
   updateHud();
   updatePrep();
@@ -772,7 +787,6 @@ function loop(now) {
   updateHud();
   updateBg();
   updatePrep();
-  if (++saveTick >= 180) { saveTick = 0; saveRun(); } // ~3초마다 이어하기 저장
   if (rafId) rafId = requestAnimationFrame(loop);
 }
 
@@ -780,11 +794,9 @@ export function destroy() {
   closeReveal(); // 리빌 오버레이가 떠 있으면 걷어낸다
   if (rafId) cancelAnimationFrame(rafId);
   rafId = 0;
-  saveRun(); // 탭 떠날 때 저장 — 설정 갔다 와도 이어진다
+  // 자동 저장 없음 — 세이브는 '저장' 버튼으로만(그래야 '저장한 경우에만 이어하기'가 성립). 탭 전환엔 인메모리 run 유지.
   window.removeEventListener('resize', measureField);
   window.removeEventListener('pointermove', onDragMove);
-  document.removeEventListener('visibilitychange', onHide);
-  window.removeEventListener('pagehide', saveRun);
   drag = null;
   enemyNodes.clear();
   unitNodes.clear();

@@ -2151,6 +2151,16 @@
   display: flex; align-items: center; justify-content: center;
   transition: color 0.15s, border-color 0.15s, background 0.15s, box-shadow 0.15s;
 }
+/* 저장 칩 — 좌상단. 눌러 저장하면 다음에 '이어하기' 가능 (v82) */
+.rd-save {
+  position: absolute; top: 8px; left: 8px; z-index: 4;
+  height: 30px; padding: 0 12px;
+  border-radius: 15px; border: 1px solid var(--gold);
+  background: rgba(23, 19, 16, 0.62);
+  color: var(--gold-bright); font-weight: 800; font-size: 13px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.rd-save:active { background: rgba(201, 162, 39, 0.25); }
 .rd-speed.boosted {
   color: var(--cta-ink);
   background: linear-gradient(160deg, var(--cta-bright), var(--cta));

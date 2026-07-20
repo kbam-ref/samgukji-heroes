@@ -15,6 +15,7 @@ import { showModal } from './ui/modal.js';
 import { maybeShowAttendance } from './ui/attendance-modal.js';
 import { showTitle } from './ui/title-screen.js';
 import { showLoading } from './ui/loading-screen.js';
+import { hasSavedRun } from './ui/defense-screen.js';
 import { fmt, formatDuration } from './ui/format.js';
 import { countUp, flyCoins } from './ui/effects.js';
 import { initSound, play, vibrate } from './ui/sound.js';
@@ -141,9 +142,13 @@ function boot() {
   }
   on('attendance:claim', () => setTimeout(maybeShowFtue, 400));
 
-  // 부팅: 로딩 화면(~2초) → 타이틀 → '시작하기'를 누르면 game:begin으로 전장이 깨어난다(준비 카운트다운 시작).
-  // 순수 아케이드라 복귀보상·출석·온보딩 모달은 없다.
-  showLoading(() => showTitle(() => emit('game:begin')));
+  // 부팅: 로딩(~2초) → 시작화면. '시작하기'=새 판(game:begin), 저장이 있으면 '이어하기'(game:load)도.
+  const openTitle = () =>
+    showTitle(
+      () => emit('game:begin'),
+      hasSavedRun() ? { onContinue: () => emit('game:load') } : {}
+    );
+  showLoading(openTitle);
 
   // 전투 배속 — 설정의 speed 배율 (x1/x2). 방치 계산(killRate)은 실측 기준 유지
   const loop = startLoop((dt) => battle.tick(dt * (getState().settings?.speed || 1)));
@@ -199,12 +204,19 @@ function boot() {
     vibrate(30);
   });
 
-  // 순수 아케이드 — 복귀 보상(옥구슬) 제거. 백그라운드 복귀 시엔 저장·클럭 리셋만.
-  // (방어 화면은 자체적으로 런을 저장/이어하기 처리한다)
+  // 앱을 백그라운드에서 충분히(>1.5초) 비웠다 돌아오면 → 시작화면을 다시 띄운다(매번 새 판/이어하기 선택).
+  // 그 사이 게임은 game:suspend로 멈춰 둔다. 잠깐 전환한 정도(<1.5초)면 그대로 이어서.
+  let bgAt = 0;
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
-      persist(getState()); // 숨기는 순간까지는 '본 시간'
+      bgAt = performance.now();
+      persist(getState());
     } else {
+      if (bgAt && performance.now() - bgAt > 1500 && !document.getElementById('title-screen')) {
+        emit('game:suspend');
+        openTitle();
+      }
+      bgAt = 0;
       loop.resetClock(); // 같은 시간이 루프에서 한 번 더 계산되지 않게
     }
   });
@@ -220,8 +232,7 @@ function boot() {
     const applyUpdate = () => {
       if (applied) return;
       applied = true;
-      try { persist(getState()); } catch { /* noop */ }  // 메타 상태 저장
-      emit('app:save');                                   // 진행 중인 방어 런 저장
+      try { persist(getState()); } catch { /* noop */ }  // 메타(최고기록 등) 저장. 진행 중 런은 '저장' 버튼으로만.
       showApplyingToast();                                // '새 버전 적용 중…' 잠깐 안내
       setTimeout(() => location.reload(), 500);           // 세이브가 끝날 여유를 준 뒤 새로고침
     };
