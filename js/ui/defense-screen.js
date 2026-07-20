@@ -878,6 +878,7 @@ function syncEnemies() {
 function consumeFx() {
   for (const fx of engine.drainFx(run)) {
     if (fx.type === 'attack') {
+      r3d.playAttack(fx.uid); // 영웅 스켈레탈 공격 애니 1회(창찌르기/휘두르기)
       r3d.lunge(fx.uid, fx.ex, fx.ey); // 그 적을 향해 살짝 돌진
       r3d.spawnShot3d(fx.ux, fx.uy, fx.ex, fx.ey, HERO_WEAPON[fx.heroId] || 'slash', ELEMENT_COLOR[fx.element] || '#e9d6a0', reduceMotion); // 3D 참격/화살 + 명중 스파크
     } else if (fx.type === 'kill') {
