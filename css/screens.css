@@ -1882,7 +1882,24 @@
 .rd-stat span { font-size: 10px; color: var(--paper-faint); letter-spacing: 0.04em; }
 .rd-stat.rd-gold b { color: var(--gold-bright); }
 .rd-stat.rd-alive.danger b { color: var(--alert); animation: rd-pulse 0.7s ease-in-out infinite; }
+.rd-stat.rd-kills b { color: var(--paper); }
 @keyframes rd-pulse { 50% { opacity: 0.5; } }
+
+/* 이번 라운드 출현 진행 바 (v87) — 총 몇 중 몇이 나왔나 */
+.rd-spawnbar {
+  position: relative; margin: -4px 16px 0; height: 13px; border-radius: 7px;
+  background: rgba(0, 0, 0, 0.34); overflow: hidden; border: 1px solid var(--ink-600);
+}
+.rd-spawnbar i {
+  position: absolute; inset: 0; display: block; width: 0;
+  background: linear-gradient(90deg, rgba(216, 114, 46, 0.45), rgba(224, 150, 74, 0.62));
+  transition: width 0.2s linear;
+}
+.rd-spawnbar b {
+  position: relative; display: block; text-align: center; line-height: 13px;
+  font-size: 9px; font-weight: 700; font-style: normal; color: var(--paper);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.75); letter-spacing: 0.02em;
+}
 
 .rd-field {
   position: relative;
@@ -1940,19 +1957,19 @@
 .rd-unit.r5 .rd-sprite { filter: drop-shadow(0 0 8px rgba(228, 197, 92, 0.85)) drop-shadow(0 2px 2px rgba(0,0,0,0.5)) brightness(1.13); }
 .rd-unit.r4 .rd-sprite { filter: drop-shadow(0 0 6px rgba(156, 107, 192, 0.8)) drop-shadow(0 2px 2px rgba(0,0,0,0.5)) brightness(1.13); }
 .rd-unit.r3 .rd-sprite { filter: drop-shadow(0 0 5px rgba(107, 139, 192, 0.6)) drop-shadow(0 2px 2px rgba(0,0,0,0.5)) brightness(1.12); }
-/* 등급 별 — 머리 위, 등급색 */
+/* 등급 별 — 머리 위 맨 위, 등급색 (캐릭터를 안 가리게) */
 .rd-unit .rd-stars {
-  position: absolute; left: 50%; bottom: 55px; transform: translateX(-50%);
+  position: absolute; left: 50%; bottom: 67px; transform: translateX(-50%);
   font-size: 8px; line-height: 1; letter-spacing: -0.5px; white-space: nowrap; font-style: normal;
   color: var(--rar, #9a9186); text-shadow: 0 1px 1.5px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.9);
   pointer-events: none;
 }
-/* 속성 배지 — 색 + 글자(水/火/土)로 명확하게. 오른쪽 어깨 위. */
+/* 속성 배지 — 색 + 글자(水/火/土). 머리 위(별 아래) — 몸/얼굴을 가리지 않게 */
 .rd-unit .rd-elem {
-  position: absolute; left: 66%; bottom: 39px; transform: translateX(-50%);
-  width: 14px; height: 14px; border-radius: 50%;
+  position: absolute; left: 50%; bottom: 53px; transform: translateX(-50%);
+  width: 13px; height: 13px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  color: #fff; font-size: 9px; font-weight: 700; font-style: normal; line-height: 1;
+  color: #fff; font-size: 8.5px; font-weight: 700; font-style: normal; line-height: 1;
   box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.55), 0 1px 2px rgba(0, 0, 0, 0.6); pointer-events: none;
 }
 /* 방향 뒤집기 래퍼 — 이동/공격 방향으로 좌우 반전(스프라이트만; 체력·속성점은 안 뒤집힘) */

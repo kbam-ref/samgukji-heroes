@@ -177,12 +177,17 @@ function spawnImpact(x, y, color, weapon) {
 
 function hud() {
   const cap = engine.stageCap();
+  const per = DEFENSE.wave.perStage;
   return `
     <div class="rd-hud">
       <div class="rd-stat"><b id="rd-stage">1</b><span>/ ${cap} 라운드</span></div>
       <div class="rd-stat rd-gold"><b id="rd-gold">0</b><span>골드</span></div>
-      <div class="rd-stat rd-alive"><b id="rd-alive">0</b><span>/ ${DEFENSE.wave.loseAt} 적</span></div>
-      <div class="rd-stat rd-best"><b id="rd-best">${meta.best().stage}</b><span>최고</span></div>
+      <div class="rd-stat rd-alive"><b id="rd-alive">0</b><span>/ ${DEFENSE.wave.loseAt} 화면 적</span></div>
+      <div class="rd-stat rd-kills"><b id="rd-kills">0</b><span>처치</span></div>
+    </div>
+    <div class="rd-spawnbar" aria-hidden="true">
+      <i id="rd-spawn-fill"></i>
+      <b id="rd-spawn-txt">이번 라운드 0 / ${per} 출현</b>
     </div>`;
 }
 
@@ -373,6 +378,16 @@ function updateHud() {
     a.textContent = run.enemies.length;
     a.parentElement.classList.toggle('danger', run.enemies.length >= DEFENSE.wave.loseAt * 0.75);
   }
+  // 누적 처치
+  const k = document.getElementById('rd-kills');
+  if (k) k.textContent = fmt(run.kills || 0);
+  // 이번 라운드 출현 진행 (스폰 N / 총)
+  const per = DEFENSE.wave.perStage;
+  const spawned = Math.min(run.spawned || 0, per);
+  const fill = document.getElementById('rd-spawn-fill');
+  const stxt = document.getElementById('rd-spawn-txt');
+  if (fill) fill.style.width = `${(spawned / per) * 100}%`;
+  if (stxt) stxt.textContent = `이번 라운드 ${spawned} / ${per} 출현`;
   const cost = DEFENSE.summon.cost;
   const free = run.freePulls;
 

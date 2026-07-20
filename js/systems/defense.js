@@ -265,6 +265,7 @@ export function serializeRun(run) {
   return {
     v: 1,
     stage: run.stage, gold: run.gold, elapsed: run.elapsed, freePulls: run.freePulls,
+    kills: run.kills || 0,
     spawned: run.spawned, killedThisStage: run.killedThisStage,
     units: run.units, enemies: run.enemies,
     dmgMult: run.dmgMult || 1,
@@ -276,6 +277,7 @@ export function deserializeRun(o) {
   if (!o || o.v !== 1) return null;
   const run = {
     stage: o.stage, gold: o.gold, elapsed: o.elapsed || 0, freePulls: o.freePulls || 0,
+    kills: o.kills || 0,
     units: o.units || [], enemies: o.enemies || [], fx: [],
     gameOver: false, won: false,
     spawned: o.spawned || 0, killedThisStage: o.killedThisStage || 0, spawnTimer: 0,
@@ -304,6 +306,7 @@ export function createRun(boot = {}) {
     gameOver: false,
     won: false,
     elapsed: 0,
+    kills: 0, // 누적 처치 수
     freePulls: 0, // 보스 보상 등 무료 소환 대기분
     prepLeft: DEFENSE.prep?.seconds ?? 0, // 준비 카운트다운(초) — 이 동안 적이 안 나온다
     dmgMult: boot.dmgMult || 1, // 영구성장: 전 유닛 데미지 배수
@@ -418,6 +421,7 @@ export function tick(run, dt) {
         target.dead = true;
         run.gold += killGold(run.stage, target.size, target.isBoss);
         run.killedThisStage += 1;
+        run.kills = (run.kills || 0) + 1; // 누적 처치 수(HUD 표시)
         run.fx.push({ type: 'kill', eid: target.eid, boss: target.isBoss, x: target.x, y: target.y });
         if (target.isBoss) {
           run.freePulls += bossPulls(run.stage);
