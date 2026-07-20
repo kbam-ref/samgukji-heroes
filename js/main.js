@@ -211,62 +211,51 @@ function boot() {
   window.addEventListener('pagehide', () => persist(getState(), { seen: !document.hidden }));
 
   if ('serviceWorker' in navigator) {
+    // 공격적 자동 업데이트(2026-07-20 수석 지시): 새 배포를 감지하면 즉시 세이브하고 바로 반영한다.
+    // sw.js가 skipWaiting+clients.claim이라 새 워커가 곧장 주도권을 잡고 controllerchange가 뜬다.
     let swReg = null;
-    navigator.serviceWorker
-      .register('./sw.js')
-      .then((reg) => { swReg = reg; })
-      .catch(() => {
-        /* 로컬 file:// 등에서는 조용히 넘어간다 */
-      });
-    // 새 버전이 도착해도 게임 도중엔 절대 자동 새로고침하지 않는다 — 플레이 중 타이틀로
-    // 튕기는 건 버그다. 대신 (1) 눈에 보이는 배너로 '지금 적용'을 한 번에 열어 주고,
-    // (2) 앱을 '충분히 오래' 벗어났을 때만 조용히 적용한다(1-1).
-    const SW_RELOAD_DELAY_MS = 30000; // 이보다 짧게 비웠다 오면 자동 리로드 취소
-    let hadController = Boolean(navigator.serviceWorker.controller);
-    let updateReady = false;
-    let reloadTimer = 0;
+    const hadController = Boolean(navigator.serviceWorker.controller);
+    let applied = false;
 
     const applyUpdate = () => {
-      persist(getState());
-      location.reload();
-    };
-    const showUpdateBanner = () => {
-      if (document.getElementById('sw-update')) return;
-      const bar = document.createElement('button');
-      bar.id = 'sw-update';
-      bar.type = 'button';
-      bar.className = 'sw-update-banner';
-      bar.innerHTML = '<b>새 버전이 준비됐어요</b><span>탭하여 지금 적용</span>';
-      bar.addEventListener('click', applyUpdate, { once: true });
-      document.body.appendChild(bar);
+      if (applied) return;
+      applied = true;
+      try { persist(getState()); } catch { /* noop */ }  // 메타 상태 저장
+      emit('app:save');                                   // 진행 중인 방어 런 저장
+      showApplyingToast();                                // '새 버전 적용 중…' 잠깐 안내
+      setTimeout(() => location.reload(), 500);           // 세이브가 끝날 여유를 준 뒤 새로고침
     };
 
+    navigator.serviceWorker
+      .register('./sw.js')
+      .then((reg) => {
+        swReg = reg;
+        // 앱을 계속 켜둬도 ~60초 내 새 배포를 감지하도록 주기적으로 확인
+        setInterval(() => reg.update().catch(() => {}), 60000);
+      })
+      .catch(() => { /* 로컬 file:// 등에서는 조용히 넘어간다 */ });
+
+    // 새 워커가 주도권을 잡는 순간 즉시 적용. 최초 설치(주도권 첫 획득)는 무시.
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (!hadController) {
-        hadController = true; // 첫 설치(주도권 최초 획득)로는 아무것도 하지 않는다
-        return;
-      }
-      updateReady = true;
-      persist(getState());
-      showUpdateBanner(); // 새 버전 도착 — 사용자가 원할 때 한 번에 적용
+      if (!hadController) return;
+      applyUpdate();
     });
+
+    // 포그라운드로 돌아올 때마다 새 배포 확인 (감지를 앞당긴다)
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden) {
-        if (updateReady && !reloadTimer) {
-          reloadTimer = setTimeout(() => {
-            if (document.hidden) applyUpdate();
-          }, SW_RELOAD_DELAY_MS);
-        }
-      } else {
-        if (reloadTimer) {
-          clearTimeout(reloadTimer); // 금방 돌아왔다 — 튕기지 않는다
-          reloadTimer = 0;
-        }
-        // 돌아올 때마다 새 배포가 있는지 즉시 확인한다 — 캐시가 여러 버전 뒤처지지 않게
-        swReg?.update?.().catch(() => {});
-      }
+      if (!document.hidden) swReg?.update?.().catch(() => {});
     });
   }
+}
+
+// 업데이트 반영 직전 잠깐 뜨는 안내 — 갑작스러운 새로고침이 멈춤처럼 느껴지지 않게
+function showApplyingToast() {
+  if (document.getElementById('sw-applying')) return;
+  const t = document.createElement('div');
+  t.id = 'sw-applying';
+  t.className = 'sw-applying';
+  t.textContent = '새 버전 적용 중…';
+  document.body.appendChild(t);
 }
 
 boot();

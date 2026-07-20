@@ -636,6 +636,16 @@ body.modal-open #tab-bar { visibility: hidden; }
 .sw-update-banner span { font-size: 11px; opacity: 0.82; }
 @keyframes sw-drop { from { transform: translate(-50%, -22px); opacity: 0; } }
 
+/* 업데이트 반영 직전 안내 (v80) — 화면 중앙에 잠깐 뜨고 곧 새로고침 */
+.sw-applying {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  z-index: 300; padding: 12px 22px; border-radius: 999px;
+  background: rgba(18, 16, 12, 0.92); border: 1px solid var(--gold);
+  color: var(--gold-bright); font-size: 14px; font-weight: 700; letter-spacing: 0.02em;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5); animation: sw-applying-in 0.2s ease-out;
+}
+@keyframes sw-applying-in { from { opacity: 0; transform: translate(-50%, -46%); } }
+
 /* ── 그려진 UI 스킨 (v37) ── */
 
 /* 모달 — 옻칠 금장 패널로 승격

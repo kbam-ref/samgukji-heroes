@@ -28,6 +28,9 @@ on('game:begin', () => {
   started = true;
   last = performance.now();
 });
+
+// 업데이트 반영 직전 — 진행 중인 런을 즉시 저장(공격적 자동 업데이트에 대비)
+on('app:save', () => { try { saveRun(); } catch { /* noop */ } });
 let fieldEl = null;
 let enemyLayer = null;
 let unitLayer = null;
