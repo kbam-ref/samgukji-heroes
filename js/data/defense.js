@@ -7,7 +7,6 @@
 // ※ 수치는 다중 LLM 밸런스 검증(2026-07-19) 반영. HP·데미지 곡선은 플레이테스트로 재조정.
 
 import { HEROES } from './heroes.js';
-import { GACHA_RATES } from './gacha-tables.js';
 
 export const DEFENSE = {
   // ── 필드 — 네모난 트랙(적이 도는 경로) + 안쪽 유닛 배치 칸 ──
@@ -33,6 +32,7 @@ export const DEFENSE = {
     //   적이 쏟아지는 속도를 살짝 완화(체감 여유). 난이도는 근소하게 쉬워짐.
     spawnInterval: 0.55,
     loseAt: 100, // 살아있는 적(보스 포함, 각 1) 100 누적 = 게임오버
+    roundTime: 60, // 2026-07-20 수석: 라운드 제한 시간(초). 전투 중 이 안에 못 끝내면 패배(DPS 체크)
     // 2026-07-20: 26→72. 소환가 100→50(경제 2배) 보정 + 초반부터 묵직하게. 라운드1 HP=72.
     hpBase: 72,
     // 2026-07-20: 30라운드 마라톤용 곡선 1.21→1.15. (1.21은 10라운드 단거리 전용 — 30에선 ~250배로 클리어 불가)
@@ -43,7 +43,7 @@ export const DEFENSE = {
     speed: 8,
     // 재화 — 개체당 골드에 스테이지 스케일(검증 C1: flat 수입 vs 기하 HP → 경제 붕괴).
     // 개체 골드 = goldPerKill × size.gold × (보스면 boss.goldMult) × goldPerStage^(stage-1)
-    goldPerKill: 2,
+    goldPerKill: 1, // 2026-07-20 수석: 2→1 (기본 1골드. 크기·스테이지 배수는 유지)
     goldPerStage: 1.15, // 수입도 스테이지마다 상승(HP 1.13을 근소 상회 → 후반 캐치업)
     // 적 체급 — 소/중/대. 대형=단단·느림·보상↑ (검증: 소형 편중 완화 60→50, 대형 10→20)
     sizes: {
@@ -70,7 +70,15 @@ export const DEFENSE = {
     openingPulls: 10, // 런 시작 시 무료 10연차로 초기 병력
     startGold: 0,
     cost: 50, // 2026-07-20: 100→50 (수석 지시). 소환가↓ = 소환 회전↑. 반환 캡도 함께 ≤50로 낮춤(처닝 차단)
-    rates: GACHA_RATES, // 전설1% 영웅5% 희귀15% 고급34% 일반45%
+    // 2026-07-20 수석: 6단계 등급 확률(레거시 GACHA_RATES와 분리 — RD 전용). 합계 1.0.
+    rates: [
+      { rarity: 6, rate: 0.002 }, // 초월
+      { rarity: 5, rate: 0.013 }, // 신화
+      { rarity: 4, rate: 0.045 }, // 전설
+      { rarity: 3, rate: 0.12 },  // 영웅
+      { rarity: 2, rate: 0.28 },  // 희귀
+      { rarity: 1, rate: 0.54 },  // 일반
+    ],
     pity: { pulls: 50, effect: 'rarityUp' }, // 50뽑마다 등급업 확정(좌절 방지)
   },
 
@@ -80,6 +88,7 @@ export const DEFENSE = {
     cost: 250,
     perPip: 30,      // 주사위 합계 1당 골드 (더블 아닐 때)
     doubleGold: 500, // 같은 수(1·1, 2·2 …) 잭팟
+    cooldown: 30,    // 2026-07-20 수석: 30초에 1회만(스팸/무한골드 방지)
   },
 
   // ── 합성 — 2026-07-20 수석 지시: '같은 영웅' 3장 → 상위 등급 랜덤 1장(수동). 전설은 합성 없음 ──
@@ -93,12 +102,15 @@ export const DEFENSE = {
 
   // ── 유닛 전투 — 등급별 사거리/공속, 데미지는 영웅 base에서. 성장축: 단련(골드) + 합성(등급climb) ──
   unit: {
+    // 2026-07-20 수석: 6단계. 전설(4)=3인 동시타격, 신화(5)=4인, 초월(6)=5인 + 10초마다 광역기.
+    //   multi = 동시 타격 대상 수. aoe = 초월 전용 광역(간격 초, 데미지 배수).
     byRarity: {
-      1: { range: 18, cooldown: 1.0, dmg: 1.0 },
-      2: { range: 20, cooldown: 0.95, dmg: 1.05 },
-      3: { range: 23, cooldown: 0.88, dmg: 1.14 },
-      4: { range: 26, cooldown: 0.8, dmg: 1.24 },
-      5: { range: 30, cooldown: 0.7, dmg: 1.36 },
+      1: { range: 18, cooldown: 1.0, dmg: 1.0, multi: 1 },
+      2: { range: 20, cooldown: 0.94, dmg: 1.12, multi: 1 },
+      3: { range: 23, cooldown: 0.86, dmg: 1.28, multi: 1 },
+      4: { range: 27, cooldown: 0.78, dmg: 1.5, multi: 3 },
+      5: { range: 31, cooldown: 0.70, dmg: 1.78, multi: 4 },
+      6: { range: 36, cooldown: 0.62, dmg: 2.1, multi: 5, aoe: { interval: 10, dmgMult: 4 } },
     },
     moveSpeed: 46, // 유닛 이동 속도(초당 필드 %) — 드래그한 지점으로 걸어간다(8방향)
     // 2026-07-20: y2 74→68→77. 68은 점선 박스(y78)까지 10%가 텅 비어 보임(수석 지적). 발이 점선에
@@ -123,7 +135,7 @@ export const DEFENSE = {
     // 반환(판매) — 등급값 + 단련 골드 50% 환급. 등급값은 소환가(50) 이하로 캡(소환→즉매 +EV 처닝 차단)
     // 2026-07-20: 소환가 100→50에 맞춰 절반으로. 랜덤 소환 기대 반환 ≈30 < 소환가 50 → 무한증식 불가.
     refund: {
-      goldByRarity: [0, 25, 30, 40, 48, 50], // 등급 1~5 (index 0 미사용). 5성도 소환가(50) 이하
+      goldByRarity: [0, 25, 30, 40, 46, 50, 50], // 등급 1~6 (index 0 미사용). 최고등급도 소환가(50) 이하 캡
       upgradeReturn: 0.5,
     },
   },
@@ -199,7 +211,7 @@ export const HERO_WEAPON = {
 };
 
 // 등급별 소환 후보(영웅 id). 소환·합성 시 등급 안에서 랜덤 1명.
-export const SUMMON_POOL = [1, 2, 3, 4, 5].reduce((pool, r) => {
+export const SUMMON_POOL = [1, 2, 3, 4, 5, 6].reduce((pool, r) => {
   pool[r] = HEROES.filter((h) => h.rarity === r).map((h) => h.id);
   return pool;
 }, {});

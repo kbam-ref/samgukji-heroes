@@ -122,6 +122,8 @@ export function summon(run) {
   const pool = SUMMON_POOL[rarity];
   const heroId = pool[Math.floor(Math.random() * pool.length)];
   const unit = makeUnit(heroId, slot);
+  const mate = run.units.find((x) => x.heroId === heroId);
+  if (mate) unit.upgradeLv = mate.upgradeLv; // 같은 영웅이 이미 있으면 공유 단련 레벨 계승
   run.units.push(unit);
   run.fx.push({ type: 'summon', uid: unit.uid, rarity, free: useFree });
   return unit;
@@ -148,13 +150,18 @@ function sumUpgradeSpent(lv) {
   for (let i = 0; i < lv; i++) s += upgradeCost(i);
   return s;
 }
+// 단련은 '영웅 단위' — 같은 영웅 전체가 같은 레벨을 공유한다(2026-07-20 수석: 조조 단련 시 모든 조조 적용).
+//   그룹의 현재 레벨(최댓값) 기준 단일 비용으로 전원 +1. 중복 보유가 곧 단련 효율(수집 보상).
 export function upgrade(run, uid) {
   const u = run.units.find((x) => x.uid === uid);
-  if (!u || u.upgradeLv >= DEFENSE.unit.upgrade.maxLevel) return false;
-  const cost = upgradeCost(u.upgradeLv);
+  if (!u) return false;
+  const mates = run.units.filter((x) => x.heroId === u.heroId);
+  const lv = Math.max(...mates.map((m) => m.upgradeLv || 0));
+  if (lv >= DEFENSE.unit.upgrade.maxLevel) return false;
+  const cost = upgradeCost(lv);
   if (run.gold < cost) return false;
   run.gold -= cost;
-  u.upgradeLv += 1;
+  for (const m of mates) m.upgradeLv = lv + 1;
   run.fx.push({ type: 'upgrade', uid });
   return true;
 }
@@ -187,8 +194,8 @@ export function elemUpgrade(run, element, kind) {
 
 // ── 반환(판매) — 등급값 + 단련 골드 50% 환급, 등급값은 소환가 이하 캡(데이터에서 이미 캡) ──
 export function refundValue(u) {
-  const base = DEFENSE.unit.refund.goldByRarity[u.rarity] ?? 0;
-  return Math.round(base + sumUpgradeSpent(u.upgradeLv) * DEFENSE.unit.refund.upgradeReturn);
+  // 단련은 '영웅 공유' 투자라 개별 유닛 반환값에 넣지 않는다(중복 반환 악용 차단).
+  return DEFENSE.unit.refund.goldByRarity[u.rarity] ?? 0;
 }
 export function refund(run, uid) {
   const i = run.units.findIndex((x) => x.uid === uid);
@@ -235,7 +242,7 @@ export function sameHeroCount(run, heroId) {
   return run.units.filter((u) => u.heroId === heroId).length;
 }
 export function canMergeHero(run, heroId) {
-  return RARITY.get(heroId) < 5 && sameHeroCount(run, heroId) >= DEFENSE.merge.need;
+  return RARITY.get(heroId) < 6 && sameHeroCount(run, heroId) >= DEFENSE.merge.need;
 }
 /** 3장 이상 모인 '같은 영웅' 목록 — 합성 대상 선택 UI용. [{heroId, count, rarity}] */
 export function mergeableHeroes(run) {
@@ -244,20 +251,17 @@ export function mergeableHeroes(run) {
   const out = [];
   for (const [heroId, count] of byHero) {
     const rarity = RARITY.get(heroId);
-    if (count >= DEFENSE.merge.need && rarity < 5) out.push({ heroId, count, rarity });
+    if (count >= DEFENSE.merge.need && rarity < 6) out.push({ heroId, count, rarity });
   }
   return out.sort((a, b) => b.rarity - a.rarity || b.count - a.count);
 }
 export function mergeHero(run, heroId) {
   if (!canMergeHero(run, heroId)) return null;
   const mats = run.units.filter((u) => u.heroId === heroId).slice(0, DEFENSE.merge.need);
-  const topLv = Math.max(...mats.map((m) => m.upgradeLv));
-  const totalSpent = mats.reduce((s, m) => s + sumUpgradeSpent(m.upgradeLv), 0);
-  const refundGold = Math.round((totalSpent - sumUpgradeSpent(topLv)) * DEFENSE.merge.consumedUpgradeReturn);
+  const topLv = Math.max(...mats.map((m) => m.upgradeLv || 0)); // 승급체가 계승할 단련 레벨
   const slot = mats[0].slot;
   const matUids = new Set(mats.map((m) => m.uid));
   run.units = run.units.filter((u) => !matUids.has(u.uid));
-  run.gold += refundGold;
   const nr = RARITY.get(heroId) + 1;
   const pool = SUMMON_POOL[nr];
   const newHeroId = pool[Math.floor(Math.random() * pool.length)];
@@ -270,6 +274,7 @@ export function mergeHero(run, heroId) {
 
 // ── 도박 — 주사위 2개. 같은 수(더블)면 잭팟, 아니면 합계 × perPip ──
 export function gamble(run) {
+  if (run.gambleCd > 0) return null; // 30초 쿨다운 중
   if (run.gold < DEFENSE.gamble.cost) return null;
   run.gold -= DEFENSE.gamble.cost;
   const d1 = 1 + Math.floor(Math.random() * 6);
@@ -277,6 +282,7 @@ export function gamble(run) {
   const jackpot = d1 === d2;
   const won = jackpot ? DEFENSE.gamble.doubleGold : (d1 + d2) * DEFENSE.gamble.perPip;
   run.gold += won;
+  run.gambleCd = DEFENSE.gamble.cooldown ?? 30;
   run.fx.push({ type: 'gamble', won, d1, d2, jackpot });
   return { won, d1, d2, jackpot };
 }
@@ -337,7 +343,7 @@ export function serializeRun(run) {
   return {
     v: 1,
     stage: run.stage, gold: run.gold, elapsed: run.elapsed, freePulls: run.freePulls,
-    kills: run.kills || 0,
+    kills: run.kills || 0, gambleCd: run.gambleCd || 0, roundLeft: run.roundLeft ?? DEFENSE.wave.roundTime,
     spawned: run.spawned, killedThisStage: run.killedThisStage,
     bossWarned: run.bossWarned || false,
     stageElement: run.stageElement || 'fire',
@@ -352,7 +358,7 @@ export function deserializeRun(o) {
   if (!o || o.v !== 1) return null;
   const run = {
     stage: o.stage, gold: o.gold, elapsed: o.elapsed || 0, freePulls: o.freePulls || 0,
-    kills: o.kills || 0,
+    kills: o.kills || 0, gambleCd: o.gambleCd || 0, roundLeft: o.roundLeft ?? DEFENSE.wave.roundTime,
     units: o.units || [], enemies: o.enemies || [], fx: [],
     gameOver: false, won: false,
     spawned: o.spawned || 0, killedThisStage: o.killedThisStage || 0, spawnTimer: 0,
@@ -385,6 +391,8 @@ export function createRun(boot = {}) {
     won: false,
     elapsed: 0,
     kills: 0, // 누적 처치 수
+    gambleCd: 0, // 도박 쿨다운(초)
+    roundLeft: DEFENSE.wave.roundTime, // 라운드 제한 시간(전투 시작 시 리셋)
     freePulls: 0, // 보스 보상 등 무료 소환 대기분
     prepLeft: DEFENSE.prep?.seconds ?? 0, // 준비 카운트다운(초) — 이 동안 적이 안 나온다
     dmgMult: boot.dmgMult || 1, // 영구성장: 전 유닛 데미지 배수
@@ -422,16 +430,30 @@ function spawnEnemy(run) {
   run.spawned += 1;
 }
 
+// 적 처치 정산 — 골드·처치수·처치 fx·보스 보상. (일반타격·광역기 공용)
+function registerKill(run, target) {
+  target.dead = true;
+  run.gold += killGold(run.stage, target.size, target.isBoss);
+  run.killedThisStage += 1;
+  run.kills = (run.kills || 0) + 1;
+  run.fx.push({ type: 'kill', eid: target.eid, boss: target.isBoss, x: target.x, y: target.y });
+  if (target.isBoss) {
+    run.freePulls += bossPulls(run.stage);
+    run.fx.push({ type: 'bossReward', pulls: bossPulls(run.stage) });
+  }
+}
+
 /** 한 프레임 진행 — run 변이 + run.fx에 이벤트 적재 */
 export function tick(run, dt) {
   if (run.gameOver || run.won) return;
   run.elapsed += dt;
+  if (run.gambleCd > 0) run.gambleCd = Math.max(0, run.gambleCd - dt); // 도박 쿨다운
   const w = DEFENSE.wave;
 
-  // 준비 시간(프렙) — 적이 아직 안 나온다. 유닛 소환·이동만 진행. 0이 되면 전투 개시.
+  // 준비 시간(프렙) — 적이 아직 안 나온다. 유닛 소환·이동만 진행. 0이 되면 전투 개시 + 라운드 타이머 시작.
   if (run.prepLeft > 0) {
     run.prepLeft -= dt;
-    if (run.prepLeft <= 0) { run.prepLeft = 0; run.fx.push({ type: 'prepEnd' }); }
+    if (run.prepLeft <= 0) { run.prepLeft = 0; run.roundLeft = w.roundTime; run.fx.push({ type: 'prepEnd' }); }
   }
   const prepping = run.prepLeft > 0;
 
@@ -478,44 +500,52 @@ export function tick(run, dt) {
     }
   }
 
-  // 전투 — 유닛이 사거리 안 가장 가까운 적을 친다
+  // 전투 — 사거리 안 가까운 적부터 multi명 동시 타격. 초월(6)은 10초마다 광역기로 전 적 타격.
+  const eu = DEFENSE.unit.elemUpgrade;
   for (const u of run.units) {
-    if (u.cd > 0) u.cd -= dt;
-    if (u.cd > 0) continue;
-    const range = DEFENSE.unit.byRarity[u.rarity].range;
-    let target = null;
-    let best = range;
-    for (const e of run.enemies) {
-      const d = Math.hypot(e.x - u.x, e.y - u.y);
-      if (d <= best) { best = d; target = e; }
+    const info = DEFENSE.unit.byRarity[u.rarity];
+    const lv = run.elemLevel?.[u.element] || null;
+    const atkBoost = 1 + eu.atkPerLevel * (lv?.atk || 0);
+    const spdMul = Math.max(0.25, 1 - eu.spdPerLevel * (lv?.spd || 0));
+
+    // 광역기(초월) — 간격마다 전 적을 한 번에 타격 (공격 쿨다운과 별개)
+    if (info.aoe && !prepping) {
+      u.aoeCd = (u.aoeCd ?? info.aoe.interval) - dt;
+      if (u.aoeCd <= 0 && run.enemies.length) {
+        u.aoeCd = info.aoe.interval;
+        const aoeDmg = u.base * info.dmg * info.aoe.dmgMult * (run.dmgMult || 1) * atkBoost;
+        run.fx.push({ type: 'aoe', uid: u.uid, x: u.x, y: u.y, element: u.element });
+        for (const e of run.enemies) {
+          e.hp -= aoeDmg; e.hit = 0.18;
+          if (e.hp <= 0 && !e.dead) registerKill(run, e);
+        }
+      }
     }
-    if (target) {
-      const eu = DEFENSE.unit.elemUpgrade; // 속성별 단련(공격력·공속)
-      const lv = run.elemLevel?.[u.element] || null;
-      const atkBoost = 1 + eu.atkPerLevel * (lv?.atk || 0);
-      const spdMul = Math.max(0.25, 1 - eu.spdPerLevel * (lv?.spd || 0));
+
+    if (u.cd > 0) { u.cd -= dt; continue; }
+    // 사거리 내 적을 거리순으로 정렬 — 가까운 multi명을 동시에 친다
+    const inRange = [];
+    for (const e of run.enemies) {
+      if (e.dead) continue;
+      const d = Math.hypot(e.x - u.x, e.y - u.y);
+      if (d <= info.range) inRange.push({ e, d });
+    }
+    if (!inRange.length) continue;
+    inRange.sort((a, b) => a.d - b.d);
+    const targets = inRange.slice(0, info.multi || 1);
+    u.cd = info.cooldown * spdMul;
+    u.face = targets[0].e.x < u.x ? -1 : 1; // 공격 대상 쪽으로 몸을 돌린다
+    for (const { e: target } of targets) {
       const dmg = damage(u, target) * (run.dmgMult || 1) * atkBoost;
       target.hp -= dmg;
       target.hit = 0.18;
-      u.cd = DEFENSE.unit.byRarity[u.rarity].cooldown * spdMul;
-      u.face = target.x < u.x ? -1 : 1; // 공격 대상 쪽으로 몸을 돌린다
       // 투사체 연출용 — 쏜 자리(u)·맞는 자리(target)·병기 판별용 heroId·속성색
       run.fx.push({
         type: 'attack', uid: u.uid, eid: target.eid, face: u.face,
         heroId: u.heroId, element: u.element,
         ux: u.x, uy: u.y, ex: target.x, ey: target.y,
       });
-      if (target.hp <= 0) {
-        target.dead = true;
-        run.gold += killGold(run.stage, target.size, target.isBoss);
-        run.killedThisStage += 1;
-        run.kills = (run.kills || 0) + 1; // 누적 처치 수(HUD 표시)
-        run.fx.push({ type: 'kill', eid: target.eid, boss: target.isBoss, x: target.x, y: target.y });
-        if (target.isBoss) {
-          run.freePulls += bossPulls(run.stage);
-          run.fx.push({ type: 'bossReward', pulls: bossPulls(run.stage) });
-        }
-      }
+      if (target.hp <= 0 && !target.dead) registerKill(run, target);
     }
   }
   run.enemies = run.enemies.filter((e) => !e.dead);
@@ -537,7 +567,13 @@ export function tick(run, dt) {
     run.stage += 1;
     run.fx.push({ type: 'stageClear', stage: run.stage });
     beginStage(run);
-    run.prepLeft = DEFENSE.prep?.betweenSeconds ?? 20; // 라운드 사이 정비 시간(수석)
+    run.roundLeft = DEFENSE.wave.roundTime; // 라운드 사이 정비 없음(수석) — 새 라운드 60초 타이머만 리셋
+  }
+
+  // 라운드 제한 시간 — 전투 중(프렙 아님) 시간을 못 지키면 패배. 방금 클리어로 프렙 들어갔으면 제외.
+  if (run.prepLeft <= 0 && !run.won && !run.gameOver) {
+    run.roundLeft = (run.roundLeft ?? w.roundTime) - dt;
+    if (run.roundLeft <= 0) { run.gameOver = true; run.fx.push({ type: 'gameover' }); }
   }
 }
 

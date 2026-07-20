@@ -32,6 +32,7 @@
   --r3-bg: rgba(107, 139, 192, 0.18);
   --r4-bg: rgba(156, 107, 192, 0.18);
   --r5-bg: rgba(201, 162, 39, 0.20);
+  --r6-bg: rgba(95, 227, 255, 0.22);
 
   /* 세력 — 전통 안료 톤 (깃발 위/아래 색) */
   --wei-a: #56749f;  --wei-b: #394f6e;  --wei-t: #8fa9ce;
@@ -45,6 +46,7 @@
   --r3: #6b8bc0;
   --r4: #9c6bc0;
   --r5: #c9a227;
+  --r6: #5fe3ff;
 
   --font: 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', system-ui, sans-serif;
   /* 제목용 명조 — 기기 내장 세리프만 사용 (오프라인 보장). 없으면 시스템 serif로 */

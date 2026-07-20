@@ -205,6 +205,18 @@ function spawnImpact(x, y, color, weapon, ang = 0) {
   }
 }
 
+// 초월 광역기 파문 — 유닛 자리에서 링이 전장 크기로 퍼진다
+function aoeRing(x, y, element) {
+  if (!fieldEl || reduceMotion) return;
+  const r = document.createElement('i');
+  r.className = 'rd-aoe';
+  r.style.left = `${(x / 100) * fieldW}px`;
+  r.style.top = `${(y / 100) * fieldH}px`;
+  r.style.setProperty('--c', ELEMENT_COLOR[element] || '#ffe6a2');
+  (shotLayer || fieldEl).appendChild(r);
+  setTimeout(() => r.remove(), 640);
+}
+
 // 보스 출현 배너 — 필드 위로 '보스 출현!'이 크게 밀려들었다 사라진다 (긴장 연출)
 function bossBanner() {
   if (!fieldEl || reduceMotion) return;
@@ -225,7 +237,7 @@ function hud() {
       <div class="rd-stat"><b id="rd-stage">1</b><span>/ ${cap} 라운드</span></div>
       <div class="rd-stat rd-gold"><b id="rd-gold">0</b><span>골드</span></div>
       <div class="rd-stat rd-alive"><b id="rd-alive">0</b><span>/ ${DEFENSE.wave.loseAt} 화면 적</span></div>
-      <div class="rd-stat rd-kills"><b id="rd-kills">0</b><span>처치</span></div>
+      <div class="rd-stat rd-time"><b id="rd-time">0:00</b><span>경과</span></div>
     </div>
     <div class="rd-spawnbar" aria-hidden="true">
       <i id="rd-spawn-fill"></i>
@@ -262,6 +274,7 @@ export function render(root) {
         <div class="rd-enemies" id="rd-enemies" aria-hidden="true"></div>
         <div class="rd-shots" id="rd-shots" aria-hidden="true"></div>
         <button class="rd-speed" id="rd-speed" aria-label="전투 배속">1×</button>
+        <div class="rd-timer" id="rd-timer" hidden><b id="rd-timer-n">60</b><span>초</span></div>
         <div class="rd-prep" id="rd-prep" hidden>
           <b class="rd-prep-n">15</b>
           <span class="rd-prep-sub">전투 시작까지 · 장수를 배치하세요</span>
@@ -294,7 +307,12 @@ export function render(root) {
   });
 
   // 하단 컨텍스트 시트 — 소환/반환/도박 옵션을 여기 빈 공간에 펼친다(tabs.js 이벤트로 열림).
-  document.getElementById('rd-sheet').addEventListener('click', onSheetClick);
+  const sheetEl = document.getElementById('rd-sheet');
+  sheetEl.addEventListener('click', onSheetClick);
+  sheetEl.addEventListener('pointerdown', onSheetPointerDown); // 홀드 반복(소환1회·단련)
+  sheetEl.addEventListener('pointerup', stopHold);
+  sheetEl.addEventListener('pointercancel', stopHold);
+  sheetEl.addEventListener('pointerleave', stopHold);
 
   // 유닛: 짧게 탭 = 패널 / 끌기 = 8방향 이동(드래그한 지점으로 걸어간다)
   unitLayer.addEventListener('pointerdown', (e) => {
@@ -370,9 +388,25 @@ function updateHud() {
     }
     dangerLevel = lvl;
   }
-  // 누적 처치
-  const k = document.getElementById('rd-kills');
-  if (k) k.textContent = fmt(run.kills || 0);
+  // 경과 시간(기록) — 처치 수 대신
+  const tEl = document.getElementById('rd-time');
+  if (tEl) {
+    const s = Math.floor(run.elapsed || 0);
+    tEl.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  }
+  // 라운드 제한 시간 — 전투 중에만 표시, 10초 이하 빨갛게
+  const timer = document.getElementById('rd-timer');
+  if (timer) {
+    if (run.prepLeft > 0 || run.gameOver || run.won) {
+      timer.hidden = true;
+    } else {
+      timer.hidden = false;
+      const t = Math.max(0, Math.ceil(run.roundLeft ?? DEFENSE.wave.roundTime));
+      const n = document.getElementById('rd-timer-n');
+      if (n) n.textContent = t;
+      timer.classList.toggle('low', t <= 10);
+    }
+  }
   // 이번 라운드 출현 진행 (스폰 N / 총)
   const per = DEFENSE.wave.perStage;
   const spawned = Math.min(run.spawned || 0, per);
@@ -393,10 +427,11 @@ function updateHud() {
   const mergeBadge = document.querySelector('#rd-nav-merge .nav-badge');
   if (mergeBadge) mergeBadge.hidden = engine.mergeableHeroes(run).length === 0;
 
-  // 열려 있는 시트 내용 실시간 갱신(소환 비용 / 속성단련 / 반환 미리보기)
+  // 열려 있는 시트 내용 실시간 갱신(소환 비용 / 속성단련 / 반환 미리보기 / 도박 쿨다운)
   if (sheetMode === 'summon') updateSummonSheet();
   else if (sheetMode === 'upgrade') updateUpgradeSheet();
   else if (sheetMode === 'refund') updateRefundSheet();
+  else if (sheetMode === 'gamble') updateGambleSheet();
 }
 
 // ── 등급이 높을수록 크게 축포를 터뜨린다 (소환의 손맛) ──
@@ -428,10 +463,12 @@ function openSheet(mode) {
   if (mode === 'summon') updateSummonSheet();
   else if (mode === 'upgrade') updateUpgradeSheet();
   else if (mode === 'refund') updateRefundSheet();
+  else if (mode === 'gamble') updateGambleSheet();
 }
 function closeSheet() {
   const sheet = document.getElementById('rd-sheet');
   const tip = document.getElementById('rd-tip');
+  stopHold();
   if (gambleTimer) { clearInterval(gambleTimer); gambleTimer = null; rolling = false; }
   sheetMode = null;
   if (sheet) { sheet.hidden = true; sheet.innerHTML = ''; sheet.removeAttribute('data-mode'); }
@@ -512,6 +549,14 @@ function updateUpgradeSheet() {
     }
   }
 }
+function updateGambleSheet() {
+  if (!run) return;
+  const go = document.querySelector('#rd-sheet .rd-gm-go');
+  if (!go) return;
+  if (rolling) { go.disabled = true; return; }
+  if (run.gambleCd > 0) { go.textContent = `${Math.ceil(run.gambleCd)}초 후 가능`; go.disabled = true; }
+  else { go.textContent = `굴리기 · 골드 ${DEFENSE.gamble.cost}`; go.disabled = false; }
+}
 function doElemUpgrade(el, kind) {
   if (engine.elemUpgrade(run, el, kind)) {
     play('claim'); vibrate(10);
@@ -545,6 +590,11 @@ function doRefundBulk() {
 }
 function doGamble() {
   if (rolling) return;
+  if (run.gambleCd > 0) {
+    vibrate(8);
+    floatText(window.innerWidth / 2, window.innerHeight * 0.42, `${Math.ceil(run.gambleCd)}초 후 가능`, 'warn');
+    return;
+  }
   if (run.gold < DEFENSE.gamble.cost) {
     vibrate(8);
     floatText(window.innerWidth / 2, window.innerHeight * 0.42, '골드가 부족해요', 'warn');
@@ -581,12 +631,30 @@ function doGamble() {
   }, 55);
 }
 
+// 홀드 반복 — 소환 1회·속성 단련 버튼을 꾹 누르면 연속 실행 (수석: 버튼 누르고 있으면 반복)
+let holdTimer = null, holdInterval = null, holdFn = null;
+function startHold(fn) {
+  stopHold();
+  holdFn = fn;
+  fn(); // 즉시 1회
+  holdTimer = setTimeout(() => { holdInterval = setInterval(() => { if (holdFn) holdFn(); }, 150); }, 360);
+}
+function stopHold() {
+  if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
+  if (holdInterval) { clearInterval(holdInterval); holdInterval = null; }
+  holdFn = null;
+}
+function onSheetPointerDown(e) {
+  const s = e.target.closest('[data-s]');
+  if (s && s.dataset.s === '1') { startHold(doSummon1); return; } // 1회 소환 홀드(10연은 리빌 때문에 단발)
+  const eu = e.target.closest('[data-eu]');
+  if (eu) { startHold(() => doElemUpgrade(eu.dataset.eu, eu.dataset.euk)); return; } // 속성 단련 홀드
+}
+
 function onSheetClick(e) {
   if (e.target.closest('[data-x]')) { closeSheet(); return; }
   const s = e.target.closest('[data-s]');
-  if (s) { s.dataset.s === '10' ? doSummon10() : doSummon1(); return; }
-  const eu = e.target.closest('[data-eu]');
-  if (eu) { doElemUpgrade(eu.dataset.eu, eu.dataset.euk); return; }
+  if (s) { if (s.dataset.s === '10') doSummon10(); return; } // 1회 소환·단련은 홀드(pointerdown)에서 처리
   const mr = e.target.closest('[data-mr]');
   if (mr) { rfFilter.maxRarity = Number(mr.dataset.mr); refreshRefundChips(); return; }
   const el = e.target.closest('[data-el]');
@@ -736,7 +804,7 @@ function openPanel(uid) {
         <b>단련</b><span>${maxed ? '최대' : `골드 ${fmt(upCost)}`}</span>
       </button>
       <button class="btn rd-act" data-act="merge" ${mergeable ? '' : 'disabled'}>
-        <b>합성</b><span>${u.rarity >= 5 ? '최고 등급' : `같은 영웅 ${haveN}/3`}</span>
+        <b>합성</b><span>${u.rarity >= 6 ? '최고 등급' : `같은 영웅 ${haveN}/3`}</span>
       </button>
       <button class="btn rd-act refund" data-act="refund">
         <b>반환</b><span>+골드 ${fmt(refVal)}</span>
@@ -813,6 +881,10 @@ function consumeFx() {
       play('epic'); vibrate(24);
       floatText(window.innerWidth / 2, window.innerHeight * 0.3, `무료 소환 +${fx.pulls}`, 'gold');
       syncUnits();
+    } else if (fx.type === 'aoe') {
+      // 초월 광역기 — 유닛 자리에서 파문이 전장을 훑고 섬광
+      play('legend'); flash('gold'); vibrate(28);
+      aoeRing(fx.x, fx.y, fx.element);
     } else if (fx.type === 'summon') {
       syncUnits();
     } else if (fx.type === 'prepEnd') {
@@ -1052,6 +1124,7 @@ function loop(now) {
 
 export function destroy() {
   closeReveal(); // 리빌 오버레이가 떠 있으면 걷어낸다
+  stopHold();
   if (gambleTimer) { clearInterval(gambleTimer); gambleTimer = null; rolling = false; } // 주사위 타이머 정리
   sheetMode = null;
   if (rafId) cancelAnimationFrame(rafId);
