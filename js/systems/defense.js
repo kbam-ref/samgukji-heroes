@@ -458,8 +458,10 @@ function registerKill(run, target) {
   run.kills = (run.kills || 0) + 1;
   run.fx.push({ type: 'kill', eid: target.eid, boss: target.isBoss, x: target.x, y: target.y });
   if (target.isBoss) {
+    const bg = DEFENSE.wave.boss.killGold ?? 0;
+    run.gold += bg; // 보스 처치 보너스 골드
     run.freePulls += bossPulls(run.stage);
-    run.fx.push({ type: 'bossReward', pulls: bossPulls(run.stage) });
+    run.fx.push({ type: 'bossReward', pulls: bossPulls(run.stage), gold: bg });
   }
 }
 
@@ -602,8 +604,9 @@ export function tick(run, dt) {
         return;
       }
       run.enemies = []; // 라운드 종료 — 남은 적 정리
+      run.gold += w.roundClearGold ?? 0; // 라운드 클리어 보너스 골드
       run.stage += 1;
-      run.fx.push({ type: 'stageClear', stage: run.stage });
+      run.fx.push({ type: 'stageClear', stage: run.stage, bonus: w.roundClearGold ?? 0 });
       beginStage(run);
       run.roundLeft = w.roundTime;
     }

@@ -919,10 +919,7 @@ function consumeFx() {
       play('foehit');
     } else if (fx.type === 'stageClear') {
       play('clear');
-      // 방금 깬 스테이지(fx.stage - 1)가 보스 스테이지였으면 알린다 (보상 무료소환권은 엔진이 지급)
-      if (engine.isBossStage(fx.stage - 1)) {
-        floatText(window.innerWidth / 2, 120, '보스 격파! 무료 소환', 'gold');
-      }
+      if (fx.bonus) floatText(window.innerWidth / 2, 150, `라운드 클리어! +${fmt(fx.bonus)} 골드`, 'gold');
       updateHud();
     } else if (fx.type === 'bossSpawn') {
       // 보스 등장 — 헌장 #3(긴장 단계). 경보음·섬광·배너로 "온다"를 알린다.
@@ -930,7 +927,8 @@ function consumeFx() {
       bossBanner();
     } else if (fx.type === 'bossReward') {
       play('epic'); vibrate(24);
-      floatText(window.innerWidth / 2, window.innerHeight * 0.3, `무료 소환 +${fx.pulls}`, 'gold');
+      const goldTxt = fx.gold ? ` · +${fmt(fx.gold)} 골드` : '';
+      floatText(window.innerWidth / 2, window.innerHeight * 0.3, `보스 격파! 무료 소환 +${fx.pulls}${goldTxt}`, 'gold');
       syncUnits();
     } else if (fx.type === 'aoe') {
       // 초월 광역기 — 유닛 자리에서 파문이 전장을 훑고 섬광
@@ -1021,6 +1019,7 @@ function startNewPlay() {
   if (!fieldEl) emit('nav:battle'); // 설정 탭 등에서 방어 화면이 언마운트됐으면 먼저 마운트
   if (!fieldEl) return;             // 그래도 없으면(이론상) 도전만 날리지 않게 중단
   if (!meta.consumePlay()) { emit('plays:empty'); return; }
+  speed = 1; setSetting('rdSpeed', 1); updateSpeedChip(); // 새 판은 배속 1부터(수석)
   started = true;
   beginRun(engine.createRun({}));
 }

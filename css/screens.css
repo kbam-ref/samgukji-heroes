@@ -2227,7 +2227,7 @@
   border-color: var(--gold-bright); color: var(--gold-bright); font-weight: 700;
   box-shadow: 0 0 8px rgba(228, 197, 92, 0.25);
 }
-.rd-rf-go { width: 100%; min-height: 44px; margin-top: 2px; font-weight: 700; }
+.rd-rf-go { width: 100%; min-height: 44px; margin-top: 2px; font-weight: 700; justify-content: center; }
 .rd-rf-go:disabled { opacity: 0.5; }
 
 /* 도박 주사위 — 3D 핀홀 큐브 (v100) */
@@ -2268,7 +2268,7 @@
 .rd-gm-info { text-align: center; font-size: 11px; color: var(--paper-dim); margin-bottom: 7px; }
 .rd-gm-info em { color: var(--gold-bright); font-style: normal; }
 .rd-gm-lucky { color: var(--gold-bright); font-weight: 800; }
-.rd-gm-go { width: 100%; min-height: 44px; font-weight: 700; }
+.rd-gm-go { width: 100%; min-height: 46px; font-weight: 700; justify-content: center; }
 
 /* 라운드 제한 타이머 (v93) — 필드 상단 중앙, 10초 이하 빨강 */
 .rd-timer {
