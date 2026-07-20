@@ -31,7 +31,7 @@ export const DEFENSE = {
     // 2026-07-20: 0.85→0.45(밀도 확보) → 0.55(수석 지시 "약간 늦춰"). 여전히 상시 교전이 유지되는 선에서
     //   적이 쏟아지는 속도를 살짝 완화(체감 여유). 난이도는 근소하게 쉬워짐.
     spawnInterval: 0.6, // 100마리 × 0.6 = 60초 스폰 → 80초 타이머 중 ~20초 여유(수석)
-    loseAt: 100, // 살아있는 적(보스 포함, 각 1) 100 누적 = 게임오버
+    loseAt: 200, // 2026-07-21 수석: 웨이브 넘어도 적이 누적(안 치움) → 여러 웨이브 쌓일 여유. 살아있는 적 200 누적 = 게임오버
     // 2026-07-20 수석: 라운드 길이 = 타이머 80초. 다 잡아도 일찍 안 넘어가고, 남은 시간은 다음 라운드 준비.
     roundTime: 80,
     roundClearGold: 100, // 라운드 클리어(다음 라운드 진입) 시 보너스 골드(수석)
@@ -68,7 +68,7 @@ export const DEFENSE = {
 
   // ── 소환 — 골드로 랜덤 영웅. 등급 확률 + 천장(헌장 #3) ──
   summon: {
-    openingPulls: 10, // 런 시작 시 무료 10연차로 초기 병력
+    openingPulls: 5, // 2026-07-21 수석: 10→5 (초반 병력 축소). 런 시작 무료 소환
     startGold: 0,
     cost: 50, // 2026-07-20: 25→50 복원(수석). 반환 캡은 <50로(소환→반환 처닝 차단)
     // 2026-07-20 수석: 6단계 등급 확률(레거시 GACHA_RATES와 분리 — RD 전용). 합계 1.0.
@@ -214,10 +214,10 @@ export const HERO_WEAPON = {
   // 그 외 21인은 참격(slash) — 기본값
 };
 
-// 공격 형태 아이콘(이름 앞 표기) — 창(spear)·칼(sword)·활(bow)·기마(cavalry). 기본 sword.
+// 공격 형태 아이콘(이름 앞 표기) — 창(spear)·칼(sword)·활(bow)·마법(magic, 파이어볼). 기본 sword.
 export const HERO_ATTACK_TYPE = {
   sunshangxiang: 'bow', ganning: 'bow', zhugeliang: 'bow', xunyu: 'bow',
-  lvbu: 'cavalry', zhaoyun: 'cavalry', zhangliao: 'cavalry', caohong: 'cavalry',
+  lvbu: 'magic', zhaoyun: 'magic', zhangliao: 'magic', caohong: 'magic', // 2026-07-21 수석: 기마→마법(파이어볼)
   zhangfei: 'spear', xiahoudun: 'spear', jiling: 'spear', chengpu: 'spear', huaxiong: 'spear', handang: 'spear', zhoucang: 'spear',
   // 나머지(관우·조조·주유·손책·동탁·유비·원소·요화·우금)는 칼(기본)
 };

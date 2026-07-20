@@ -1936,27 +1936,29 @@
 .rd-3d-wrap { position: absolute; inset: 0; }
 .rd-3d { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .rd-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
-.rd-star3d, .rd-name3d { position: absolute; left: 0; top: 0; white-space: nowrap; will-change: transform; font-style: normal; }
-.rd-star3d {
-  font-size: 12px; line-height: 1; letter-spacing: -0.3px; font-weight: 800; color: #9a9186;
-  text-shadow: 0 0 2px rgba(0, 0, 0, 0.95), 0 1px 2px rgba(0, 0, 0, 0.95), -0.5px -0.5px 1px rgba(0, 0, 0, 0.8);
-}
-.rd-star3d.king { font-size: 16px; animation: rd-king-glow2 1.4s ease-in-out infinite; }
-@keyframes rd-king-glow2 {
-  0%, 100% { filter: drop-shadow(0 0 3px currentColor); }
-  50% { filter: drop-shadow(0 0 9px currentColor) drop-shadow(0 0 3px #fff); }
-}
+.rd-name3d { position: absolute; left: 0; top: 0; white-space: nowrap; will-change: transform; font-style: normal; }
 .rd-name3d {
   display: inline-flex; align-items: center; gap: 3px;
   font-size: 9px; font-weight: 700; line-height: 1; color: #f0e6cf;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
-  padding: 1px 4px 1px 2px; border-radius: 3px; background: rgba(12, 9, 6, 0.5);
+  padding: 1.5px 4px 1.5px 2px; border-radius: 4px; background: rgba(12, 9, 6, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+/* 등급 테두리색 — 3D 몸 오라와 짝. 등급↑ = 밝고 강한 테두리/글로우(별표 대체) */
+.rd-name3d.tier-2 { box-shadow: inset 0 0 0 1px rgba(134, 217, 146, 0.55); }
+.rd-name3d.tier-3 { box-shadow: inset 0 0 0 1px rgba(90, 168, 242, 0.75); }
+.rd-name3d.tier-4 { box-shadow: inset 0 0 0 1px rgba(184, 132, 242, 0.85), 0 0 5px rgba(184, 132, 242, 0.4); }
+.rd-name3d.tier-5 { box-shadow: inset 0 0 0 1px rgba(242, 195, 74, 0.95), 0 0 7px rgba(242, 195, 74, 0.5); }
+.rd-name3d.tier-6 { animation: rd-tier6-glow 1.4s ease-in-out infinite; }
+@keyframes rd-tier6-glow {
+  0%, 100% { box-shadow: inset 0 0 0 1.2px rgba(255, 228, 134, 1), 0 0 8px rgba(255, 228, 134, 0.5); }
+  50% { box-shadow: inset 0 0 0 1.2px #fff, 0 0 14px rgba(255, 228, 134, 0.85); }
 }
 /* 공격 형태 아이콘 — 이름 앞 작은 네모(창·칼·활·기마) */
 .rd-wpn { display: inline-flex; width: 13px; height: 13px; flex: none; padding: 1.5px; border-radius: 3px; background: rgba(0, 0, 0, 0.55); color: #ffd76a; box-shadow: inset 0 0 0 1px rgba(232, 196, 99, 0.35); }
 .rd-wpn svg { width: 100%; height: 100%; display: block; }
 .rd-wpn.wpn-bow { color: #8fe0b0; }
-.rd-wpn.wpn-cavalry { color: #c9a6f0; }
+.rd-wpn.wpn-magic { color: #ff9a5a; }
 .rd-wpn.wpn-spear { color: #f0b48a; }
 
 /* 유닛(소환한 영웅) — 탭하면 단련/합성/반환 패널 */
@@ -2210,8 +2212,9 @@
   display: flex; align-items: center; justify-content: center;
 }
 .rd-tip {
-  text-align: center; font-size: 11.5px; color: var(--paper-faint);
-  letter-spacing: 0.02em; line-height: 1.3; padding: 0 8px;
+  text-align: center; font-size: 11px; color: var(--paper-faint);
+  letter-spacing: 0.01em; line-height: 1.3; padding: 0 8px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; /* 한 줄 고정(수석) */
 }
 .rd-tip b { color: var(--gold-bright); font-weight: 700; }
 .rd-tip[hidden] { display: none; }
@@ -2347,6 +2350,16 @@
   text-shadow: 0 0 10px rgba(240, 196, 78, 0.9); animation: rd-lucky-pop 0.5s var(--ease-spring);
 }
 @keyframes rd-lucky-pop { 0% { transform: scale(0.4); opacity: 0; } 60% { transform: scale(1.25); } 100% { transform: scale(1); opacity: 1; } }
+/* 도박 결과 — '몇 나왔는지'(주사위 눈) + '얼마!'(획득) 큼직하게 팝 (수석: 결과가 맛나게) */
+.rd-gm-result { text-align: center; margin: 2px 0 8px; opacity: 0; }
+.rd-gm-result.pop { animation: rd-gm-pop 0.4s var(--ease-spring) forwards; }
+@keyframes rd-gm-pop { 0% { transform: scale(0.5) translateY(6px); opacity: 0; } 60% { transform: scale(1.12); } 100% { transform: scale(1); opacity: 1; } }
+.rd-gm-dice { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 2px; }
+.rd-gm-face { font-size: 30px; line-height: 1; color: #fdf6e6; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.7); }
+.rd-gm-dice em { font-style: normal; font-size: 14px; font-weight: 800; color: var(--paper-dim); margin-left: 4px; }
+.rd-gm-won { display: block; font-family: var(--font-display); font-size: 22px; font-weight: 900; color: var(--gold-bright); letter-spacing: 0.02em; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); }
+.rd-gm-won.lucky { color: #ffe9a8; font-size: 25px; text-shadow: 0 0 12px rgba(240, 196, 78, 0.95); }
+.rd-gm-dice.lucky em { color: #ffe9a8; }
 .rd-gm-go {
   width: 100%; min-height: 50px; font-weight: 800; font-size: 15px; justify-content: center;
   letter-spacing: 0.02em; border-radius: 13px;

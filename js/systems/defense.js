@@ -468,7 +468,7 @@ function registerKill(run, target) {
 /** 한 프레임 진행 — run 변이 + run.fx에 이벤트 적재 */
 export function tick(run, dt) {
   if (run.gameOver || run.won) return;
-  run.elapsed += dt;
+  if (run.prepLeft <= 0) run.elapsed += dt; // 2026-07-21 수석: 경과시간은 몬스터 출현(프렙 종료) 후부터 카운팅
   if (run.gambleCd > 0) run.gambleCd = Math.max(0, run.gambleCd - dt); // 도박 쿨다운
   const w = DEFENSE.wave;
 
@@ -593,8 +593,9 @@ export function tick(run, dt) {
     return;
   }
 
-  // 라운드는 '타이머'로 끝난다(2026-07-20 수석) — 다 잡아도 일찍 안 넘어가고, 남은 시간은 다음 라운드 준비.
-  // 살아있는 적 100 누적(loseAt)이 유일한 패배. 타이머가 0이 되면 남은 적을 정리하고 다음 라운드(또는 승리).
+  // 2026-07-21 수석: 웨이브(타이머)가 끝나도 남은 적을 '치우지 않는다'. 시간은 계속 흐르고 적은 누적된다.
+  //   타이머는 이제 '다음 웨이브(더 강한 스테이지·보스) 투입' 신호일 뿐 — 필드는 그대로 이어진다.
+  //   살아있는 적 100 누적(loseAt)이 유일한 패배. 못 잡고 쌓으면 진다(진짜 생존 디펜스).
   if (run.prepLeft <= 0 && !run.won && !run.gameOver) {
     run.roundLeft = (run.roundLeft ?? w.roundTime) - dt;
     if (run.roundLeft <= 0) {
@@ -603,11 +604,10 @@ export function tick(run, dt) {
         run.fx.push({ type: 'win' });
         return;
       }
-      run.enemies = []; // 라운드 종료 — 남은 적 정리
-      run.gold += w.roundClearGold ?? 0; // 라운드 클리어 보너스 골드
+      run.gold += w.roundClearGold ?? 0; // 웨이브 돌파 보너스 골드(적은 그대로 누적)
       run.stage += 1;
       run.fx.push({ type: 'stageClear', stage: run.stage, bonus: w.roundClearGold ?? 0 });
-      beginStage(run);
+      beginStage(run); // 다음 웨이브 스폰 개시 — 기존 적 위에 더 얹는다(run.enemies 유지)
       run.roundLeft = w.roundTime;
     }
   }

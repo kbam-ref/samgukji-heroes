@@ -22,7 +22,7 @@ const WEAPON_SVG = {
   spear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20 19 5"/><path d="M19 5 13 6.5 M19 5 17.5 11"/></svg>',
   sword: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18 17 7 20 4"/><path d="M5 17 3 21 M7 19 9 21 M15 9 18 12"/></svg>',
   bow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3a13 13 0 0 1 0 18"/><path d="M7 3 7 21"/><path d="M5 12 20 12 16.5 9 M20 12 16.5 15"/></svg>',
-  cavalry: '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M4 21c0-6 3-9.5 7.5-10.5C12.5 7 15.5 5 19 5c-1 2-1 3.2 0 4.3l2 1.2-3.2 1.8c.2 4-2 7.2-4.3 8.9h-2.3c2.2-2 3.3-4.3 3.2-7.2l-3.4 1c-1.8 1-2.7 4-2.7 8z"/></svg>',
+  magic: '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2c1 3-.5 4.5-1.8 6C8.5 10 8 12 9 14c-2-.5-3-2-2.7-4.2C4.7 11 4 13 4.5 15.3 5.4 19.2 8.4 22 12 22c4 0 7-3 7-7 0-3-1.6-5-2.8-6.7C15 6 14 4.5 12 2z"/></svg>',
 };
 function weaponIcon(heroId) {
   const t = HERO_ATTACK_TYPE[heroId] || 'sword';
@@ -337,7 +337,7 @@ export function render(root) {
         <div class="rd-over" id="rd-over" hidden></div>
       </div>
       <div class="rd-dock" id="rd-dock">
-        <p class="rd-tip" id="rd-tip"><b>소환</b>한 장수를 <b>끌어</b> 가장자리(적 길목)에 배치하세요</p>
+        <p class="rd-tip" id="rd-tip"><b>소환</b>한 장수를 <b>끌어</b> 적 길목에 배치하세요</p>
         <div class="rd-sheet" id="rd-sheet" hidden></div>
       </div>
     </section>`
@@ -576,6 +576,7 @@ function sheetGambleHtml() {
   return `
     <div class="rd-sheet-head"><b>도박 — 주사위 두 개</b><button class="rd-sheet-x" data-x aria-label="닫기">✕</button></div>
     <canvas class="rd-dice3d" id="rd-dice3d"></canvas>
+    <div class="rd-gm-result" id="rd-gm-result" hidden></div>
     <div class="rd-gm-info" id="rd-gm-info">합계 ×${g.perPip}골드 · <em>더블이면 럭키! ${g.doubleGold}골드</em></div>
     <button class="btn primary rd-gm-go" data-roll>굴리기 · 골드 ${g.cost}</button>`;
 }
@@ -681,19 +682,21 @@ function doGamble() {
   rolling = true;
   play('tap'); vibrate(8);
   dice3d.lucky(false);
-  dice3d.roll(res.d1, res.d2, () => { // 3D 주사위가 물리적으로 굴러 결과 면이 앞으로 안착
+  const resEl = document.getElementById('rd-gm-result');
+  if (resEl) { resEl.hidden = true; resEl.classList.remove('pop'); } // 이전 결과 숨김
+  const FACE = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+  dice3d.roll(res.d1, res.d2, () => { // 3D 주사위가 물리적으로 굴러 결과 면이 위로 안착
     rolling = false;
-    const info = document.getElementById('rd-gm-info');
+    const dice = `<span class="rd-gm-face">${FACE[res.d1]}</span><span class="rd-gm-face">${FACE[res.d2]}</span>`;
     if (res.jackpot) {
-      if (info) info.innerHTML = `<b class="rd-gm-lucky">럭키!</b> ${res.d1}·${res.d2} → +${fmt(res.won)}골드`;
+      if (resEl) resEl.innerHTML = `<div class="rd-gm-dice lucky">${dice}<em>더블 ${res.d1}!</em></div><b class="rd-gm-won lucky">럭키! +${fmt(res.won)}골드</b>`;
       dice3d.lucky(true);
       play('legend'); flash('gold'); vibrate(50);
-      floatText(window.innerWidth / 2, window.innerHeight * 0.4, `럭키! +${fmt(res.won)} 골드`, 'gold');
     } else {
-      if (info) info.textContent = `${res.d1}+${res.d2}=${res.d1 + res.d2} → +${fmt(res.won)}골드`;
-      play('claim'); vibrate(10);
-      floatText(window.innerWidth / 2, window.innerHeight * 0.42, `+${fmt(res.won)} 골드`, 'gold');
+      if (resEl) resEl.innerHTML = `<div class="rd-gm-dice">${dice}<em>= ${res.d1 + res.d2}</em></div><b class="rd-gm-won">+${fmt(res.won)}골드</b>`;
+      play('claim'); vibrate(12);
     }
+    if (resEl) { resEl.hidden = false; void resEl.offsetWidth; resEl.classList.add('pop'); } // 리플로우 후 팝 애니
     updateHud();
   });
 }
@@ -851,10 +854,8 @@ function updatePrep() {
 }
 
 function styleLabel(n, u) {
-  const king = u.rarity >= 6; // 6성은 '왕별' 하나로 빛남
-  n.starEl.className = `rd-star3d${king ? ' king' : ''}`;
-  n.starEl.style.color = ELEMENT_COLOR[u.element];
-  n.starEl.textContent = king ? '★' : '★'.repeat(u.rarity);
+  // 등급은 캐릭터 몸의 오라(3D)로 표현 — 이름표엔 등급 테두리색만 얹어 한눈에.
+  n.nameEl.className = `rd-name3d tier-${Math.min(6, u.rarity)}`;
   n.nameEl.innerHTML = weaponIcon(u.heroId) + HERO_NAME.get(u.heroId); // 무기 아이콘 + 이름
   n.rarity = u.rarity; n.element = u.element;
 }
@@ -867,21 +868,18 @@ function syncUnits() {
     seen.add(u.uid);
     let n = labelNodes.get(u.uid);
     if (!n) {
-      const starEl = document.createElement('div');
       const nameEl = document.createElement('div'); nameEl.className = 'rd-name3d';
-      labelLayer.append(starEl, nameEl);
-      n = { starEl, nameEl, rarity: -1, element: '' };
+      labelLayer.append(nameEl);
+      n = { nameEl, rarity: -1, element: '' };
       labelNodes.set(u.uid, n);
       styleLabel(n, u);
     } else if (n.rarity !== u.rarity || n.element !== u.element) {
       styleLabel(n, u); // 합성/변경 반영
     }
-    const head = r3d.project(u.x, u.y, 1.06);
-    const feet = r3d.project(u.x, u.y, 0.0);
-    n.starEl.style.transform = `translate(${head.sx}px, ${head.sy}px) translate(-50%, -100%)`;
-    n.nameEl.style.transform = `translate(${feet.sx}px, ${feet.sy}px) translate(-50%, 2px)`;
+    const head = r3d.project(u.x, u.y, 1.12);
+    n.nameEl.style.transform = `translate(${head.sx}px, ${head.sy}px) translate(-50%, -100%)`; // 머리 위 이름표
   }
-  for (const [uid, n] of labelNodes) if (!seen.has(uid)) { n.starEl.remove(); n.nameEl.remove(); labelNodes.delete(uid); }
+  for (const [uid, n] of labelNodes) if (!seen.has(uid)) { n.nameEl.remove(); labelNodes.delete(uid); }
 }
 
 function syncEnemies() {
@@ -894,7 +892,7 @@ function consumeFx() {
     if (fx.type === 'attack') {
       r3d.playAttack(fx.uid); // 영웅 스켈레탈 공격 애니 1회(창찌르기/휘두르기)
       r3d.lunge(fx.uid, fx.ex, fx.ey); // 그 적을 향해 살짝 돌진
-      r3d.spawnShot3d(fx.ux, fx.uy, fx.ex, fx.ey, HERO_WEAPON[fx.heroId] || 'slash', ELEMENT_COLOR[fx.element] || '#e9d6a0', reduceMotion); // 3D 참격/화살 + 명중 스파크
+      r3d.spawnShot3d(fx.ux, fx.uy, fx.ex, fx.ey, HERO_ATTACK_TYPE[fx.heroId] || 'sword', ELEMENT_COLOR[fx.element] || '#e9d6a0', reduceMotion); // 무기별 3D 공격 연출(활/창/칼/기마)
     } else if (fx.type === 'kill') {
       play('foehit');
     } else if (fx.type === 'stageClear') {
@@ -937,7 +935,7 @@ function consumeFx() {
 }
 
 function wipeNodes() {
-  for (const [, n] of labelNodes) { n.starEl.remove(); n.nameEl.remove(); }
+  for (const [, n] of labelNodes) { n.nameEl.remove(); }
   labelNodes.clear();
   if (r3d.ready()) { r3d.syncUnits([]); r3d.syncEnemies([]); } // 3D 풀 비우기
   if (shotLayer) shotLayer.innerHTML = '';
@@ -1166,7 +1164,7 @@ export function destroy() {
   window.removeEventListener('resize', onResize);
   window.removeEventListener('pointermove', onDragMove);
   drag = null;
-  for (const [, n] of labelNodes) { n.starEl.remove(); n.nameEl.remove(); }
+  for (const [, n] of labelNodes) { n.nameEl.remove(); }
   labelNodes.clear();
   if (shotLayer) shotLayer.innerHTML = '';
   r3d.dispose(); // 3D 씬·캔버스 해제
