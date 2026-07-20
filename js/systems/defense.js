@@ -144,7 +144,7 @@ export function summonMany(run, n) {
 // ── 단련(업그레이드) ──
 export function upgradeCost(lv) {
   const u = DEFENSE.unit.upgrade;
-  return Math.round(u.costBase * Math.pow(u.costGrowth, lv));
+  return u.costBase + lv * (u.costStep ?? 1); // 선형 — 25골드부터 레벨당 +1
 }
 function sumUpgradeSpent(lv) {
   let s = 0;

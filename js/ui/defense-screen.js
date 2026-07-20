@@ -25,6 +25,7 @@ let started = false;      // '시작하기'를 누르기 전엔 월드가 돌지
 let dangerLevel = 0;      // 패배 임박 경보 단계(0/1/2) — 임계를 넘을 때만 1회 울린다
 let sheetMode = null;     // 하단 컨텍스트 시트: null/'summon'/'refund'/'gamble'
 let rfFilter = { maxRarity: 1, element: 'all' }; // 반환 조건(성급 이하 · 성향)
+let autoMergeMax = 0;     // 자동 합성 고정 성급(0=끔) — 소환할 때마다 이하 그룹 자동 합성(설정 영속)
 let gambleTimer = null;   // 주사위 굴림 애니메이션 타이머
 let rolling = false;      // 주사위 굴리는 중
 
@@ -306,6 +307,7 @@ export function render(root) {
   // 전투 배속 — 저장된 값에서 이어받아 칩에 반영
   speed = clampSpeed(getState().settings?.rdSpeed);
   updateSpeedChip();
+  autoMergeMax = Math.max(0, Math.min(5, Math.round(Number(getState().settings?.rdAutoMerge) || 0))); // 자동 합성 고정(영속)
   document.getElementById('rd-speed').addEventListener('click', () => {
     speed = speed >= 3 ? 1 : speed + 1;
     setSetting('rdSpeed', speed);
@@ -431,9 +433,9 @@ function updateHud() {
     re.textContent = `${ELEM_GLYPH[run.stageElement]} ${ELEMENT_LABEL[run.stageElement]}`;
     re.style.color = ELEMENT_COLOR[run.stageElement];
   }
-  // 하단바 '합성' 배지 — 같은 영웅 3장이 모이면 점등
+  // 하단바 '합성' 배지 — 합성 가능(3장) 또는 자동 합성 고정 중이면 점등
   const mergeBadge = document.querySelector('#rd-nav-merge .nav-badge');
-  if (mergeBadge) mergeBadge.hidden = engine.mergeableHeroes(run).length === 0;
+  if (mergeBadge) mergeBadge.hidden = autoMergeMax === 0 && engine.mergeableHeroes(run).length === 0;
 
   // 열려 있는 시트 내용 실시간 갱신(소환 비용 / 속성단련 / 반환 미리보기 / 도박 쿨다운)
   if (sheetMode === 'summon') updateSummonSheet();
@@ -572,12 +574,20 @@ function doElemUpgrade(el, kind) {
   } else { vibrate(8); }
 }
 
+// 자동 합성 고정 — 소환 직후 이하 성급 그룹을 자동으로 합성(소환하다 요건되면 바로 합쳐진다)
+function autoMergeIfPinned() {
+  if (autoMergeMax > 0 && run) {
+    const n = engine.mergeAuto(run, autoMergeMax);
+    if (n) { play('claim'); floatText(window.innerWidth / 2, window.innerHeight * 0.34, `자동 합성 ${n}회`, 'gold'); syncUnits(); updateHud(); }
+  }
+}
 function doSummon1() {
   const u = engine.summon(run);
   if (!u) { summonFail(); return; }
   summonFanfare(u.rarity);
   syncUnits();
   updateHud();
+  autoMergeIfPinned();
 }
 function doSummon10() {
   const made = engine.summonMany(run, 10);
@@ -585,6 +595,7 @@ function doSummon10() {
   syncUnits();
   updateHud();
   startReveal(made);
+  autoMergeIfPinned();
 }
 function doRefundBulk() {
   const { count, gold } = engine.refundBulk(run, rfFilter);
@@ -685,14 +696,15 @@ function openMergePicker() {
   box.className = 'rd-merge-picker';
   const render = () => {
     const groups = engine.mergeableHeroes(run);
-    // 자동 합성 — N성 이하 '같은 영웅 3장' 그룹을 한 번에 전부 합성 (수석)
+    // 자동 합성 고정 — 성급을 켜두면 지금 한 번 합성 + 소환할 때마다 그 이하 그룹을 자동 합성(수석)
     const autoRow = `
       <div class="rd-merge-auto">
-        <span>자동 합성</span>
+        <span>자동 합성 고정</span>
         <div class="rd-chips">
-          ${[2, 3, 4, 5].map((r) => `<button class="rd-chip" data-auto="${r}">${r}★ 이하</button>`).join('')}
+          ${[2, 3, 4, 5].map((r) => `<button class="rd-chip${autoMergeMax === r ? ' on' : ''}" data-auto="${r}">${r}★ 이하</button>`).join('')}
         </div>
-      </div>`;
+      </div>
+      <p class="rd-merge-hint">켜두면 <b>소환할 때마다</b> 그 성급 이하가 자동으로 합성돼요</p>`;
     const list = groups.length
       ? groups.map((g) => `
         <button class="rd-merge-opt r${g.rarity}" data-hero="${g.heroId}">
@@ -710,12 +722,16 @@ function openMergePicker() {
   box.addEventListener('click', (e) => {
     const auto = e.target.closest('[data-auto]');
     if (auto) {
-      const n = engine.mergeAuto(run, Number(auto.dataset.auto));
-      if (n) {
-        play('epic'); vibrate(20);
-        floatText(window.innerWidth / 2, window.innerHeight * 0.4, `자동 합성 ${n}회!`, 'gold');
-        syncUnits(); updateHud(); render();
-      } else { vibrate(8); }
+      const r = Number(auto.dataset.auto);
+      autoMergeMax = autoMergeMax === r ? 0 : r; // 고정 토글
+      setSetting('rdAutoMerge', autoMergeMax);
+      vibrate(12);
+      if (autoMergeMax) {
+        const n = engine.mergeAuto(run, autoMergeMax);
+        if (n) { play('epic'); floatText(window.innerWidth / 2, window.innerHeight * 0.4, `자동 합성 ${n}회!`, 'gold'); }
+        syncUnits(); updateHud();
+      }
+      render();
       return;
     }
     const btn = e.target.closest('.rd-merge-opt');
