@@ -1947,10 +1947,17 @@
   50% { filter: drop-shadow(0 0 9px currentColor) drop-shadow(0 0 3px #fff); }
 }
 .rd-name3d {
+  display: inline-flex; align-items: center; gap: 3px;
   font-size: 9px; font-weight: 700; line-height: 1; color: #f0e6cf;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
-  padding: 1px 4px; border-radius: 3px; background: rgba(12, 9, 6, 0.5);
+  padding: 1px 4px 1px 2px; border-radius: 3px; background: rgba(12, 9, 6, 0.5);
 }
+/* 공격 형태 아이콘 — 이름 앞 작은 네모(창·칼·활·기마) */
+.rd-wpn { display: inline-flex; width: 13px; height: 13px; flex: none; padding: 1.5px; border-radius: 3px; background: rgba(0, 0, 0, 0.55); color: #ffd76a; box-shadow: inset 0 0 0 1px rgba(232, 196, 99, 0.35); }
+.rd-wpn svg { width: 100%; height: 100%; display: block; }
+.rd-wpn.wpn-bow { color: #8fe0b0; }
+.rd-wpn.wpn-cavalry { color: #c9a6f0; }
+.rd-wpn.wpn-spear { color: #f0b48a; }
 
 /* 유닛(소환한 영웅) — 탭하면 단련/합성/반환 패널 */
 .rd-unit { position: absolute; left: 0; top: 0; width: 0; height: 0; will-change: transform; pointer-events: auto; cursor: pointer; }

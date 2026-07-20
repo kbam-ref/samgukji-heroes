@@ -214,6 +214,14 @@ export const HERO_WEAPON = {
   // 그 외 21인은 참격(slash) — 기본값
 };
 
+// 공격 형태 아이콘(이름 앞 표기) — 창(spear)·칼(sword)·활(bow)·기마(cavalry). 기본 sword.
+export const HERO_ATTACK_TYPE = {
+  sunshangxiang: 'bow', ganning: 'bow', zhugeliang: 'bow', xunyu: 'bow',
+  lvbu: 'cavalry', zhaoyun: 'cavalry', zhangliao: 'cavalry', caohong: 'cavalry',
+  zhangfei: 'spear', xiahoudun: 'spear', jiling: 'spear', chengpu: 'spear', huaxiong: 'spear', handang: 'spear', zhoucang: 'spear',
+  // 나머지(관우·조조·주유·손책·동탁·유비·원소·요화·우금)는 칼(기본)
+};
+
 // 등급별 소환 후보(영웅 id). 소환·합성 시 등급 안에서 랜덤 1명.
 export const SUMMON_POOL = [1, 2, 3, 4, 5, 6].reduce((pool, r) => {
   pool[r] = HEROES.filter((h) => h.rarity === r).map((h) => h.id);

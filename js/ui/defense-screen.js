@@ -1,7 +1,7 @@
 // 삼국지 랜덤 디펜스 — 화면(DOM·연출). 엔진(systems/defense.js)을 rAF로 돌리고 상태를 그린다.
 // 성능: 적/유닛 DOM을 id로 재사용하고 transform(translate3d)만 매 프레임 갱신(레이아웃 회피).
 
-import { DEFENSE, ELEMENT_COLOR, ELEMENT_LABEL, SIZE_LABEL, HERO_WEAPON } from '../data/defense.js';
+import { DEFENSE, ELEMENT_COLOR, ELEMENT_LABEL, SIZE_LABEL, HERO_WEAPON, HERO_ATTACK_TYPE } from '../data/defense.js';
 import { HEROES, RARITY } from '../data/heroes.js';
 import * as engine from '../systems/defense.js';
 import * as r3d from './defense-3d.js'; // 3D 필드 렌더러(Three.js 빌보드)
@@ -16,6 +16,18 @@ import { play, vibrate } from './sound.js';
 
 const HERO_NAME = new Map(HEROES.map((h) => [h.id, h.name]));
 const ELEM_GLYPH = { water: '水', fire: '火', earth: '土', wind: '風' }; // 속성 배지 글자 — 색만으론 헷갈려서
+
+// 공격 형태 아이콘 — 이름 앞 작은 네모 안에 창·칼·활·기마 모양
+const WEAPON_SVG = {
+  spear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20 19 5"/><path d="M19 5 13 6.5 M19 5 17.5 11"/></svg>',
+  sword: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18 17 7 20 4"/><path d="M5 17 3 21 M7 19 9 21 M15 9 18 12"/></svg>',
+  bow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3a13 13 0 0 1 0 18"/><path d="M7 3 7 21"/><path d="M5 12 20 12 16.5 9 M20 12 16.5 15"/></svg>',
+  cavalry: '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M4 21c0-6 3-9.5 7.5-10.5C12.5 7 15.5 5 19 5c-1 2-1 3.2 0 4.3l2 1.2-3.2 1.8c.2 4-2 7.2-4.3 8.9h-2.3c2.2-2 3.3-4.3 3.2-7.2l-3.4 1c-1.8 1-2.7 4-2.7 8z"/></svg>',
+};
+function weaponIcon(heroId) {
+  const t = HERO_ATTACK_TYPE[heroId] || 'sword';
+  return `<i class="rd-wpn wpn-${t}">${WEAPON_SVG[t]}</i>`;
+}
 
 // ── 3D 주사위 — 6면 핀홀 큐브. 굴릴 땐 텀블 애니, 멈추면 결과 면을 앞으로 회전(입체적으로 굴러가는 느낌) ──
 const DIE_PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
@@ -843,7 +855,7 @@ function styleLabel(n, u) {
   n.starEl.className = `rd-star3d${king ? ' king' : ''}`;
   n.starEl.style.color = ELEMENT_COLOR[u.element];
   n.starEl.textContent = king ? '★' : '★'.repeat(u.rarity);
-  n.nameEl.textContent = HERO_NAME.get(u.heroId);
+  n.nameEl.innerHTML = weaponIcon(u.heroId) + HERO_NAME.get(u.heroId); // 무기 아이콘 + 이름
   n.rarity = u.rarity; n.element = u.element;
 }
 function syncUnits() {
