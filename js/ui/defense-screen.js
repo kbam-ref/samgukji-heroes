@@ -5,11 +5,9 @@ import { DEFENSE, ELEMENT_COLOR, ELEMENT_LABEL, SIZE_LABEL, HERO_WEAPON } from '
 import { HEROES, RARITY } from '../data/heroes.js';
 import * as engine from '../systems/defense.js';
 import * as meta from '../systems/rd-meta.js';
-import { on } from '../core/events.js';
 import { getState, setSetting } from '../core/state.js';
 import { fmt } from './format.js';
 import { floatText, flash } from './effects.js';
-import { showModal } from './modal.js';
 import { play, vibrate } from './sound.js';
 
 const HERO_NAME = new Map(HEROES.map((h) => [h.id, h.name]));
@@ -31,7 +29,6 @@ let fieldW = 0;
 let fieldH = 0;
 let saveTick = 0;
 let drag = null; // { uid, startX, startY, moved }
-let metaOff = null; // rd:meta 구독 해제
 
 // 화면 좌표 → 필드 % (드래그 위치 계산)
 function fieldPct(clientX, clientY) {
@@ -150,7 +147,7 @@ function hud() {
       <div class="rd-stat"><b id="rd-stage">1</b><span>/ ${cap} 라운드</span></div>
       <div class="rd-stat rd-gold"><b id="rd-gold">0</b><span>골드</span></div>
       <div class="rd-stat rd-alive"><b id="rd-alive">0</b><span>/ ${DEFENSE.wave.loseAt} 적</span></div>
-      <div class="rd-stat rd-ticket"><b id="rd-tk">0</b><span>도전권</span></div>
+      <div class="rd-stat rd-best"><b id="rd-best">${meta.best().stage}</b><span>최고</span></div>
     </div>`;
 }
 
@@ -163,10 +160,10 @@ function trackRectStyle() {
 
 export function render(root) {
   destroy();
-  // 탭 전환·앱 재실행에도 런 유지(인메모리) → 없으면 이어하기 세이브(무료) → 없으면 티켓 소모하고 새 런.
+  // 탭 전환·앱 재실행에도 런 유지(인메모리) → 없으면 이어하기 세이브 → 없으면 새 런(아케이드: 언제나 가능).
   if (!run || run.gameOver || run.won) {
     run = loadRun();
-    if (!run) run = startFreshRun(); // 티켓 없으면 null → 아래에서 티켓 없음 화면
+    if (!run) run = engine.createRun({});
   }
 
   root.insertAdjacentHTML(
@@ -194,10 +191,7 @@ export function render(root) {
       </div>
       <div class="rd-controls sub">
         <button class="btn rd-gamble" id="rd-gamble">
-          <b>도박</b><span>골드 ${DEFENSE.gamble.cost}</span>
-        </button>
-        <button class="btn rd-shop" id="rd-shop">
-          <b>성장</b><span>옥구슬</span>
+          <b>도박</b><span>골드 ${DEFENSE.gamble.cost}에 한탕</span>
         </button>
       </div>
     </section>`
@@ -295,29 +289,20 @@ export function render(root) {
     }
   });
 
-  document.getElementById('rd-shop').addEventListener('click', openShop);
-  metaOff = on('rd:meta', updateHud);
-
   window.addEventListener('resize', measureField);
   document.addEventListener('visibilitychange', onHide);
   window.addEventListener('pagehide', saveRun);
 
   updateHud();
-  if (run) {
-    shownArena = '';
-    syncUnits();
-    syncEnemies();
-    updateBg();
-    last = performance.now();
-    rafId = requestAnimationFrame(loop);
-  } else {
-    showNoTicket(); // 티켓이 없어 새 런을 시작 못 함
-  }
+  shownArena = '';
+  syncUnits();
+  syncEnemies();
+  updateBg();
+  last = performance.now();
+  rafId = requestAnimationFrame(loop);
 }
 
 function updateHud() {
-  const tk = document.getElementById('rd-tk');
-  if (tk) tk.textContent = meta.tickets();
   if (!run) return;
   const s = document.getElementById('rd-stage');
   const g = document.getElementById('rd-gold');
@@ -480,10 +465,9 @@ function consumeFx() {
       play('foehit');
     } else if (fx.type === 'stageClear') {
       play('clear');
-      // 방금 깬 스테이지(fx.stage - 1)가 보스 스테이지였으면 옥구슬 보상
+      // 방금 깬 스테이지(fx.stage - 1)가 보스 스테이지였으면 알린다 (보상 무료소환권은 엔진이 지급)
       if (engine.isBossStage(fx.stage - 1)) {
-        const j = meta.bossClearReward();
-        floatText(window.innerWidth / 2, 120, `보스 격파! 옥구슬 +${j}`, 'gold');
+        floatText(window.innerWidth / 2, 120, '보스 격파! 무료 소환', 'gold');
       }
       updateHud();
     } else if (fx.type === 'bossReward') {
@@ -527,7 +511,7 @@ function showOver(won) {
   const reachedStage = run.stage;
   const sec = Math.round(run.elapsed);
   clearRun(); // 런 종료 → 이어하기 세이브 삭제(패배 시 처음부터)
-  const reward = meta.recordRun(reachedStage, sec, won); // 최고기록·클리어 옥구슬
+  const newBest = meta.recordRun(reachedStage, sec, won); // 최고 라운드 갱신
   const b = meta.best();
   const over = document.getElementById('rd-over');
   if (!over) return;
@@ -536,78 +520,15 @@ function showOver(won) {
   over.innerHTML = `
     <div class="rd-over-card">
       <b>${won ? `${engine.stageCap()}라운드 클리어!` : '패배'}</b>
-      <span>${won ? '천하를 지켜냈다' : `${reachedStage}라운드에서 무너졌다`} · 최고 ${b.stage}라운드${reward ? ` · 옥구슬 +${reward}` : ''}</span>
-      <button class="btn primary" id="rd-retry">다시 시작 (도전권 1)</button>
-      <button class="btn" id="rd-over-shop">성장 상점</button>
+      <span>${won ? '천하를 지켜냈다' : `${reachedStage}라운드에서 무너졌다`} · 최고 ${b.stage}라운드${newBest ? ' · 신기록!' : ''}</span>
+      <button class="btn primary" id="rd-retry">다시 시작</button>
     </div>`;
-  document.getElementById('rd-retry').addEventListener('click', () => {
-    const fresh = startFreshRun();
-    if (!fresh) { showNoTicket(); return; }
-    beginRun(fresh);
-  });
-  document.getElementById('rd-over-shop').addEventListener('click', openShop);
+  document.getElementById('rd-retry').addEventListener('click', () => beginRun(startFreshRun()));
 }
 
-// 새 런 시작(티켓 1 소모). 티켓 없으면 null.
+// 새 런 시작 — 아케이드: 티켓 없이 언제나 가능
 function startFreshRun() {
-  if (!meta.consumeTicket()) return null;
-  return engine.createRun(meta.permBonuses());
-}
-
-// 티켓 없음 화면 — 옥구슬 충전 또는 시간 회복 대기
-function showNoTicket() {
-  const over = document.getElementById('rd-over');
-  if (!over) return;
-  wipeNodes();
-  const b = meta.best();
-  const ms = meta.refillMsLeft();
-  const mm = Math.floor(ms / 60000);
-  const ss = Math.floor((ms % 60000) / 1000);
-  over.hidden = false;
-  over.innerHTML = `
-    <div class="rd-over-card">
-      <b>도전권 없음</b>
-      <span>최고 ${b.stage}라운드 · 회복까지 ${mm}:${String(ss).padStart(2, '0')}</span>
-      <button class="btn primary" id="rd-charge">옥구슬 ${DEFENSE.tickets.rechargeJade}로 충전</button>
-      <button class="btn" id="rd-noticket-shop">성장 상점</button>
-    </div>`;
-  document.getElementById('rd-charge').addEventListener('click', () => {
-    if (meta.rechargeTicket()) { const f = startFreshRun(); if (f) beginRun(f); }
-    else { vibrate(8); floatText(window.innerWidth / 2, 200, '옥구슬이 모자라요', 'warn'); }
-  });
-  document.getElementById('rd-noticket-shop').addEventListener('click', openShop);
-}
-
-// 성장 상점 — 옥구슬로 영구 성장 + 도전권 충전
-function openShop() {
-  const box = document.createElement('div');
-  box.className = 'rd-shop-box';
-  const render = () => {
-    box.innerHTML = `
-      <p class="rd-shop-jade">옥구슬 <b>${fmt(meta.jade())}</b></p>
-      ${meta.PERM_KEYS.map((k) => {
-        const maxed = meta.permMaxed(k);
-        return `<button class="rd-perm" data-k="${k}" ${maxed ? 'disabled' : ''}>
-          <span class="rd-perm-name">${meta.PERM_LABEL[k]} <em>${meta.permEffectText(k)}</em></span>
-          <span class="rd-perm-cost">${maxed ? '최대' : `옥구슬 ${fmt(meta.permCost(k))}`}</span>
-        </button>`;
-      }).join('')}
-      <button class="rd-perm charge" data-charge="1" ${meta.tickets() >= meta.ticketMax() ? 'disabled' : ''}>
-        <span class="rd-perm-name">도전권 충전 <em>${meta.tickets()}/${meta.ticketMax()}</em></span>
-        <span class="rd-perm-cost">${meta.tickets() >= meta.ticketMax() ? '가득' : `옥구슬 ${fmt(DEFENSE.tickets.rechargeJade)}`}</span>
-      </button>`;
-  };
-  render();
-  box.addEventListener('click', (e) => {
-    const btn = e.target.closest('.rd-perm');
-    if (!btn || btn.disabled) return;
-    let ok = false;
-    if (btn.dataset.charge) ok = meta.rechargeTicket();
-    else ok = meta.buyPerm(btn.dataset.k);
-    if (ok) { play('claim'); render(); updateHud(); }
-    else { vibrate(8); }
-  });
-  showModal({ title: '성장 상점', body: box, actions: [{ label: '닫기' }] });
+  return engine.createRun({});
 }
 
 // ── 10연 소환 리빌 — 깃발을 하나씩 뒤집는다. 등급이 높을수록 빛·소리가 커진다(헌장 #3 가챠 연출). ──
@@ -753,7 +674,6 @@ export function destroy() {
   window.removeEventListener('pointermove', onDragMove);
   document.removeEventListener('visibilitychange', onHide);
   window.removeEventListener('pagehide', saveRun);
-  if (metaOff) { metaOff(); metaOff = null; }
   drag = null;
   enemyNodes.clear();
   unitNodes.clear();

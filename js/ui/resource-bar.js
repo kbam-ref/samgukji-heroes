@@ -15,26 +15,8 @@ const JADE_ICON = `
   <ellipse cx="7.3" cy="6.9" rx="2.7" ry="1.6" fill="rgba(255,255,255,0.45)"/>
 </svg>`;
 
-let shown = { jade: 0 };
-
+// 순수 아케이드(2026-07-20) — 메타 재화(옥구슬) 제거. 상단 바는 비운다(비면 CSS가 접는다).
+// 인런 재화(골드)는 방어 화면 HUD에만 표시.
 export function renderResourceBar(root) {
-  const s = getState();
-  shown = { jade: s.resources.jade };
-
-  root.innerHTML = `
-    <div class="resource jade" id="res-jade">
-      ${JADE_ICON}<b>${fmt(shown.jade)}</b><span class="res-label">옥구슬</span>
-    </div>
-  `;
-
-  on('jade', ({ total }) => update('jade', total));
-}
-
-function update(kind, total) {
-  const box = document.getElementById(`res-${kind}`);
-  if (!box) return;
-  const num = box.querySelector('b');
-  countUp(num, shown[kind], total, { duration: 400, format: fmt });
-  pulse(box);
-  shown[kind] = total;
+  root.innerHTML = '';
 }

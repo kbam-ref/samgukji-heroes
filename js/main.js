@@ -140,12 +140,9 @@ function boot() {
   }
   on('attendance:claim', () => setTimeout(maybeShowFtue, 400));
 
-  // 타이틀 → 출정을 누르면 보상 흐름(복귀→출석→온보딩)이 시작된다
-  showTitle(() => {
-    const gain = computeOfflineGain(save, awaySeconds);
-    if (gain) showOfflineReward(gain);
-    else if (!maybeShowAttendance()) maybeShowFtue();
-  });
+  // 순수 아케이드(2026-07-20) — 옥구슬 제거로 복귀보상·출석·온보딩 모달을 걷어냈다.
+  // 시작하기를 누르면 곧장 전장으로 (보상 흐름 없음).
+  showTitle();
 
   // 전투 배속 — 설정의 speed 배율 (x1/x2). 방치 계산(killRate)은 실측 기준 유지
   const loop = startLoop((dt) => battle.tick(dt * (getState().settings?.speed || 1)));
