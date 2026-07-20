@@ -2023,6 +2023,13 @@
 
 /* 적 — 트랙을 걸어서 돈다 */
 .rd-enemy { position: absolute; left: 0; top: 0; width: 0; height: 0; will-change: transform; z-index: 2; }
+/* 발밑 그림자 — 걸음에 맞춰 커졌다 작아진다(딛으면 크게, 뜨면 작게) → 진짜 걷는 느낌 */
+.rd-enemy::before {
+  content: ''; position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
+  width: calc(20px * var(--sz, 1)); height: calc(6px * var(--sz, 1)); border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.42), transparent);
+  animation: rd-walk-shadow 0.5s ease-in-out infinite;
+}
 .rd-enemy .rd-sprite {
   position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
   width: calc(30px * var(--sz, 1)); height: calc(38px * var(--sz, 1));
@@ -2031,11 +2038,21 @@
   animation: rd-walk 0.5s ease-in-out infinite;
 }
 .rd-enemy.boss .rd-sprite { filter: drop-shadow(0 0 8px rgba(200, 60, 48, 0.7)) drop-shadow(0 3px 3px rgba(0,0,0,0.6)); }
+/* 병사마다 걸음 박자·속도를 어긋내 우르르 행군하는 느낌(딱 맞으면 로봇 같다) */
+.rd-enemy:nth-child(2n) .rd-sprite, .rd-enemy:nth-child(2n)::before { animation-duration: 0.57s; animation-delay: -0.19s; }
+.rd-enemy:nth-child(3n) .rd-sprite, .rd-enemy:nth-child(3n)::before { animation-duration: 0.44s; animation-delay: -0.33s; }
+.rd-enemy:nth-child(5n) .rd-sprite, .rd-enemy:nth-child(5n)::before { animation-duration: 0.51s; animation-delay: -0.25s; }
+/* 걸음걸이 — 좌우로 무게중심을 옮기며 두 번 딛는다(딛을 때 눌리고, 뜰 때 늘어난다) */
 @keyframes rd-walk {
-  0%, 100% { transform: translateX(-50%) translateY(0) rotate(-2deg) scale(1, 1); }
-  25% { transform: translateX(-50%) translateY(-4px) rotate(1deg) scale(0.98, 1.03); }
-  50% { transform: translateX(-50%) translateY(0) rotate(3deg) scale(1.02, 0.98); }
-  75% { transform: translateX(-50%) translateY(-4px) rotate(-1deg) scale(0.98, 1.03); }
+  0%   { transform: translateX(-50%) translateY(0) rotate(-3.5deg) scale(1.04, 0.96); }  /* 왼발 딛고 눌림 */
+  25%  { transform: translateX(-50%) translateY(-5px) rotate(0deg) scale(0.97, 1.05); }   /* 떠오름 */
+  50%  { transform: translateX(-50%) translateY(0) rotate(3.5deg) scale(1.04, 0.96); }    /* 오른발 딛고 눌림 */
+  75%  { transform: translateX(-50%) translateY(-5px) rotate(0deg) scale(0.97, 1.05); }   /* 떠오름 */
+  100% { transform: translateX(-50%) translateY(0) rotate(-3.5deg) scale(1.04, 0.96); }
+}
+@keyframes rd-walk-shadow {
+  0%, 50%, 100% { transform: translateX(-50%) scale(1); opacity: 0.48; }     /* 발 딛을 때 그림자 크게 */
+  25%, 75%      { transform: translateX(-50%) scale(0.72); opacity: 0.28; }   /* 떠오를 때 작게 */
 }
 /* 처치 연출 — 번쩍이며 납작하게 스러진다 */
 .rd-enemy.dying { opacity: 0; transition: opacity 0.26s ease-in; }
