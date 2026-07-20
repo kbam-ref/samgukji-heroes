@@ -2199,7 +2199,7 @@
 /* ── 하단 도크 + 컨텍스트 시트 — 액션 옵션을 여기 펼친다. 도크는 고정 높이라 필드가 안 흔들리고,
       시트는 도크 안에 담겨(overflow) 전투 화면을 침범하지 않는다 (v94 수석: 메인화면과 분리). ── */
 .rd-dock {
-  position: relative; margin: 0 14px; height: 150px; flex: none;
+  position: relative; margin: 0 14px; height: 190px; flex: none;
   display: flex; align-items: center; justify-content: center;
 }
 .rd-tip {
@@ -2279,12 +2279,21 @@
 .rd-auto-switch.on .rd-switch { background: #57bd86; }
 .rd-auto-switch.on .rd-switch i { transform: translateX(14px); background: #fff; }
 
-/* 도박 주사위 — 3D 핀홀 큐브 (v104: 강한 아이소메트릭 + 면 음영으로 확실히 서 있게) */
-.rd-dice { display: flex; justify-content: center; gap: 30px; margin: 12px 0 14px; perspective: 300px; }
+/* 도박 — 프리미엄 주사위: 펠트 테이블 플래터 + 골드 베벨 큐브 */
+.rd-dice {
+  position: relative; display: flex; justify-content: center; gap: 34px;
+  margin: 4px 0 8px; padding: 9px 0 5px; perspective: 360px;
+}
+.rd-dice::before { /* 펠트 도박 테이블 (금테) */
+  content: ''; position: absolute; left: 50%; top: 52%; transform: translate(-50%, -50%);
+  width: 200px; height: 82px; border-radius: 50%; z-index: 0;
+  background: radial-gradient(ellipse at 50% 38%, #34614a, #1d3829 68%, #132419);
+  box-shadow: inset 0 0 0 2px rgba(228, 197, 92, 0.38), inset 0 4px 16px rgba(0, 0, 0, 0.55), 0 5px 14px rgba(0, 0, 0, 0.45);
+}
 .rd-die {
-  width: 52px; height: 52px; position: relative; transform-style: preserve-3d;
+  width: 58px; height: 58px; position: relative; transform-style: preserve-3d; z-index: 1;
   transform: rotateX(-25deg) rotateY(-32deg);
-  filter: drop-shadow(4px 8px 7px rgba(0, 0, 0, 0.55));
+  filter: drop-shadow(4px 10px 9px rgba(0, 0, 0, 0.6));
 }
 .rd-die.settle { transition: transform 0.5s cubic-bezier(0.2, 1.5, 0.35, 1); }
 .rd-die.rolling { animation: rd-die-tumble 0.4s linear infinite; }
@@ -2293,36 +2302,50 @@
   100% { transform: rotateX(396deg) rotateY(324deg) rotateZ(216deg); }
 }
 .rd-die-face {
-  position: absolute; inset: 0; border-radius: 10px; backface-visibility: hidden;
-  background: linear-gradient(150deg, #f7f0e2, #d6cab0);
-  border: 1px solid #b6a680;
-  display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr); padding: 7px; gap: 1px;
+  position: absolute; inset: 0; border-radius: 13px; backface-visibility: hidden;
+  background: linear-gradient(150deg, #fdf7ec 0%, #efe2c9 55%, #dccdae 100%);
+  border: 1px solid #cbb787;
+  box-shadow: inset 0 0 0 2px rgba(255, 250, 240, 0.55), inset 0 -4px 8px rgba(120, 96, 54, 0.32), inset 0 3px 5px rgba(255, 255, 255, 0.6);
+  display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr); padding: 8px; gap: 1px;
 }
 .rd-die-face i { display: block; }
 .rd-die-face .rd-pip {
-  width: 9px; height: 9px; border-radius: 50%; align-self: center; justify-self: center;
-  background: radial-gradient(circle at 38% 32%, #4a3418, #221404);
-  box-shadow: inset 0 -1px 1px rgba(0, 0, 0, 0.55);
+  width: 10px; height: 10px; border-radius: 50%; align-self: center; justify-self: center;
+  background: radial-gradient(circle at 36% 30%, #6b4a22, #2a1806 70%);
+  box-shadow: inset 0 -1px 1.5px rgba(0, 0, 0, 0.6), 0 0.5px 0 rgba(255, 255, 255, 0.5);
 }
-.rd-die-face.f1 { transform: rotateY(0deg) translateZ(26px); }
-.rd-die-face.f2 { transform: rotateY(180deg) translateZ(26px); }
-.rd-die-face.f3 { transform: rotateY(90deg) translateZ(26px); }
-.rd-die-face.f4 { transform: rotateY(-90deg) translateZ(26px); }
-.rd-die-face.f5 { transform: rotateX(90deg) translateZ(26px); }
-.rd-die-face.f6 { transform: rotateX(-90deg) translateZ(26px); }
+.rd-die-face.f1 .rd-pip { background: radial-gradient(circle at 36% 30%, #e2604a, #9c2718 70%); } /* 1은 붉은 눈 (전통 주사위) */
+.rd-die-face.f1 { transform: rotateY(0deg) translateZ(29px); }
+.rd-die-face.f2 { transform: rotateY(180deg) translateZ(29px); }
+.rd-die-face.f3 { transform: rotateY(90deg) translateZ(29px); }
+.rd-die-face.f4 { transform: rotateY(-90deg) translateZ(29px); }
+.rd-die-face.f5 { transform: rotateX(90deg) translateZ(29px); }
+.rd-die-face.f6 { transform: rotateX(-90deg) translateZ(29px); }
 /* 면 음영 — 윗면 밝게, 옆/아랫면 어둡게 = 큐브 볼륨감 */
 .rd-die-face.f5 { filter: brightness(1.16); }
 .rd-die-face.f3 { filter: brightness(0.82); }
 .rd-die-face.f4 { filter: brightness(0.72); }
 .rd-die-face.f6 { filter: brightness(0.66); }
 .rd-die.lucky .rd-die-face {
-  background: linear-gradient(150deg, #fce6a8, #e0b24e); border-color: var(--gold-bright);
-  box-shadow: 0 0 12px rgba(228, 197, 92, 0.6);
+  background: linear-gradient(150deg, #fff0c2, #e9b84e); border-color: #f5d878;
+  box-shadow: inset 0 0 0 2px rgba(255, 240, 190, 0.7), 0 0 16px rgba(240, 196, 78, 0.75);
 }
-.rd-gm-info { text-align: center; font-size: 11px; color: var(--paper-dim); margin-bottom: 7px; }
-.rd-gm-info em { color: var(--gold-bright); font-style: normal; }
-.rd-gm-lucky { color: var(--gold-bright); font-weight: 800; }
-.rd-gm-go { width: 100%; min-height: 46px; font-weight: 700; justify-content: center; }
+.rd-die.lucky .rd-die-face .rd-pip { background: radial-gradient(circle at 36% 30%, #7a4a12, #3a2205 70%); }
+.rd-gm-info { text-align: center; font-size: 11.5px; color: var(--paper-dim); margin-bottom: 9px; }
+.rd-gm-info em { color: var(--gold-bright); font-style: normal; font-weight: 700; }
+.rd-gm-lucky {
+  display: inline-block; color: #ffe9a8; font-weight: 900; font-size: 14px; letter-spacing: 0.04em;
+  text-shadow: 0 0 10px rgba(240, 196, 78, 0.9); animation: rd-lucky-pop 0.5s var(--ease-spring);
+}
+@keyframes rd-lucky-pop { 0% { transform: scale(0.4); opacity: 0; } 60% { transform: scale(1.25); } 100% { transform: scale(1); opacity: 1; } }
+.rd-gm-go {
+  width: 100%; min-height: 50px; font-weight: 800; font-size: 15px; justify-content: center;
+  letter-spacing: 0.02em; border-radius: 13px;
+  box-shadow: inset 0 1px 0 rgba(255, 240, 224, 0.4), 0 4px 14px rgba(228, 197, 92, 0.28);
+}
+.rd-gm-go::before { content: '🎲'; margin-right: 7px; font-size: 16px; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.4)); }
+.rd-gm-go:disabled { opacity: 0.55; }
+.rd-gm-go:disabled::before { content: '⏳'; }
 
 /* 라운드 제한 타이머 (v93) — 필드 상단 중앙, 10초 이하 빨강 */
 .rd-timer {

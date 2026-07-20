@@ -164,16 +164,12 @@ function enemyCut(id) {
 }
 
 // 전장 배경(아레나) — ~13라운드마다 교체
-const ARENAS = ['arena-plain', 'arena-camp', 'arena-stone', 'arena-snow'];
+const ARENAS = ['arena-plain', 'arena-grass', 'arena-sand', 'arena-camp', 'arena-stone', 'arena-marsh', 'arena-ash', 'arena-snow', 'arena-jade', 'arena-crimson'];
 let shownArena = '';
 function updateBg() {
-  const el = document.getElementById('rd-bg');
-  if (!el || !run) return;
-  const id = ARENAS[Math.floor((run.stage - 1) / 13) % ARENAS.length];
-  if (id !== shownArena) {
-    el.style.backgroundImage = `url('./assets/bg/${id}.png')`;
-    shownArena = id;
-  }
+  if (!run) return;
+  const id = ARENAS[Math.floor((run.stage - 1) / 3) % ARENAS.length]; // ~3라운드마다 전장 교체(30라운드에 10종 순환)
+  if (id !== shownArena) { r3d.setArena(`./assets/bg/${id}.png`); shownArena = id; } // 3D 전장 바닥에 아레나 그림
 }
 
 function measureField() {
@@ -882,8 +878,8 @@ function syncEnemies() {
 function consumeFx() {
   for (const fx of engine.drainFx(run)) {
     if (fx.type === 'attack') {
-      r3d.lunge(fx.uid, fx.ex, fx.ey); // 3D 빌보드가 그 적을 향해 살짝 몸을 던진다
-      spawnShot(fx); // 참격/화살이 적에게 날아가 명중 불꽃
+      r3d.lunge(fx.uid, fx.ex, fx.ey); // 그 적을 향해 살짝 돌진
+      r3d.spawnShot3d(fx.ux, fx.uy, fx.ex, fx.ey, HERO_WEAPON[fx.heroId] || 'slash', ELEMENT_COLOR[fx.element] || '#e9d6a0', reduceMotion); // 3D 참격/화살 + 명중 스파크
     } else if (fx.type === 'kill') {
       play('foehit');
     } else if (fx.type === 'stageClear') {
@@ -902,9 +898,9 @@ function consumeFx() {
       floatText(window.innerWidth / 2, window.innerHeight * 0.3, `보스 격파! ${parts.join(' · ')}`, 'gold');
       syncUnits();
     } else if (fx.type === 'aoe') {
-      // 초월 광역기 — 유닛 자리에서 파문이 전장을 훑고 섬광
+      // 초월 광역기 — 유닛 자리에서 3D 파문이 전장을 훑고 섬광
       play('legend'); flash('gold'); vibrate(28);
-      aoeRing(fx.x, fx.y, fx.element);
+      r3d.spawnAoe3d(fx.x, fx.y, ELEMENT_COLOR[fx.element] || '#ffe6a2');
     } else if (fx.type === 'summon') {
       syncUnits();
     } else if (fx.type === 'prepEnd') {

@@ -1,7 +1,7 @@
 // 서비스워커 — 전체 에셋을 캐시해 비행기 모드에서도 완전히 플레이 가능하게 한다.
 // 에셋이 바뀌면 CACHE 버전을 올린다.
 
-const CACHE = 'samgukji-v106';
+const CACHE = 'samgukji-v107';
 
 // 영웅 초상 — js/data/heroes.js의 id와 일치 (24명)
 const HERO_IDS = [
@@ -24,6 +24,7 @@ const BG_IDS = [
   'village-plain', 'fortress-gate', 'burning-city', 'river-shore', 'red-cliffs',
   'mountain-pass', 'palace-court', 'jungle', 'night-camp', 'gacha-sky',
   'arena-plain', 'arena-camp', 'arena-stone', 'arena-snow',
+  'arena-grass', 'arena-sand', 'arena-ash', 'arena-marsh', 'arena-jade', 'arena-crimson',
   'loading', // 로딩 화면 전장 배경 (Scenario 생성)
 ];
 
@@ -50,6 +51,9 @@ const IMAGE_ASSETS = [
   ...HERO_IDS.map((id) => `./assets/heroes-atk-cut/${id}.png`),
   ...ENEMY_IDS.map((id) => `./assets/enemies-cut/${id}.png`),
   ...ENEMY_IDS.map((id) => `./assets/enemies-atk-cut/${id}.png`),
+  // 3D 모델(GLB) — 방어 전장용. best-effort(미생성분은 조용히 건너뜀, 런타임은 빌보드 폴백).
+  ...HERO_IDS.map((id) => `./assets/models/${id}.glb`),
+  ...['yellow-turban', 'dong-soldier', 'warlord-soldier', 'yuan-soldier', 'wu-soldier', 'nanman-soldier', 'zhangjiao'].map((id) => `./assets/models/${id}.glb`),
 ];
 
 // 코어(HTML·CSS·JS) — 하나라도 빠지면 앱이 백지가 되므로 원자적으로 담는다
@@ -66,6 +70,8 @@ const ASSETS = [
   './js/main.js',
   './js/version.js',
   './js/vendor/three.module.js',
+  './js/vendor/GLTFLoader.js',
+  './js/vendor/BufferGeometryUtils.js',
   './js/core/events.js',
   './js/core/state.js',
   './js/core/save.js',

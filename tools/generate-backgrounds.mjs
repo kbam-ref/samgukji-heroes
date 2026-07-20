@@ -60,6 +60,13 @@ const SCENES = {
   'arena-stone': 'ancient stone-paved courtyard floor, weathered mossy flagstones, cracks, subtle torch glow at the edges',
   'arena-camp': 'trampled war-camp dirt ground, scattered straw, wooden stakes and rope, warm firelight from the sides',
   'arena-snow': 'frozen battlefield ground, snow-dusted dark earth and cracked ice, cold pale blue dusk light',
+  // 추가 아레나(v107 완성도) — 30라운드 동안 더 다양한 전장
+  'arena-grass': 'green grassland battlefield field, trampled grass and wildflowers, patches of bare earth, warm daylight',
+  'arena-sand': 'desert battlefield of rippled golden sand dunes, scattered bleached bones and broken spears, harsh sunlight',
+  'arena-ash': 'scorched black battlefield ground, cracked earth with glowing embers and drifting ash, deep red firelight',
+  'arena-marsh': 'muddy swamp battlefield ground, dark water puddles, reeds and moss over wet earth, cold misty light',
+  'arena-jade': 'imperial palace floor of polished jade-green and gold tiles, ornate dragon patterns, warm lantern glow',
+  'arena-crimson': 'blood-soaked battlefield ground, dark red stained cracked earth, broken weapons and torn banners, grim dusk light',
 };
 // 아레나는 톱다운 시점(위에서 내려다본 바닥) — 캐릭터·수평선 없이 바닥 텍스처만
 const ARENA_STYLE =
