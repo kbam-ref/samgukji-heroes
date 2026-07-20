@@ -198,19 +198,12 @@ function boot() {
     vibrate(30);
   });
 
-  // 탭을 벗어났다 돌아오면 그 시간만큼 복귀 보상
-  let hiddenAt = 0;
+  // 순수 아케이드 — 복귀 보상(옥구슬) 제거. 백그라운드 복귀 시엔 저장·클럭 리셋만.
+  // (방어 화면은 자체적으로 런을 저장/이어하기 처리한다)
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
-      hiddenAt = Date.now();
       persist(getState()); // 숨기는 순간까지는 '본 시간'
     } else {
-      if (hiddenAt) {
-        const away = (Date.now() - hiddenAt) / 1000;
-        hiddenAt = 0;
-        const g = computeOfflineGain(getState(), away);
-        if (g) showOfflineReward(g);
-      }
       loop.resetClock(); // 같은 시간이 루프에서 한 번 더 계산되지 않게
     }
   });
