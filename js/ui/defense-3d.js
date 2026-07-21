@@ -664,17 +664,33 @@ export function frame(dt) {
       let cur = n.modelObj.rotation.y, diff = yaw - cur;
       while (diff > Math.PI) diff -= 6.28318; while (diff < -Math.PI) diff += 6.28318;
       n.modelObj.rotation.y = cur + diff * Math.min(1, dt * 12); // 이동/공격 방향으로 몸 회전
-      if (n.mixer) { // 스켈레탈 — 팔다리 애니(적=걷기, 영웅=공격/대기)
-        n.mixer.update(dt);
-        n.modelObj.position.y = n.hit ? -0.06 : 0;
-        n.modelObj.rotation.z = n.isAttacker ? Math.sin(clock * 1.6 + n.phase) * 0.02 : 0;
-      } else { // 절차적(정적 모델) — 이동 시 걸음 튐, 정지 시 미세 숨쉬기, 공격 시 내려치기 스윙
+      if (n.mixer) { n.mixer.update(dt); }
+      if (n.isAttacker) {
+        // 영웅 — 공격 클립이 끝나면 중립 프레임으로 되돌려(고정 방지), 절차적 내려치기로 타격을 확실히.
+        if (n.mixer && n.attacking && n.action) {
+          const dur = n._clipDur || (n._clipDur = (n.action.getClip && n.action.getClip() ? n.action.getClip().duration : 0.5));
+          if (n.action.time >= dur - 0.02) { n.action.time = 0; n.action.paused = true; n.attacking = false; }
+        }
+        if (n.strikeT > 0) { // 내려치기 — 앞으로 숙였다 복귀 + 살짝 솟구쳐 내려침(강한 타격감)
+          n.strikeT -= dt;
+          const sp = Math.sin(Math.max(0, 1 - n.strikeT / 0.26) * Math.PI);
+          n.modelObj.rotation.x = -sp * 0.52;
+          n.modelObj.rotation.z = sp * 0.1;
+          n.modelObj.position.y = (n.hit ? -0.06 : 0) + sp * 0.09;
+        } else { // 대기 — 은은한 숨쉬기(고개만 흔드는 느낌 제거)
+          n.modelObj.rotation.x = 0;
+          n.modelObj.rotation.z = Math.sin(clock * 1.5 + n.phase) * 0.028;
+          n.modelObj.position.y = (n.hit ? -0.06 : 0) + Math.sin(clock * 2.1 + n.phase) * 0.03;
+        }
+      } else if (n.mixer) { // 적(걷기 루프)
+        n.modelObj.position.y = n.hit ? -0.06 : 0; n.modelObj.rotation.z = 0;
+      } else { // 절차적(정적 모델, 무믹서) — 걸음 튐 + 내려치기
         const t = clock * (moving ? 8.5 : 2.4) + n.phase;
         n.modelObj.position.y = (n.hit ? -0.06 : 0) + (moving ? Math.abs(Math.sin(t)) * 0.07 : Math.sin(t) * BOB_AMP * 0.6);
-        if (n.swingT > 0) { // 공격 스윙 — 앞으로 숙였다 복귀(무기 없어도 '친다'는 느낌)
-          n.swingT -= dt;
-          const sp = Math.sin((1 - n.swingT / 0.28) * Math.PI); // 0→1→0
-          n.modelObj.rotation.x = -sp * 0.6; n.modelObj.rotation.z = sp * 0.12;
+        if (n.strikeT > 0) {
+          n.strikeT -= dt;
+          const sp = Math.sin(Math.max(0, 1 - n.strikeT / 0.26) * Math.PI);
+          n.modelObj.rotation.x = -sp * 0.62; n.modelObj.rotation.z = sp * 0.12;
         } else { n.modelObj.rotation.x = 0; n.modelObj.rotation.z = moving ? Math.sin(t) * 0.05 : 0; }
       }
     } else {
@@ -739,8 +755,8 @@ export function fieldFromPx(px, py) {
 export function playAttack(uid) {
   const n = units.get(uid);
   if (!n) return;
-  if (n.action && n.isAttacker) { n.action.reset(); n.action.timeScale = 2.6; n.action.paused = false; n.action.play(); }
-  else n.swingT = 0.28; // 공격 클립 없는 모델(리깅 실패 4종) — 절차적 '내려치기' 스윙
+  if (n.action && n.isAttacker) { n.action.reset(); n.action.timeScale = 2.6; n.action.paused = false; n.action.play(); n.attacking = true; }
+  n.strikeT = 0.26; // 모든 영웅 — 절차적 '내려치기'(클립이 미묘해도 '친다'가 확실히 읽히게)
 }
 
 // 공격 순간 그 적(tx,ty%) 쪽으로 잠깐 돌진하는 연출
