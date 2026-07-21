@@ -14,27 +14,27 @@ export const BGM = [
     kind: 'music',
     lengthMs: 45000,
     prompt:
-      'Epic Chinese Three Kingdoms battle theme, refined and exciting, driving war drums, ' +
-      'soaring bamboo flute (daegeum) and gayageum zither melody, sweeping orchestral strings, ' +
-      'heroic and adventurous, seamless loop, cinematic game background music, no vocals',
+      'High-energy epic Chinese Three Kingdoms battle music, fast driving tempo, pounding war drums and taiko, ' +
+      'adrenaline-pumping propulsive rhythm, soaring heroic bamboo flute and erhu melody with a catchy memorable hook, ' +
+      'powerful orchestral brass and strings, thrilling adventurous and hype, exciting action video game loop, seamless loop, no vocals',
   },
   {
     id: 'bgm-boss',
     kind: 'music',
     lengthMs: 32000,
     prompt:
-      'Intense Three Kingdoms boss battle theme, tense and dramatic, thunderous taiko drums, ' +
-      'aggressive low strings and brass, ominous gong hits, fast heroic Chinese flute, ' +
-      'rising tension, seamless loop, cinematic, no vocals',
+      'Ferocious Three Kingdoms boss battle theme, explosive and menacing, thunderous relentless taiko drums, ' +
+      'aggressive staccato low brass and strings, screaming Chinese flute, dramatic choir-like swells and gong hits, ' +
+      'high-stakes pulse-pounding intensity, thrilling and epic, seamless loop, cinematic, no vocals',
   },
   {
     id: 'bgm-title',
     kind: 'music',
     lengthMs: 30000,
     prompt:
-      'Majestic ancient East Asian epic main theme, grand and emotional opening, slow build, ' +
-      'gayageum zither and bamboo flute over warm orchestral strings and soft taiko drums, ' +
-      'noble, hopeful and cinematic, seamless loop, no vocals',
+      'Grand exciting East Asian epic main theme, powerful heroic opening building to a triumphant swell, ' +
+      'gayageum zither and bamboo flute over soaring orchestral strings, bold brass fanfare and driving taiko drums, ' +
+      'majestic hopeful and adventurous, goosebumps cinematic game title, seamless loop, no vocals',
   },
 ];
 
