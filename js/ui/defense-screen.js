@@ -2,7 +2,7 @@
 // 성능: 적/유닛 DOM을 id로 재사용하고 transform(translate3d)만 매 프레임 갱신(레이아웃 회피).
 
 import { DEFENSE, ELEMENT_COLOR, ELEMENT_LABEL, SIZE_LABEL, HERO_WEAPON, HERO_ATTACK_TYPE } from '../data/defense.js';
-import { HEROES, RARITY } from '../data/heroes.js';
+import { HEROES, RARITY, FACTIONS, PERK_LABELS } from '../data/heroes.js';
 import * as engine from '../systems/defense.js';
 import * as r3d from './defense-3d.js'; // 3D 필드 렌더러(Three.js 빌보드)
 import * as dice3d from './dice-3d.js'; // 3D 주사위(Three.js 육면체)
@@ -15,6 +15,8 @@ import { showModal } from './modal.js';
 import { play, vibrate } from './sound.js';
 
 const HERO_NAME = new Map(HEROES.map((h) => [h.id, h.name]));
+const HERO_BY_ID = new Map(HEROES.map((h) => [h.id, h]));
+const WNAME = { bow: '활', spear: '창', sword: '칼', magic: '마법' };
 const ELEM_GLYPH = { water: '水', fire: '火', earth: '土', wind: '風' }; // 속성 배지 글자 — 색만으론 헷갈려서
 
 // 공격 형태 아이콘 — 이름 앞 작은 네모 안에 창·칼·활·기마 모양
@@ -105,6 +107,42 @@ let drag = null; // { uid, startX, startY, moved }
 // 폰 가로 전환 — 세로 전용이라 가로에선 게임 루프를 멈춘다(CSS #rotate-guard가 화면을 덮음)
 const landscapeMQ = matchMedia('(orientation: landscape) and (max-height: 600px) and (pointer: coarse)');
 
+// ── 왼쪽 정보 패널 — 영웅을 탭하면 그 영웅 상세를 표시(v114 가로) ──
+let selectedUid = null;
+function selectHero(uid) {
+  selectedUid = uid;
+  play('tap'); vibrate(6);
+  renderHeroInfo();
+}
+function renderHeroInfo() {
+  const box = document.getElementById('rd-hero-info');
+  if (!box) return;
+  const u = run && selectedUid != null ? run.units.find((x) => x.uid === selectedUid) : null;
+  if (!u) { selectedUid = null; box.innerHTML = '<p class="rd-hi-empty">영웅을 탭하면<br>정보가 나와요</p>'; return; }
+  const h = HERO_BY_ID.get(u.heroId) || {};
+  const info = DEFENSE.unit.byRarity[u.rarity] || {};
+  const atype = HERO_ATTACK_TYPE[u.heroId] || 'sword';
+  const tier = Math.min(6, u.rarity);
+  const atk = Math.round((u.base || h.base || 0) * (info.dmg || 1));
+  const rate = info.cooldown ? (1 / info.cooldown).toFixed(2) : '—';
+  box.innerHTML = `
+    <div class="rd-hi-name tier-${tier}">${weaponIcon(u.heroId)}<b>${h.name || ''}</b></div>
+    <div class="rd-hi-sub">${RARITY[u.rarity]?.name || ''} · ${FACTIONS[h.faction]?.name || '군웅'}</div>
+    ${h.title ? `<div class="rd-hi-title">「${h.title}」</div>` : ''}
+    <div class="rd-hi-badges">
+      <span class="rd-hi-elem" style="color:${ELEMENT_COLOR[u.element]}">${ELEM_GLYPH[u.element] || ''} ${ELEMENT_LABEL[u.element] || ''}</span>
+      <span class="rd-hi-wpn wpn-${atype}">${WNAME[atype] || '칼'}</span>
+    </div>
+    <ul class="rd-hi-stats">
+      <li><span>공격력</span><b>${fmt(atk)}</b></li>
+      <li><span>사거리</span><b>${info.range || '—'}</b></li>
+      <li><span>공속</span><b>${rate}/초</b></li>
+      <li><span>동시타격</span><b>${info.multi || 1}명</b></li>
+      ${info.aoe ? `<li><span>광역기</span><b>${info.aoe.interval}초</b></li>` : ''}
+    </ul>
+    ${h.perk ? `<div class="rd-hi-perk">특성 · ${PERK_LABELS[h.perk.kind] || ''} +${h.perk.value}%</div>` : ''}`;
+}
+
 // 화면 좌표 → 필드 %(3D 바닥 레이캐스트)
 function fieldFromClient(clientX, clientY) {
   const r = fieldEl.getBoundingClientRect();
@@ -142,7 +180,8 @@ function onResize() {
 }
 function onDragUp() {
   window.removeEventListener('pointermove', onDragMove);
-  drag = null; // 탭 패널 제거(수석) — 탭은 아무 것도 안 하고, 끌면 이동만
+  if (drag && !drag.moved) selectHero(drag.uid); // v114: 탭 = 왼쪽 정보 패널에 그 영웅 표시(끌면 이동)
+  drag = null;
 }
 
 // ── 이어하기 세이브 (앱 닫아도 계속) ──
@@ -317,12 +356,29 @@ export function render(root) {
     started = false;
   }
 
+  const cap = engine.stageCap();
+  const per = DEFENSE.wave.perStage;
+  const loseAt = DEFENSE.wave.loseAt;
   root.insertAdjacentHTML(
     'beforeend',
     `
     <section class="screen rd-screen">
-      ${hud()}
-      <div class="rd-field" id="rd-field">
+      <aside class="rd-info" id="rd-info">
+        <div class="rd-hud">
+          <div class="rd-stat"><b id="rd-stage">1</b><span>/ ${cap} 라운드</span></div>
+          <div class="rd-stat rd-gold"><b id="rd-gold">0</b><span>골드</span></div>
+          <div class="rd-stat rd-alive"><b id="rd-alive">0</b><span>/ ${loseAt} 화면 적</span></div>
+          <div class="rd-stat rd-time"><b id="rd-time">0:00</b><span>경과</span></div>
+        </div>
+        <div class="rd-hero-info" id="rd-hero-info"><p class="rd-hi-empty">영웅을 탭하면<br>정보가 나와요</p></div>
+      </aside>
+      <div class="rd-center">
+        <div class="rd-spawnbar" aria-hidden="true">
+          <i id="rd-spawn-fill"></i>
+          <b id="rd-spawn-txt">이번 라운드 0 / ${per} 출현</b>
+          <em id="rd-round-elem" class="rd-round-elem"></em>
+        </div>
+        <div class="rd-field" id="rd-field">
         <div class="rd-3d-wrap" id="rd-3d-wrap" aria-hidden="true"></div>
         <div class="rd-labels" id="rd-labels" aria-hidden="true"></div>
         <div class="rd-shots" id="rd-shots" aria-hidden="true"></div>
@@ -336,10 +392,9 @@ export function render(root) {
         <button class="rd-next" id="rd-next" hidden>다음 라운드 ▶</button>
         <div class="rd-over" id="rd-over" hidden></div>
       </div>
-      <div class="rd-dock" id="rd-dock">
         <p class="rd-tip" id="rd-tip"><b>소환</b>한 장수를 <b>끌어</b> 적 길목에 배치하세요</p>
-        <div class="rd-sheet" id="rd-sheet" hidden></div>
       </div>
+      <div class="rd-sheet" id="rd-sheet" hidden></div>
     </section>`
   );
 
@@ -880,6 +935,7 @@ function syncUnits() {
     n.nameEl.style.transform = `translate(${head.sx}px, ${head.sy}px) translate(-50%, -100%)`; // 머리 위 이름표
   }
   for (const [uid, n] of labelNodes) if (!seen.has(uid)) { n.nameEl.remove(); labelNodes.delete(uid); }
+  if (selectedUid != null) renderHeroInfo(); // 선택 영웅이 합성/반환되면 패널 갱신(사라지면 비움)
 }
 
 function syncEnemies() {

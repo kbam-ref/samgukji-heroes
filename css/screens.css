@@ -1875,19 +1875,47 @@
 }
 
 /* ══ 삼국지 랜덤 디펜스 (v61) ══ */
-.rd-screen { display: flex; flex-direction: column; height: 100%; padding: 10px 0 8px; gap: 10px; }
-.rd-hud { display: flex; justify-content: space-around; align-items: center; padding: 0 16px; }
-.rd-stat { display: flex; flex-direction: column; align-items: center; line-height: 1.05; }
-.rd-stat b { font-size: 20px; font-weight: 800; color: var(--paper); font-variant-numeric: tabular-nums; }
-.rd-stat span { font-size: 10px; color: var(--paper-faint); letter-spacing: 0.04em; }
+/* v114 가로 — 3분할: 왼쪽 정보 · 중앙 필드 · (오른쪽 5버튼은 #tab-bar) */
+.rd-screen { position: relative; display: flex; flex-direction: row; align-items: stretch; height: 100%; padding: 6px 0; gap: 6px; }
+.rd-info {
+  width: var(--info-w); flex: none; display: flex; flex-direction: column; gap: 7px;
+  padding: 2px 6px 2px 10px; overflow-y: auto; scrollbar-width: none;
+}
+.rd-info::-webkit-scrollbar { display: none; }
+.rd-center { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; padding-right: 2px; }
+/* HUD — 왼쪽 패널 상단에 세로 스택 */
+.rd-hud { display: flex; flex-direction: column; gap: 4px; padding: 0; }
+.rd-stat {
+  display: flex; flex-direction: row; align-items: baseline; justify-content: space-between;
+  line-height: 1.05; padding: 5px 9px; border-radius: 9px;
+  background: rgba(0, 0, 0, 0.26); border: 1px solid var(--ink-600);
+}
+.rd-stat b { font-size: 16px; font-weight: 800; color: var(--paper); font-variant-numeric: tabular-nums; }
+.rd-stat span { font-size: 9.5px; color: var(--paper-faint); letter-spacing: 0.02em; }
 .rd-stat.rd-gold b { color: var(--gold-bright); }
 .rd-stat.rd-alive.danger b { color: var(--alert); animation: rd-pulse 0.7s ease-in-out infinite; }
 .rd-stat.rd-kills b { color: var(--paper); }
+/* 선택 영웅 상세 */
+.rd-hero-info { flex: 1; display: flex; flex-direction: column; gap: 5px; padding: 9px 10px; border-radius: 11px; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--ink-600); }
+.rd-hi-empty { margin: auto 0; text-align: center; font-size: 11px; color: var(--paper-faint); line-height: 1.5; }
+.rd-hi-name { display: flex; align-items: center; gap: 5px; }
+.rd-hi-name b { font-family: var(--font-display); font-size: 19px; font-weight: 800; color: #f4ecd8; }
+.rd-hi-name.tier-4 b { color: #d9b6ff; } .rd-hi-name.tier-5 b { color: #ffe08a; } .rd-hi-name.tier-6 b { color: #ffe486; text-shadow: 0 0 9px rgba(255, 228, 134, 0.6); }
+.rd-hi-sub { font-size: 11px; font-weight: 700; color: var(--gold-bright); letter-spacing: 0.02em; }
+.rd-hi-title { font-size: 10px; color: var(--paper-faint); font-style: italic; margin-bottom: 2px; }
+.rd-hi-badges { display: flex; gap: 5px; flex-wrap: wrap; margin: 1px 0 3px; }
+.rd-hi-elem, .rd-hi-wpn { font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 6px; background: rgba(0, 0, 0, 0.4); }
+.rd-hi-wpn { color: #ffd76a; } .rd-hi-wpn.wpn-bow { color: #8fe0b0; } .rd-hi-wpn.wpn-magic { color: #ff9a5a; } .rd-hi-wpn.wpn-spear { color: #f0b48a; }
+.rd-hi-stats { list-style: none; display: flex; flex-direction: column; gap: 3px; margin: 2px 0; }
+.rd-hi-stats li { display: flex; justify-content: space-between; align-items: baseline; font-size: 11px; padding: 3px 2px; border-bottom: 1px solid rgba(239, 230, 210, 0.06); }
+.rd-hi-stats span { color: var(--paper-faint); }
+.rd-hi-stats b { color: #f0e6cf; font-weight: 800; font-variant-numeric: tabular-nums; }
+.rd-hi-perk { margin-top: 3px; font-size: 10.5px; font-weight: 700; color: #b6d9a0; padding: 4px 7px; border-radius: 7px; background: rgba(90, 140, 70, 0.14); }
 @keyframes rd-pulse { 50% { opacity: 0.5; } }
 
 /* 이번 라운드 출현 진행 바 (v87) — 총 몇 중 몇이 나왔나 */
 .rd-spawnbar {
-  position: relative; margin: -4px 16px 0; height: 13px; border-radius: 7px;
+  position: relative; margin: 0 4px; height: 13px; flex: none; border-radius: 7px;
   background: rgba(0, 0, 0, 0.34); overflow: hidden; border: 1px solid var(--ink-600);
 }
 .rd-spawnbar i {
@@ -1910,7 +1938,8 @@
 .rd-field {
   position: relative;
   flex: 1;
-  margin: 0 14px;
+  margin: 0 4px;
+  min-height: 0;
   border-radius: 12px;
   background:
     radial-gradient(ellipse at 50% 36%, rgba(152, 128, 92, 0.5), rgba(64, 50, 34, 0.82) 60%, rgba(30, 24, 16, 0.95)),
@@ -2207,27 +2236,26 @@
 
 /* ── 하단 도크 + 컨텍스트 시트 — 액션 옵션을 여기 펼친다. 도크는 고정 높이라 필드가 안 흔들리고,
       시트는 도크 안에 담겨(overflow) 전투 화면을 침범하지 않는다 (v94 수석: 메인화면과 분리). ── */
-.rd-dock {
-  position: relative; margin: 0 14px; height: 198px; flex: none;
-  display: flex; align-items: center; justify-content: center;
-}
 .rd-tip {
-  text-align: center; font-size: 11px; color: var(--paper-faint);
+  flex: none; text-align: center; font-size: 11px; color: var(--paper-faint);
   letter-spacing: 0.01em; line-height: 1.3; padding: 0 8px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; /* 한 줄 고정(수석) */
 }
 .rd-tip b { color: var(--gold-bright); font-weight: 700; }
 .rd-tip[hidden] { display: none; }
 
+/* v114 가로 — 시트는 오른쪽 버튼 레일 옆에 떠서 펼쳐진다(필드 위 오버레이) */
 .rd-sheet {
-  position: absolute; inset: 0; overflow-y: auto;
-  background: linear-gradient(180deg, rgba(28, 23, 16, 0.97), rgba(20, 16, 11, 0.99));
-  border: 1px solid var(--ink-600); border-radius: 12px;
-  padding: 8px 10px 10px; box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.4);
-  animation: rd-sheet-up 0.18s var(--ease-out);
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  width: 300px; max-width: 48%; max-height: 94%; overflow-y: auto; z-index: 24;
+  background: linear-gradient(180deg, rgba(28, 23, 16, 0.98), rgba(20, 16, 11, 0.99));
+  border: 1px solid var(--gold-deep, #6b5320); border-radius: 14px;
+  padding: 8px 10px 10px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  animation: rd-sheet-in 0.18s var(--ease-out);
 }
+.rd-sheet::-webkit-scrollbar { display: none; }
 .rd-sheet[hidden] { display: none; }
-@keyframes rd-sheet-up { from { transform: translateY(10px); opacity: 0; } }
+@keyframes rd-sheet-in { from { transform: translate(14px, -50%); opacity: 0; } }
 .rd-sheet-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .rd-sheet-head b { font-size: 12.5px; font-weight: 700; color: var(--paper); }
 .rd-sheet-hint { font-size: 10px; color: var(--paper-faint); margin-left: auto; }
