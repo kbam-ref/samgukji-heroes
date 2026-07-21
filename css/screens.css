@@ -2892,13 +2892,13 @@
 
 /* ── 준비 카운트다운 (v75) — 시작 후 적이 나오기 전, 유닛 배치 시간 ── */
 .rd-prep {
-  position: absolute; top: 12%; left: 50%; transform: translateX(-50%);
+  position: absolute; top: 16%; left: 50%; transform: translateX(-50%);
   z-index: 5; display: flex; flex-direction: column; align-items: center; gap: 4px;
   pointer-events: none; text-align: center;
 }
 .rd-prep[hidden] { display: none; }
 .rd-prep-n {
-  font-family: var(--font-display); font-size: 60px; font-weight: 800; line-height: 1;
+  font-family: var(--font-display); font-size: 42px; font-weight: 800; line-height: 1;
   color: var(--gold-bright); text-shadow: 0 2px 10px rgba(0, 0, 0, 0.75), 0 0 18px rgba(228, 197, 92, 0.45);
   animation: rd-prep-tick 1s ease-out infinite;
 }
@@ -2909,7 +2909,7 @@
 }
 .rd-prep.go .rd-prep-n { display: none; }
 .rd-prep.go .rd-prep-sub {
-  font-family: var(--font-display); font-size: 30px; font-weight: 800; color: var(--cta-bright);
+  font-family: var(--font-display); font-size: 25px; font-weight: 800; color: var(--cta-bright);
   background: none; padding: 0; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.7);
   animation: rd-prep-go 0.85s cubic-bezier(0.2, 1.5, 0.4, 1);
 }

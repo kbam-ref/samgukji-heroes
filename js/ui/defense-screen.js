@@ -105,7 +105,7 @@ let saveTick = 0;
 const AUTOSAVE_SEC = 3; // 연속 자동저장 주기(초) — 강제종료 되감기(세이브 스컴) 방지
 let drag = null; // { uid, startX, startY, moved }
 // 폰 가로 전환 — 세로 전용이라 가로에선 게임 루프를 멈춘다(CSS #rotate-guard가 화면을 덮음)
-const landscapeMQ = matchMedia('(orientation: landscape) and (max-height: 600px) and (pointer: coarse)');
+const portraitGuardMQ = matchMedia('(orientation: portrait) and (pointer: coarse)'); // v114: 가로 전용 — 세로(폰)면 게임 정지
 
 // ── 왼쪽 정보 패널 — 영웅을 탭하면 그 영웅 상세를 표시(v114 가로) ──
 let selectedUid = null;
@@ -1183,7 +1183,7 @@ function startReveal(units) {
 function loop(now) {
   if (!run) { rafId = 0; return; }
   // 폰 가로 전환 중엔 월드 정지 — 세로 전용이라 화면이 '세로로 돌려주세요'로 덮여 있다
-  if (landscapeMQ.matches) { last = now; if (rafId) rafId = requestAnimationFrame(loop); return; }
+  if (portraitGuardMQ.matches) { last = now; if (rafId) rafId = requestAnimationFrame(loop); return; }
   // '시작하기' 전엔 월드 정지 — 로딩·타이틀 뒤에서 적이 미리 스폰되지 않게
   if (!started) { last = now; if (rafId) rafId = requestAnimationFrame(loop); return; }
   // 소환 리빌 중엔 월드를 멈춘다 — 깃발을 뒤집는 순간의 긴장을 온전히 (적이 새지 않게)
