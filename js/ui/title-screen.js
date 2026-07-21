@@ -11,11 +11,12 @@ export function showTitle(onStart, opts = {}) {
   el.innerHTML = `
     <div class="title-veil" aria-hidden="true"></div>
     <div class="title-logo">
-      <em>천하통일</em>
-      <b>삼국지<br>랜덤 디펜스</b>
+      <em class="title-eyebrow">운빨로 천하통일</em>
+      <b class="title-brand">삼랜디</b>
+      <span class="title-full">삼국지 랜덤 디펜스</span>
     </div>
     <div class="title-actions">
-      <button class="btn primary title-start">시작하기</button>
+      <button class="btn primary title-start">전투 시작</button>
       ${playsLine}
     </div>
     <span class="title-version">${APP_VERSION}</span>`;

@@ -3061,7 +3061,7 @@
 
 .load-crowd { flex: 1; align-self: stretch; display: flex; flex-wrap: wrap;
   align-content: center; justify-content: center; margin: 1% -6px 0; }
-.load-hero { width: 58px; height: 70px; object-fit: contain; object-position: bottom; margin: 1px -9px;
+.load-hero { width: 82px; height: 98px; object-fit: contain; object-position: bottom; margin: 1px -6px;
   filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.55)); opacity: 0; transform: translateY(22px) scale(0.7);
   /* 튀어 오른 뒤 계속 통통·좌우로 흔들려 '살아 움직이는 부대'로 보이게 (액티브) */
   animation: load-hero-pop 0.5s cubic-bezier(0.2, 1.5, 0.4, 1) both,

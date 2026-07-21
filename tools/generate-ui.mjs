@@ -51,13 +51,15 @@ const ITEMS = {
       'subtle dragon engraving on the rim only, empty smooth center, on pure black background, ' +
       'flat front view, game UI asset, no text, no watermark',
   },
-  // 타이틀 키 아트 — 치비 군단 진군
+  // 타이틀 키 아트 — 주요 영웅들이 싸우는 가로 전투 씬(삼랜디)
   'title-art': {
-    w: 512, h: 768,
+    w: 896, h: 512,
     prompt:
-      'epic vertical key art for a mobile game, army of adorable chibi three kingdoms heroes marching ' +
-      'with tall war banners toward golden dawn light, dramatic clouds, painterly, rich warm colors, ' +
-      'wide empty sky in the upper third for a logo, no text, no watermark',
+      'epic wide landscape key art for a mobile game, a few heroic chibi three kingdoms warriors clashing in an intense battle: ' +
+      'a bearded general swinging a huge green-dragon crescent-blade guandao polearm, a fierce warrior thrusting a crescent halberd, ' +
+      'a robed strategist casting glowing golden magic, charging against a horde of small yellow-turban soldiers, ' +
+      'dynamic action poses, dust clouds and golden sparks, dramatic warm sunset battlefield, painterly cinematic 3D render, ' +
+      'rich warm colors, some open sky area at the top for a logo, no text, no watermark',
   },
   'ribbon-header': {
     w: 512, h: 192,

@@ -7,8 +7,8 @@ export function showLoading(done, ms = 2000) {
   const el = document.createElement('div');
   el.id = 'loading-screen';
 
-  // 등급 높은 순 — 전설이 앞줄 중앙에 먼저 선다(가장 먼저 튀어 오른다)
-  const ids = [...HEROES].sort((a, b) => b.rarity - a.rarity);
+  // 주요 영웅만 — 등급 높은 순 상위 8명(전부 나열 안 함, 수석)
+  const ids = [...HEROES].sort((a, b) => b.rarity - a.rarity).slice(0, 8);
   const crowd = ids
     .map(
       (h, i) =>
@@ -19,9 +19,9 @@ export function showLoading(done, ms = 2000) {
   el.innerHTML = `
     <div class="load-sky" aria-hidden="true" style="background-image:url('./assets/bg/loading.png')"></div>
     <div class="load-title">
-      <em class="load-eyebrow">천하통일</em>
-      <b class="load-logo">삼국지</b>
-      <span class="load-sub">랜덤 디펜스</span>
+      <em class="load-eyebrow">운빨로 천하통일</em>
+      <b class="load-logo">삼랜디</b>
+      <span class="load-sub">삼국지 랜덤 디펜스</span>
     </div>
     <div class="load-crowd" aria-hidden="true">${crowd}</div>
     <div class="load-foot">

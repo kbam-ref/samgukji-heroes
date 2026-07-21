@@ -608,25 +608,21 @@ body.modal-open #tab-bar { visibility: hidden; }
 @keyframes logo-drop {
   from { opacity: 0; transform: translateY(-18px) scale(0.96); }
 }
-.title-logo em {
-  display: block;
-  font-style: normal;
-  font-size: 14px;
-  letter-spacing: 0.6em;
-  margin-left: 0.6em; /* 자간 보정 */
-  color: var(--paper-dim);
-  margin-bottom: 10px;
+.title-eyebrow {
+  display: block; font-style: normal; font-size: 13px; letter-spacing: 0.4em;
+  margin-left: 0.4em; color: var(--gold-bright); opacity: 0.9; margin-bottom: 6px;
 }
-.title-logo b {
-  font-size: 44px;
-  font-weight: 800;
-  line-height: 1.22;
-  letter-spacing: 0.06em;
-  background: linear-gradient(180deg, #f7e9ac, #e4c55c 45%, #a8871f);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.65));
+/* 삼랜디 — 로고의 주인공(큼직·금빛) */
+.title-brand {
+  display: block; font-size: 78px; font-weight: 900; line-height: 1; letter-spacing: 0.03em;
+  background: linear-gradient(180deg, #fff4c8, #f0c548 44%, #a8781f);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.7)) drop-shadow(0 0 24px rgba(228, 197, 92, 0.42));
+}
+.title-full {
+  display: block; margin-top: 9px; font-size: 16px; font-weight: 700;
+  letter-spacing: 0.32em; text-indent: 0.32em; color: var(--paper); opacity: 0.9;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
 }
 .title-start {
   margin-top: 5%; /* v121 가로 */
