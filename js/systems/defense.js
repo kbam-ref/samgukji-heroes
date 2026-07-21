@@ -467,11 +467,12 @@ function spawnEnemy(run) {
   const isBoss = run.bossIdx.has(idx);
   const size = isBoss ? rollSize() : rollSize(); // 보스도 소/중/대
   const hp = enemyHp(run.stage, idx, size, isBoss);
+  const spriteId = isBoss
+    ? BOSS_SPRITES[Math.floor(run.stage / DEFENSE.wave.boss.everyStages - 1) % BOSS_SPRITES.length]
+    : ENEMY_SPRITES[(run.stage - 1) % ENEMY_SPRITES.length];
   run.enemies.push({
     eid: enemySeq++,
-    spriteId: isBoss
-      ? BOSS_SPRITES[Math.floor(run.stage / DEFENSE.wave.boss.everyStages - 1) % BOSS_SPRITES.length]
-      : ENEMY_SPRITES[(run.stage - 1) % ENEMY_SPRITES.length],
+    spriteId,
     isBoss,
     size,
     element: run.stageElement || randElement(), // 라운드 통일 속성(구세이브 방어로 폴백)
@@ -487,7 +488,7 @@ function spawnEnemy(run) {
   // 이번 스테이지 첫 보스가 나오는 순간 — 긴장 단계를 알린다(경보음·배너). 스테이지당 1회.
   if (isBoss && !run.bossWarned) {
     run.bossWarned = true;
-    run.fx.push({ type: 'bossSpawn' });
+    run.fx.push({ type: 'bossSpawn', sprite: spriteId });
   }
   run.spawned += 1;
 }
@@ -498,7 +499,7 @@ function registerKill(run, target) {
   run.gold += killGold(run.stage, target.size, target.isBoss);
   run.killedThisStage += 1;
   run.kills = (run.kills || 0) + 1;
-  run.fx.push({ type: 'kill', eid: target.eid, boss: target.isBoss, x: target.x, y: target.y });
+  run.fx.push({ type: 'kill', eid: target.eid, boss: target.isBoss, sprite: target.spriteId, x: target.x, y: target.y });
   if (target.isBoss) {
     const bg = DEFENSE.wave.boss.killGold ?? 0;
     run.gold += bg; // 보스 처치 보너스 골드

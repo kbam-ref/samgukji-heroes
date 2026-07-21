@@ -1,7 +1,7 @@
 // 서비스워커 — 전체 에셋을 캐시해 비행기 모드에서도 완전히 플레이 가능하게 한다.
 // 에셋이 바뀌면 CACHE 버전을 올린다.
 
-const CACHE = 'samgukji-v122';
+const CACHE = 'samgukji-v123';
 
 // 영웅 초상 — js/data/heroes.js의 id와 일치 (24명)
 const HERO_IDS = [
@@ -34,6 +34,8 @@ const AUDIO_IDS = [
   'bgm-field', 'bgm-boss', 'bgm-title',
   'hit-armor', 'hit-cloth', 'hit-hide', 'hit-heavy', 'hit-blade', 'foe-strike',
   'clear', 'legend', 'epic', 'claim', 'chapter', 'rival', 'wipe',
+  'death-gasp', 'death-yelp', 'death-grunt', 'death-bellow', 'death-cry', 'death-wild',
+  'boss-voice-zhangjiao', 'boss-voice-boss-general', 'boss-voice-boss-warlock',
 ];
 
 // 이미지·오디오 — 하나쯤 빠져도 네트워크 폴백이 있으므로 best-effort로 담는다

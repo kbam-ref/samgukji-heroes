@@ -17,6 +17,14 @@ import { play, vibrate } from './sound.js';
 const HERO_NAME = new Map(HEROES.map((h) => [h.id, h.name]));
 const HERO_BY_ID = new Map(HEROES.map((h) => [h.id, h]));
 const WNAME = { bow: '활', spear: '창', sword: '칼', magic: '마법' };
+// 적 사망음 프로파일 — 스프라이트별(인접 라운드는 다르게). id: death-<profile> (audio-manifest)
+const DEATH_PROFILE = {
+  'yellow-turban': 'gasp', 'bandit-archer': 'yelp', 'dong-soldier': 'grunt', 'halberdier': 'bellow',
+  'warlord-soldier': 'cry', 'shield-brute': 'bellow', 'yuan-soldier': 'grunt', 'twin-blade': 'cry',
+  'wu-soldier': 'grunt', 'crossbowman': 'yelp', 'nanman-soldier': 'wild', 'axe-raider': 'bellow',
+  'spear-guard': 'grunt', 'flag-bearer': 'cry',
+};
+let lastDeathT = 0; // 사망음 스로틀
 const ELEM_GLYPH = { water: '水', fire: '火', earth: '土', wind: '風' }; // 속성 배지 글자 — 색만으론 헷갈려서
 
 // 공격 형태 아이콘 — 이름 앞 작은 네모 안에 창·칼·활·기마 모양
@@ -133,7 +141,6 @@ function renderHeroInfo() {
       <span class="rd-hi-wpn wpn-${atype}">${WNAME[atype] || '칼'}</span>
     </div>
     <ul class="rd-hi-stats">
-      <li><span>무력</span><b>${fmt(h.base || 0)}</b></li>
       <li><span>공격력</span><b>${fmt(atk)}</b></li>
       <li><span>사거리</span><b>${info.range || '—'}</b></li>
       <li><span>공격속도</span><b>${rate}/초</b></li>
@@ -335,7 +342,7 @@ function hud() {
     <div class="rd-hud">
       <div class="rd-stat"><b id="rd-stage">1</b><span>/ ${cap} 라운드</span></div>
       <div class="rd-stat rd-gold"><b id="rd-gold">0</b><span>골드</span></div>
-      <div class="rd-stat rd-alive"><b id="rd-alive">0</b><span>/ ${DEFENSE.wave.loseAt} 화면 적</span></div>
+      <div class="rd-stat rd-alive"><b id="rd-alive">0</b><span>/ ${DEFENSE.wave.loseAt}마리</span></div>
       <div class="rd-stat rd-time"><b id="rd-time">0:00</b><span>경과</span></div>
     </div>
     <div class="rd-spawnbar" aria-hidden="true">
@@ -372,7 +379,7 @@ export function render(root) {
         <div class="rd-hud">
           <div class="rd-stat"><b id="rd-stage">1</b><span>/ ${cap} 라운드</span></div>
           <div class="rd-stat rd-gold"><b id="rd-gold">0</b><span>골드</span></div>
-          <div class="rd-stat rd-alive"><b id="rd-alive">0</b><span>/ ${loseAt} 화면 적</span></div>
+          <div class="rd-stat rd-alive"><b id="rd-alive">0</b><span>/ ${loseAt}마리</span></div>
           <div class="rd-stat rd-time"><b id="rd-time">0:00</b><span>경과</span></div>
         </div>
         <div class="rd-hero-info" id="rd-hero-info"><p class="rd-hi-empty">영웅을 탭하면<br>정보가 나와요</p></div>
@@ -1039,14 +1046,18 @@ function consumeFx() {
       r3d.lunge(fx.uid, fx.ex, fx.ey); // 그 적을 향해 살짝 돌진
       r3d.spawnShot3d(fx.ux, fx.uy, fx.ex, fx.ey, HERO_ATTACK_TYPE[fx.heroId] || 'sword', ELEMENT_COLOR[fx.element] || '#e9d6a0', reduceMotion, fx.rarity || 1); // 무기별 3D 공격(활/창/칼/마법), 등급↑=큰 이펙트
     } else if (fx.type === 'kill') {
-      play('foehit');
+      // 적 사망음 — 스프라이트별 죽는 소리(보스는 묵직하게). 다수 동시사망 스팸 방지 스로틀(보스는 항상).
+      const prof = fx.boss ? 'bellow' : DEATH_PROFILE[fx.sprite];
+      const now = performance.now();
+      if (fx.boss || now - lastDeathT > 95) { lastDeathT = now; play(prof ? 'death-' + prof : 'foehit'); }
     } else if (fx.type === 'stageClear') {
       play('clear');
       if (fx.bonus) floatText(window.innerWidth / 2, 150, `라운드 클리어! +${fmt(fx.bonus)} 골드`, 'gold');
       updateHud();
     } else if (fx.type === 'bossSpawn') {
-      // 보스 등장 — 헌장 #3(긴장 단계). 경보음·섬광·배너로 "온다"를 알린다.
+      // 보스 등장 — 헌장 #3(긴장 단계). 경보음·섬광·배너 + 보스 멘트(TTS).
       play('boss'); flash('ember'); vibrate([0, 45, 60, 45]);
+      if (fx.sprite) setTimeout(() => play('boss-voice-' + fx.sprite), 260); // 징 뒤에 멘트
       bossBanner();
     } else if (fx.type === 'bossReward') {
       play('epic'); vibrate(24);

@@ -74,6 +74,31 @@ async function genMusic(entry) {
   return Buffer.from(await res.arrayBuffer());
 }
 
+/** ElevenLabs TTS — 보스 멘트 등 음성 대사(한국어). 보이스는 .env ELEVENLABS_VOICE_ID 또는 계정 첫 남성 보이스. */
+let VOICE_ID = process.env.ELEVENLABS_VOICE_ID || '';
+async function resolveVoice() {
+  if (VOICE_ID) return VOICE_ID;
+  const res = await fetch(`${BASE}/voices`, { headers: { 'xi-api-key': KEY } });
+  if (!res.ok) throw new Error(`voices ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  const list = (await res.json()).voices || [];
+  const male = list.find((v) => /male|man/i.test(v.labels?.gender || '') && !/female/i.test(v.labels?.gender || ''));
+  const pick = male || list[0];
+  if (!pick) throw new Error('사용 가능한 보이스 없음');
+  VOICE_ID = pick.voice_id;
+  console.log(`  (보이스: ${pick.name} ${pick.voice_id})`);
+  return VOICE_ID;
+}
+async function genTts(entry) {
+  const vid = await resolveVoice();
+  const res = await fetch(`${BASE}/text-to-speech/${vid}`, {
+    method: 'POST',
+    headers: { 'xi-api-key': KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: entry.text, model_id: 'eleven_multilingual_v2', voice_settings: { stability: 0.4, similarity_boost: 0.75, style: 0.55 } }),
+  });
+  if (!res.ok) throw new Error(`tts ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  return Buffer.from(await res.arrayBuffer());
+}
+
 async function run() {
   if (!existsSync(OUT)) mkdirSync(OUT, { recursive: true });
 
@@ -92,7 +117,7 @@ async function run() {
     }
     process.stdout.write(`▸ ${entry.id} (${entry.kind}) 생성 중…`);
     try {
-      const bytes = entry.kind === 'music' ? await genMusic(entry) : await genSfx(entry);
+      const bytes = entry.kind === 'music' ? await genMusic(entry) : entry.kind === 'tts' ? await genTts(entry) : await genSfx(entry);
       writeFileSync(out, bytes);
       made += 1;
       console.log(` ✓ ${(bytes.length / 1024).toFixed(0)}KB`);

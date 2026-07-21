@@ -54,6 +54,17 @@ export const SFX = [
   { id: 'chapter', kind: 'sfx', seconds: 1.6, prompt: 'new chapter opening, deep gong strike followed by a solemn bamboo flute phrase, epic ink-brush reveal' },
   { id: 'rival',   kind: 'sfx', seconds: 1.2, prompt: 'rival warlord appears, tense double war drum and a low ominous flute, dramatic encounter sting' },
   { id: 'wipe',    kind: 'sfx', seconds: 1.2, prompt: 'army defeated, descending dark whoosh and a low mournful gong, retreat sting' },
+  // 적 사망음 — 라운드 적 종류별 프로파일(defense-screen ENEMY_DEATH 매핑, id: death-<profile>)
+  { id: 'death-gasp',   kind: 'sfx', seconds: 0.7, prompt: 'short raspy male peasant death gasp, weak pained cry cut short as he collapses, dry, single' },
+  { id: 'death-yelp',   kind: 'sfx', seconds: 0.6, prompt: 'short quick male soldier death yelp, startled sharp pained gasp as he is struck down, dry, single' },
+  { id: 'death-grunt',  kind: 'sfx', seconds: 0.7, prompt: 'short male soldier death grunt, pained low groan as he falls, dry, single' },
+  { id: 'death-bellow', kind: 'sfx', seconds: 0.8, prompt: 'short deep heavy warrior death bellow, low pained roar as the big man collapses, dry, single' },
+  { id: 'death-cry',    kind: 'sfx', seconds: 0.7, prompt: 'short sharp male warrior death cry, high proud yell cut short as he is slain, dry, single' },
+  { id: 'death-wild',   kind: 'sfx', seconds: 0.8, prompt: 'short wild savage tribal warrior death roar cut short, fierce guttural cry, dry, single' },
+  // 보스 등장 멘트(TTS, 한국어). id: boss-voice-<sprite>. bossSpawn 시 재생.
+  { id: 'boss-voice-zhangjiao',   kind: 'tts', text: '창천은 이미 죽었다! 황천의 시대가 열리리라!' },
+  { id: 'boss-voice-boss-general', kind: 'tts', text: '감히 내 앞을 막아서다니, 무모하구나!' },
+  { id: 'boss-voice-boss-warlock', kind: 'tts', text: '크하하하! 너희에게 죽음을 선사하마!' },
 ];
 
 /** 모든 항목 (도구·플레이어 공용) */
