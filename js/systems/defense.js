@@ -620,6 +620,18 @@ export function tick(run, dt) {
         run.fx.push({ type: 'slowField', uid: u.uid, x: cx, y: cy, radius: cast.radius, element: u.element });
       }
     }
+    // 싸이오닉 스톰(조조) — cd초마다 적 밀집점에 전기 폭풍 소환(지속 광역 데미지)
+    if (cast && cast.type === 'storm' && !prepping) {
+      u.castCd = (u.castCd ?? cast.cd) - dt;
+      if (u.castCd <= 0 && run.enemies.length) {
+        u.castCd = cast.cd;
+        let cx = u.x, cy = u.y, bestD = 1e9;
+        for (const e of run.enemies) { const d = Math.hypot(e.x - u.x, e.y - u.y); if (d < bestD) { bestD = d; cx = e.x; cy = e.y; } }
+        const dmg = u.base * info.dmg * cast.dmgMult * (run.dmgMult || 1) * atkBoost;
+        (run.storms = run.storms || []).push({ x: cx, y: cy, radius: cast.radius, dmg, t: 0, dur: cast.dur, tickCd: 0, tickEvery: cast.tickEvery });
+        run.fx.push({ type: 'storm', uid: u.uid, x: cx, y: cy, radius: cast.radius, dur: cast.dur, element: u.element });
+      }
+    }
 
     if (u.cd > 0) { u.cd -= dt; continue; }
     // 사거리 내 적을 거리순으로 정렬 — 가까운 multi명을 동시에 친다
@@ -646,6 +658,19 @@ export function tick(run, dt) {
       });
       if (target.hp <= 0 && !target.dead) registerKill(run, target);
     }
+  }
+  // 싸이오닉 스톰 지속 데미지 — 지속 시간 동안 tick마다 반경 내 적을 지진다
+  if (run.storms && run.storms.length) {
+    for (const s of run.storms) {
+      s.t += dt; s.tickCd -= dt;
+      if (s.tickCd <= 0) {
+        s.tickCd = s.tickEvery;
+        for (const e of run.enemies) {
+          if (!e.dead && Math.hypot(e.x - s.x, e.y - s.y) <= s.radius) { e.hp -= s.dmg; e.hit = 0.14; if (e.hp <= 0 && !e.dead) registerKill(run, e); }
+        }
+      }
+    }
+    run.storms = run.storms.filter((s) => s.t < s.dur);
   }
   run.enemies = run.enemies.filter((e) => !e.dead);
 

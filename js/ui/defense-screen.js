@@ -65,6 +65,7 @@ let speed = 1;            // 전투 배속 x1/x2/x3 (설정에 영속)
 let revealing = false;    // 10연 소환 연출 중 — 월드를 멈춘다
 let revealTimers = [];
 let started = false;      // '시작하기'를 누르기 전엔 월드가 돌지 않는다 (로딩·타이틀 뒤 스폰 방지)
+let paused = false;       // 설정 열려 있으면 일시중지(틱·타이머 정지, 렌더는 유지)
 let dangerLevel = 0;      // 패배 임박 경보 단계(0/1/2) — 임계를 넘을 때만 1회 울린다
 let sheetMode = null;     // 하단 컨텍스트 시트: null/'summon'/'refund'/'gamble'
 let rfFilter = { maxRarity: 1, element: 'all' }; // 반환 조건(성급 이하 · 성향)
@@ -96,6 +97,8 @@ function actGuard(fn) {
   if (!fieldEl) emit('nav:battle');
   if (fieldEl) fn();
 }
+on('rd:pause', () => { paused = true; });                                  // 설정 열림 — 월드 정지
+on('rd:resume', () => { paused = false; last = performance.now(); });       // 설정 닫힘 — 이어서(dt 점프 방지)
 on('rd:summon', () => actGuard(() => { closeSheet(); doSummon1(); })); // 원클릭 소환(시트 없이 바로 1회). 꾹 누르면 tabs.js가 반복 발행
 on('rd:upgrade', () => actGuard(() => toggleSheet('upgrade')));
 on('rd:merge', () => actGuard(() => { closeSheet(); play('tap'); openMergePicker(); }));
@@ -1083,6 +1086,10 @@ function consumeFx() {
       // 제갈량 끈끈이 — 바닥에 초록 점액 장(적 둔화)
       play('tap');
       r3d.spawnSlowField3d(fx.x, fx.y, fx.radius, '#5fd98a');
+    } else if (fx.type === 'storm') {
+      // 조조 싸이오닉 스톰 — 전기 폭풍 광역 지속타
+      play('legend'); flash('gold'); vibrate(24);
+      r3d.spawnStorm3d(fx.x, fx.y, fx.radius);
     } else if (fx.type === 'summon') {
       syncUnits();
     } else if (fx.type === 'prepEnd') {
@@ -1298,6 +1305,8 @@ function loop(now) {
   // v117: 세로로 들어도 강제 가로로 렌더하므로 방향에 따른 정지 없음(항상 진행)
   // '시작하기' 전엔 월드 정지 — 로딩·타이틀 뒤에서 적이 미리 스폰되지 않게
   if (!started) { last = now; if (rafId) rafId = requestAnimationFrame(loop); return; }
+  // 설정 열림 — 일시중지(틱·타이머 정지). 3D 씬은 계속 렌더(멈춘 화면 유지).
+  if (paused) { last = now; r3d.frame(0); if (rafId) rafId = requestAnimationFrame(loop); return; }
   // 소환 리빌 중엔 월드를 멈춘다 — 깃발을 뒤집는 순간의 긴장을 온전히 (적이 새지 않게)
   if (revealing) { last = now; if (rafId) rafId = requestAnimationFrame(loop); return; }
   const dt = Math.min(0.05, (now - last) / 1000);

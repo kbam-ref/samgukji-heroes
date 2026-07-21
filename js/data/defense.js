@@ -230,7 +230,9 @@ export const HERO_ATTACK_TYPE = {
 // 지능(마법) 영웅 특수 시전 — 제갈량: 디파일러 끈끈이(Ensnare)식 광역 슬로우.
 // cd초마다 사거리 내 적 밀집점에 radius(필드%) 슬로우 장을 깔아 dur초간 이동속도 ×factor.
 export const HERO_CAST = {
-  zhugeliang: { type: 'slow', radius: 20, factor: 0.45, dur: 2.6, cd: 4.5 },
+  zhugeliang: { type: 'slow', radius: 20, factor: 0.45, dur: 2.6, cd: 4.5 }, // 제갈량 끈끈이(둔화)
+  // 조조(신화) 싸이오닉 스톰 — 지정 구역에 전기 폭풍, dur초간 tickEvery마다 광역 지속 데미지.
+  caocao: { type: 'storm', radius: 17, dmgMult: 0.55, dur: 2.1, tickEvery: 0.3, cd: 6 },
 };
 
 // 등급별 소환 후보(영웅 id). 소환·합성 시 등급 안에서 랜덤 1명.

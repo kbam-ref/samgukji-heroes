@@ -356,12 +356,31 @@ export function spawnSlowField3d(x, y, radiusPct, colorHex) {
   m.scale.set(d, d, 1); m.material.opacity = 0.45;
   fx3d.push({ kind: 'slowfield', mk: 'burst', mesh: m, t: 0, dur: 2.6, d });
 }
+// 조조 싸이오닉 스톰 — 바닥에 보라 전기장이 지지직 깜빡이며 유지(지속 데미지)
+export function spawnStorm3d(x, y, radiusPct) {
+  if (!renderer) return;
+  const m = takeFx('burst', '#a98cff');
+  m.position.set(wx(x), 0.05, wz(y)); m.rotation.x = -Math.PI / 2;
+  const d = (radiusPct / 100) * FIELD_W * 2;
+  m.scale.set(d, d, 1); m.material.opacity = 0.5;
+  fx3d.push({ kind: 'storm', mk: 'burst', mesh: m, t: 0, dur: 2.1, d });
+}
 // 초월 광역기 — 바닥에서 링이 전장으로 퍼진다
 export function spawnAoe3d(x, y, colorHex) {
   if (!renderer) return;
-  const m = takeFx('ring', colorHex);
-  m.position.set(wx(x), 0.06, wz(y)); m.scale.setScalar(0.4); m.material.opacity = 0.7;
-  fx3d.push({ kind: 'ring', mk: 'ring', mesh: m, t: 0, dur: 0.62 });
+  const cx = wx(x), cz = wz(y);
+  // 초월 전체타격 — 게임 내 최고 연출: 3중 확산 링 + 중앙 대형 섬광 + 솟구치는 빛기둥.
+  for (const d of [0.5, 0.72, 0.94]) {
+    const m = takeFx('ring', colorHex);
+    m.position.set(cx, 0.06, cz); m.scale.setScalar(0.4); m.material.opacity = 0.85;
+    fx3d.push({ kind: 'ring', mk: 'ring', mesh: m, t: 0, dur: d, big: true });
+  }
+  const flash = takeFx('burst', '#fff2c8');
+  flash.position.set(cx, 0.06, cz); flash.rotation.x = -Math.PI / 2; flash.scale.setScalar(1);
+  fx3d.push({ kind: 'aoeflash', mk: 'burst', mesh: flash, t: 0, dur: 0.55 });
+  const col = takeFx('burst', '#ffe8a0');
+  col.position.set(cx, 1.5, cz);
+  fx3d.push({ kind: 'aoepillar', mk: 'burst', mesh: col, t: 0, dur: 0.6 });
 }
 // 매 프레임 이펙트 갱신
 function updateFx(dt) {
@@ -431,8 +450,24 @@ function updateFx(dt) {
       faceCam(f.mesh); f.mesh.scale.setScalar((0.3 + p * 1.0) * (f.pw || 1)); f.mesh.material.opacity = 1 - p;
       if (p >= 1) { freeFx('burst', f.mesh); fx3d.splice(i, 1); }
     } else if (f.kind === 'ring') {
-      f.mesh.scale.setScalar(0.4 + p * (FIELD_W * 0.5)); f.mesh.material.opacity = 0.7 * (1 - p);
+      f.mesh.scale.setScalar(0.4 + p * (FIELD_W * (f.big ? 0.75 : 0.5))); f.mesh.material.opacity = (f.big ? 0.85 : 0.7) * (1 - p);
       if (p >= 1) { freeFx('ring', f.mesh); fx3d.splice(i, 1); }
+    } else if (f.kind === 'storm') {
+      // 싸이오닉 스톰 — 바닥 전기장이 빠르게 깜빡(지지직), 뒤 20%에서 소멸
+      f.mesh.rotation.x = -Math.PI / 2;
+      const fade = p < 0.8 ? 1 : 1 - (p - 0.8) / 0.2;
+      const flick = 0.55 + 0.45 * Math.abs(Math.sin(clock * 34 + f.t * 11));
+      f.mesh.scale.set(f.d * (0.94 + 0.06 * Math.sin(clock * 9)), f.d, 1);
+      f.mesh.material.opacity = 0.5 * fade * flick;
+      if (p >= 1) { freeFx('burst', f.mesh); fx3d.splice(i, 1); }
+    } else if (f.kind === 'aoeflash') {
+      // 초월 광역기 중앙 바닥 대형 섬광
+      f.mesh.rotation.x = -Math.PI / 2; f.mesh.scale.setScalar(1 + p * 7); f.mesh.material.opacity = 0.75 * (1 - p);
+      if (p >= 1) { freeFx('burst', f.mesh); fx3d.splice(i, 1); }
+    } else if (f.kind === 'aoepillar') {
+      // 초월 광역기 중앙 솟구치는 빛기둥
+      faceCam(f.mesh); f.mesh.scale.set(1.6 + p * 1.2, 3 + p * 3.5, 1); f.mesh.position.y = 1.6 + p * 1.6; f.mesh.material.opacity = 0.8 * (1 - p);
+      if (p >= 1) { freeFx('burst', f.mesh); fx3d.splice(i, 1); }
     } else if (f.kind === 'die') {
       const s = Math.max(0.001, 1 - p * p); f.node.group.scale.setScalar(s);
       f.node.group.position.y = p * 0.6; f.node.group.rotation.y += dt * 6;
