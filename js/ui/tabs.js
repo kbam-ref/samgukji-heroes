@@ -19,7 +19,7 @@ const ACTIONS = [
   { id: 'upgrade', label: '단련', event: 'rd:upgrade' },
   { id: 'merge', label: '합성', event: 'rd:merge' },
   { id: 'refund', label: '반환', event: 'rd:refund' },
-  { id: 'gamble', label: '도박', event: 'rd:gamble' },
+  { id: 'gamble', label: '행운', event: 'rd:gamble' },
 ];
 
 export function renderTabs(navRoot, screenRoot) {

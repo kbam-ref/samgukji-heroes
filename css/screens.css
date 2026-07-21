@@ -1901,6 +1901,15 @@
 .rd-hi-name { display: flex; align-items: center; gap: 5px; }
 .rd-hi-name b { font-family: var(--font-display); font-size: 19px; font-weight: 800; color: #f4ecd8; }
 .rd-hi-name.tier-4 b { color: #d9b6ff; } .rd-hi-name.tier-5 b { color: #ffe08a; } .rd-hi-name.tier-6 b { color: #ffe486; text-shadow: 0 0 9px rgba(255, 228, 134, 0.6); }
+/* 성급(별 등급) — 정보 패널에서 한눈에. 등급색으로 채운 별 + 등급명 */
+.rd-hi-stars { display: flex; align-items: center; gap: 5px; margin: 3px 0 2px; font-size: 13px; letter-spacing: 1px; color: #6b5a3a; }
+.rd-hi-stars em { font-style: normal; font-size: 11px; font-weight: 800; letter-spacing: 0.02em; margin-left: 2px; }
+.rd-hi-stars.tier-1 { color: #e8e2d2; } .rd-hi-stars.tier-1 em { color: #e8e2d2; }
+.rd-hi-stars.tier-2 { color: #7fd6a0; } .rd-hi-stars.tier-2 em { color: #7fd6a0; }
+.rd-hi-stars.tier-3 { color: #62b5f0; } .rd-hi-stars.tier-3 em { color: #62b5f0; }
+.rd-hi-stars.tier-4 { color: #c99bff; } .rd-hi-stars.tier-4 em { color: #d9b6ff; }
+.rd-hi-stars.tier-5 { color: #ffcf5a; } .rd-hi-stars.tier-5 em { color: #ffe08a; }
+.rd-hi-stars.tier-6 { color: #ffe486; text-shadow: 0 0 8px rgba(255, 228, 134, 0.7); } .rd-hi-stars.tier-6 em { color: #ffe486; }
 .rd-hi-sub { font-size: 11px; font-weight: 700; color: var(--gold-bright); letter-spacing: 0.02em; }
 .rd-hi-title { font-size: 10px; color: var(--paper-faint); font-style: italic; margin-bottom: 2px; }
 .rd-hi-badges { display: flex; gap: 5px; flex-wrap: wrap; margin: 1px 0 3px; }
@@ -2389,10 +2398,10 @@
 .rd-gm-won { display: block; font-family: var(--font-display); font-size: 22px; font-weight: 900; color: var(--gold-bright); letter-spacing: 0.02em; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); }
 .rd-gm-won.lucky { color: #ffe9a8; font-size: 25px; text-shadow: 0 0 12px rgba(240, 196, 78, 0.95); }
 .rd-gm-dice.lucky em { color: #ffe9a8; }
-/* 도박 — 필드 중앙 주사위 낙하 무대(v118) */
+/* 행운의 주사위 — 필드 중앙 낙하 무대. 2026-07-22 수석: 너무 커서 축소(62×74 → 40×48) */
 .rd-dice-stage {
-  position: absolute; left: 50%; top: 44%; transform: translate(-50%, -50%);
-  width: 62%; height: 74%; z-index: 12; pointer-events: none;
+  position: absolute; left: 50%; top: 43%; transform: translate(-50%, -50%);
+  width: 40%; height: 48%; z-index: 12; pointer-events: none;
   display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
 }
 .rd-dice-stage[hidden] { display: none; }
@@ -3050,8 +3059,8 @@
   animation: load-title-in 0.8s cubic-bezier(0.2, 1.3, 0.4, 1) both; }
 .load-eyebrow { display: block; font-style: normal; font-weight: 600; font-size: 13px;
   letter-spacing: 0.5em; text-indent: 0.5em; color: var(--gold-bright); opacity: 0.85; margin-bottom: 9px; }
-.load-logo { display: block; font-family: var(--font-display); font-size: 52px; line-height: 0.95;
-  font-weight: 800; letter-spacing: 0.06em;
+.load-logo { display: block; font-family: var(--font-display); font-size: 42px; line-height: 1.05;
+  font-weight: 800; letter-spacing: 0.04em;
   background: linear-gradient(180deg, #fbe6a8, #e4c55c 44%, #b8862c);
   -webkit-background-clip: text; background-clip: text; color: transparent;
   filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 18px rgba(228, 197, 92, 0.22)); }

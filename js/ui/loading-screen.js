@@ -20,8 +20,7 @@ export function showLoading(done, ms = 2000) {
     <div class="load-sky" aria-hidden="true" style="background-image:url('./assets/bg/loading.png')"></div>
     <div class="load-title">
       <em class="load-eyebrow">운빨로 천하통일</em>
-      <b class="load-logo">삼랜디</b>
-      <span class="load-sub">삼국지 랜덤 디펜스</span>
+      <b class="load-logo">삼국지<br>랜덤 디펜스</b>
     </div>
     <div class="load-crowd" aria-hidden="true">${crowd}</div>
     <div class="load-foot">

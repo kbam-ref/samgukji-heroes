@@ -23,6 +23,14 @@ export function showModal({ title, body, actions = [], dismissible = true }) {
   heading.textContent = title;
   panel.appendChild(heading);
 
+  // 2026-07-22 수석: 모든 메뉴에 우상단 닫기(✕) 통일 — 닫을 수 있는 모달이면 항상 표시
+  if (dismissible) {
+    const x = document.createElement('button');
+    x.className = 'modal-x'; x.type = 'button'; x.setAttribute('aria-label', '닫기'); x.textContent = '✕';
+    x.addEventListener('click', () => close());
+    panel.appendChild(x);
+  }
+
   const bodyEl = document.createElement('div');
   bodyEl.className = 'modal-body';
   if (typeof body === 'string') bodyEl.textContent = body;

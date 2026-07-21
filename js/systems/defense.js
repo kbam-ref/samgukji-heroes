@@ -501,14 +501,10 @@ function registerKill(run, target) {
   run.kills = (run.kills || 0) + 1;
   run.fx.push({ type: 'kill', eid: target.eid, boss: target.isBoss, sprite: target.spriteId, x: target.x, y: target.y });
   if (target.isBoss) {
+    // 2026-07-22 수석: 보스 처치 = 캐릭/무료뽑기 지급 폐지. 보너스 골드(killGold)만 지급.
     const bg = DEFENSE.wave.boss.killGold ?? 0;
-    run.gold += bg; // 보스 처치 보너스 골드
-    run.freePulls += bossPulls(run.stage);
-    // 메운디밸런스: 보스 처치 시 고등급 유닛 무료 지급(파워 스파이크)
-    const gr = pickGrantRarity();
-    const gu = grantUnit(run, gr);
-    if (gu) run.fx.push({ type: 'bossGrant', uid: gu.uid, rarity: gr, heroId: gu.heroId });
-    run.fx.push({ type: 'bossReward', pulls: bossPulls(run.stage), gold: bg });
+    run.gold += bg;
+    run.fx.push({ type: 'bossReward', gold: bg });
   }
 }
 

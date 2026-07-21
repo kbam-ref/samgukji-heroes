@@ -35,13 +35,14 @@ const fx3d = [];
 const pool = { arrow: [], slash: [], lance: [], burst: [], ring: [] };
 let burstTex, ringGeo, arrowGeo, burstGeo, slashGeo, lanceGeo, auraGeo, beamGeo;
 
-// 등급 오라 — 별표 대신 "좋은 캐릭"임을 캐릭터 몸에서 뿜는 기운으로. 등급↑ = 색·크기·맥박·후광↑
+// 등급 오라 — 별표 대신 "좋은 캐릭"임을 캐릭터 몸에서 뿜는 기운으로. 등급↑ = 색·크기·맥박·빛기둥↑
+// 2026-07-22 수석: 바닥 후광 링(halo) 폐지 — 사정거리로 오해됨. 대신 몸에서 솟는 빛기둥(beam)으로만 표현.
 const AURA = {
-  2: { color: 0x86d992, base: 0.9, amp: 0.06, op: 0.15, halo: false, beam: false },
-  3: { color: 0x5aa8f2, base: 1.1, amp: 0.10, op: 0.28, halo: false, beam: false },
-  4: { color: 0xc79bff, base: 1.55, amp: 0.16, op: 0.55, halo: true, beam: true },  // 전설 — 강한 보라 오라 + 빛기둥
-  5: { color: 0xffd24a, base: 1.9, amp: 0.20, op: 0.72, halo: true, beam: true },   // 신화 — 금빛
-  6: { color: 0xfff0a0, base: 2.3, amp: 0.26, op: 0.92, halo: true, beam: true },   // 초월 — 찬란
+  2: { color: 0x86d992, base: 0.72, amp: 0.05, op: 0.12, halo: false, beam: false },
+  3: { color: 0x5aa8f2, base: 0.86, amp: 0.08, op: 0.22, halo: false, beam: false },
+  4: { color: 0xc79bff, base: 1.0, amp: 0.12, op: 0.42, halo: false, beam: true },  // 전설 — 보라 빛기둥
+  5: { color: 0xffd24a, base: 1.15, amp: 0.15, op: 0.55, halo: false, beam: true }, // 신화 — 금빛 빛기둥
+  6: { color: 0xfff0a0, base: 1.3, amp: 0.2, op: 0.72, halo: false, beam: true },   // 초월 — 찬란한 빛기둥
 };
 
 function heroCut(id) { return `./assets/heroes-cut/${id}.png`; }
@@ -365,27 +366,37 @@ export function spawnStorm3d(x, y, radiusPct) {
   m.scale.set(d, d, 1); m.material.opacity = 0.5;
   fx3d.push({ kind: 'storm', mk: 'burst', mesh: m, t: 0, dur: 2.1, d });
 }
-// 초월 광역기 — 바닥에서 링이 전장으로 퍼진다
+// 초월 광역기 — 2026-07-22 수석: 바닥 확산 링(사정거리 오해) 폐지. '내리꽂히는 벼락 + 폭발'식 수직 연출로.
+//   하늘에서 빛기둥이 내리꽂히고 → 중앙 대형 섬광 → 사방으로 파편(shard)이 솟구쳐 흩어진다. 링 없음.
 export function spawnAoe3d(x, y, colorHex) {
   if (!renderer) return;
   const cx = wx(x), cz = wz(y);
-  // 초월 전체타격 — 게임 내 최고 연출: 3중 확산 링 + 중앙 대형 섬광 + 솟구치는 빛기둥.
-  for (const d of [0.5, 0.72, 0.94]) {
-    const m = takeFx('ring', colorHex);
-    m.position.set(cx, 0.06, cz); m.scale.setScalar(0.4); m.material.opacity = 0.85;
-    fx3d.push({ kind: 'ring', mk: 'ring', mesh: m, t: 0, dur: d, big: true });
-  }
+  // 1) 하늘에서 내리꽂히는 빛기둥(수직 낙하)
+  const bolt = takeFx('burst', '#fff2c8');
+  bolt.position.set(cx, 3.2, cz);
+  fx3d.push({ kind: 'aoebolt', mk: 'burst', mesh: bolt, cx, cz, t: 0, dur: 0.22 });
+  // 2) 착지 순간 중앙 대형 섬광(바닥에 눕힘)
   const flash = takeFx('burst', '#fff2c8');
-  flash.position.set(cx, 0.06, cz); flash.rotation.x = -Math.PI / 2; flash.scale.setScalar(1);
-  fx3d.push({ kind: 'aoeflash', mk: 'burst', mesh: flash, t: 0, dur: 0.55 });
-  const col = takeFx('burst', '#ffe8a0');
-  col.position.set(cx, 1.5, cz);
-  fx3d.push({ kind: 'aoepillar', mk: 'burst', mesh: col, t: 0, dur: 0.6 });
+  flash.position.set(cx, 0.12, cz); flash.rotation.x = -Math.PI / 2; flash.scale.setScalar(1);
+  fx3d.push({ kind: 'aoeflash', mk: 'burst', mesh: flash, t: 0, dur: 0.5, delay: 0.18 });
+  // 3) 솟구치는 빛기둥(카메라 향함)
+  const col = takeFx('burst', colorHex);
+  col.position.set(cx, 1.4, cz);
+  fx3d.push({ kind: 'aoepillar', mk: 'burst', mesh: col, t: 0, dur: 0.55, delay: 0.16 });
+  // 4) 사방 8갈래 파편 — 위로 솟았다 바깥으로 흩어지며 소멸(폭발 별). 링과 달리 '터짐'으로 읽힘.
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    const sh = takeFx('burst', colorHex);
+    sh.position.set(cx, 0.3, cz);
+    fx3d.push({ kind: 'shard', mk: 'burst', mesh: sh, cx, cz, vx: Math.cos(a) * 3.4, vz: Math.sin(a) * 3.4, t: 0, dur: 0.5, delay: 0.16 });
+  }
 }
 // 매 프레임 이펙트 갱신
 function updateFx(dt) {
   for (let i = fx3d.length - 1; i >= 0; i--) {
-    const f = fx3d[i]; f.t += dt; const p = f.t / f.dur;
+    const f = fx3d[i]; f.t += dt;
+    if (f.delay && f.t < f.delay) { if (f.mesh) f.mesh.material.opacity = 0; continue; } // 지연 시작(순차 연출)
+    const p = f.delay ? (f.t - f.delay) / f.dur : f.t / f.dur;
     if (f.kind === 'proj') {
       f.mesh.position.lerpVectors(f.from, f.to, Math.min(1, p));
       if (f.mk === 'arrow') f.mesh.lookAt(f.to); else faceCam(f.mesh);
@@ -460,13 +471,23 @@ function updateFx(dt) {
       f.mesh.scale.set(f.d * (0.94 + 0.06 * Math.sin(clock * 9)), f.d, 1);
       f.mesh.material.opacity = 0.5 * fade * flick;
       if (p >= 1) { freeFx('burst', f.mesh); fx3d.splice(i, 1); }
+    } else if (f.kind === 'aoebolt') {
+      // 초월 광역기 — 하늘에서 내리꽂히는 빛기둥(수직 낙하 + 세로로 길쭉)
+      faceCam(f.mesh); f.mesh.position.y = 3.2 * (1 - p) + 0.2; f.mesh.scale.set(0.7, 2.4 - p * 1.4, 1); f.mesh.material.opacity = 0.9;
+      if (p >= 1) { freeFx('burst', f.mesh); fx3d.splice(i, 1); }
     } else if (f.kind === 'aoeflash') {
       // 초월 광역기 중앙 바닥 대형 섬광
-      f.mesh.rotation.x = -Math.PI / 2; f.mesh.scale.setScalar(1 + p * 7); f.mesh.material.opacity = 0.75 * (1 - p);
+      f.mesh.rotation.x = -Math.PI / 2; f.mesh.scale.setScalar(1 + p * 7); f.mesh.material.opacity = 0.8 * (1 - p);
       if (p >= 1) { freeFx('burst', f.mesh); fx3d.splice(i, 1); }
     } else if (f.kind === 'aoepillar') {
       // 초월 광역기 중앙 솟구치는 빛기둥
-      faceCam(f.mesh); f.mesh.scale.set(1.6 + p * 1.2, 3 + p * 3.5, 1); f.mesh.position.y = 1.6 + p * 1.6; f.mesh.material.opacity = 0.8 * (1 - p);
+      faceCam(f.mesh); f.mesh.scale.set(1.6 + p * 1.2, 3 + p * 3.5, 1); f.mesh.position.y = 1.6 + p * 1.6; f.mesh.material.opacity = 0.85 * (1 - p);
+      if (p >= 1) { freeFx('burst', f.mesh); fx3d.splice(i, 1); }
+    } else if (f.kind === 'shard') {
+      // 초월 광역기 파편 — 중앙에서 위로 솟았다 바깥·아래로 흩어지며 소멸(폭발 별)
+      faceCam(f.mesh);
+      f.mesh.position.set(f.cx + f.vx * p, 0.3 + Math.sin(p * Math.PI) * 1.3, f.cz + f.vz * p);
+      f.mesh.scale.setScalar(0.55 * (1 - p * 0.5)); f.mesh.material.opacity = 1 - p;
       if (p >= 1) { freeFx('burst', f.mesh); fx3d.splice(i, 1); }
     } else if (f.kind === 'die') {
       const s = Math.max(0.001, 1 - p * p); f.node.group.scale.setScalar(s);

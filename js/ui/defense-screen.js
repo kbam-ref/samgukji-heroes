@@ -137,7 +137,8 @@ function renderHeroInfo() {
   const rate = info.cooldown ? (1 / info.cooldown).toFixed(2) : '—';
   box.innerHTML = `
     <div class="rd-hi-name tier-${tier}">${weaponIcon(u.heroId)}<b>${h.name || ''}</b></div>
-    <div class="rd-hi-sub">${RARITY[u.rarity]?.name || ''} · ${FACTIONS[h.faction]?.name || '군웅'}</div>
+    <div class="rd-hi-stars tier-${tier}" aria-label="성급 ${u.rarity}성">${'★'.repeat(u.rarity)}${'☆'.repeat(6 - u.rarity)}<em>${RARITY[u.rarity]?.name || ''}</em></div>
+    <div class="rd-hi-sub">${FACTIONS[h.faction]?.name || '군웅'}${u.upgradeLv ? ` · 단련 +${u.upgradeLv}` : ''}</div>
     ${h.title ? `<div class="rd-hi-title">「${h.title}」</div>` : ''}
     <div class="rd-hi-badges">
       <span class="rd-hi-elem" style="color:${ELEMENT_COLOR[u.element]}">${ELEM_GLYPH[u.element] || ''} ${ELEMENT_LABEL[u.element] || ''}</span>
@@ -147,7 +148,7 @@ function renderHeroInfo() {
       <li><span>공격력</span><b>${fmt(atk)}</b></li>
       <li><span>사거리</span><b>${info.range || '—'}</b></li>
       <li><span>공격속도</span><b>${rate}/초</b></li>
-      <li><span>동시타격</span><b>${info.multi || 1}명</b></li>
+      <li><span>동시타격</span><b>${info.multi || 1}마리</b></li>
       ${info.aoe ? `<li><span>광역기</span><b>${info.aoe.interval}초</b></li>` : ''}
     </ul>
     ${h.perk ? `<div class="rd-hi-perk">특성 · ${PERK_LABELS[h.perk.kind] || ''} +${h.perk.value}%</div>` : ''}`;
@@ -555,7 +556,7 @@ function updateHud() {
     re.textContent = `${ELEM_GLYPH[run.stageElement]} ${ELEMENT_LABEL[run.stageElement]}`;
     re.style.color = ELEMENT_COLOR[run.stageElement];
   }
-  // 하단바 '합성' 배지 — 합성 가능(3장) 또는 자동 합성 고정 중이면 점등
+  // 하단바 '합성' 배지 — 합성 가능(5장) 또는 자동 합성 고정 중이면 점등
   const mergeBadge = document.querySelector('#rd-nav-merge .nav-badge');
   if (mergeBadge) mergeBadge.hidden = autoMergeMax === 0 && engine.mergeableHeroes(run).length === 0;
 
@@ -596,19 +597,19 @@ function showHelp() {
     <section class="rd-hs"><h4>버튼</h4><ul>
       <li><b>소환</b> — 랜덤 장수 1명(꾹 누르면 연속). 50뽑마다 등급업 확정(천장)</li>
       <li><b>단련</b> — 속성별 전 유닛 공격력·공속 강화</li>
-      <li><b>합성</b> — 같은 장수 3장 → 상위 등급 랜덤 1장</li>
+      <li><b>합성</b> — 같은 장수 5장 → 상위 등급 랜덤 1장</li>
       <li><b>반환</b> — 필요 없는 장수를 골드로 되돌림</li>
-      <li><b>도박</b> — 주사위 2개, 합계×배수 골드(더블이면 잭팟)</li>
+      <li><b>행운의 주사위</b> — 주사위 2개, 합계×배수 골드(더블이면 잭팟)</li>
     </ul></section>
-    <section class="rd-hs"><h4>영웅 등급 (6단계)</h4>
+    <section class="rd-hs"><h4>영웅 성급 (6단계)</h4>
       <p class="rd-hs-grades"><span class="g g1">일반</span><span class="g g2">희귀</span><span class="g g3">영웅</span><span class="g g4">전설</span><span class="g g5">신화</span><span class="g g6">초월</span></p>
-      <p>높을수록 사거리·동시타격·데미지↑. <b>전설</b>부터는 몸에서 오라·빛기둥이 뿜어져 나옵니다.</p></section>
+      <p>성급이 높을수록 사거리·동시타격·데미지↑. <b>전설</b>부터는 몸에서 <b>빛기둥</b>이 솟아납니다. 판을 쓸어버리는 <b>초월</b>이 최고 등급.</p></section>
     <section class="rd-hs"><h4>속성 상성</h4>
       <p class="rd-hs-elem"><span style="color:#e0613a">불</span> ▸ <span style="color:#57bd86">바람</span> ▸ <span style="color:#b0803f">땅</span> ▸ <span style="color:#4f9dd6">물</span> ▸ <span style="color:#e0613a">불</span> <em>(▸ = 이김)</em></p>
       <p>상성 우위 데미지 <b>×1.5</b>, 열위 <b>×0.75</b>. 라운드마다 적 속성이 <b>통일</b>되니 그 속성을 이기는 장수를 준비하세요.</p></section>
     <section class="rd-hs"><h4>유닛 크기 상성</h4>
       <p>적은 <b>소형</b>(빠르고 약함)·<b>중형</b>·<b>대형</b>(느리고 단단, 보상↑). 각 장수는 한 체급에 <b>강함(×1.25)</b>·다른 체급에 <b>약함(×0.8)</b> — 영웅을 탭해 확인.</p></section>`;
-  showModal({ title: '도움말', body: box, actions: [{ label: '닫기', primary: true }] });
+  showModal({ title: '도움말', body: box }); // 닫기는 우상단 ✕로 통일(수석)
 }
 
 // ── 하단 컨텍스트 시트 — 소환/반환/도박 옵션을 도크 빈 공간에 펼친다 ──
@@ -689,7 +690,7 @@ function sheetRefundHtml() {
 function sheetGambleHtml() {
   const g = DEFENSE.gamble;
   return `
-    <div class="rd-sheet-head"><b>도박 — 주사위 두 개</b><button class="rd-sheet-x" data-x aria-label="닫기">✕</button></div>
+    <div class="rd-sheet-head"><b>행운의 주사위 — 두 개</b><button class="rd-sheet-x" data-x aria-label="닫기">✕</button></div>
     <canvas class="rd-dice3d" id="rd-dice3d"></canvas>
     <div class="rd-gm-result" id="rd-gm-result" hidden></div>
     <div class="rd-gm-info" id="rd-gm-info">합계 ×${g.perPip}골드 · <em>더블이면 럭키! ${g.doubleGold}골드</em></div>
@@ -917,7 +918,7 @@ function refreshRefundChips() {
   play('tap');
 }
 
-// 합성 대상 선택 모달 — 같은 영웅 3장 모인 것만 보여주고, 고르면 상위 등급 랜덤으로 합성한다.
+// 합성 대상 선택 모달 — 같은 영웅 5장 모인 것만 보여주고, 고르면 상위 등급 랜덤으로 합성한다.
 function openMergePicker() {
   const box = document.createElement('div');
   box.className = 'rd-merge-picker';
@@ -942,7 +943,7 @@ function openMergePicker() {
           </span>
           <span class="rd-mo-go">합성 ›</span>
         </button>`).join('')
-      : `<p class="rd-merge-empty"><b>같은 영웅 3장</b>을 모으면 상위 등급으로 합성할 수 있어요.<br>소환으로 같은 장수를 모아 보세요.</p>`;
+      : `<p class="rd-merge-empty"><b>같은 영웅 5장</b>을 모으면 상위 등급으로 합성할 수 있어요.<br>소환으로 같은 장수를 모아 보세요.</p>`;
     box.innerHTML = autoRow + list;
   };
   render();
@@ -973,7 +974,7 @@ function openMergePicker() {
       vibrate(8);
     }
   });
-  showModal({ title: '영웅 합성 — 같은 장수 3장', body: box, actions: [{ label: '닫기' }] });
+  showModal({ title: '영웅 합성 — 같은 장수 5장', body: box }); // 닫기는 우상단 ✕로 통일(수석)
 }
 
 function clampSpeed(v) {
@@ -1064,11 +1065,7 @@ function consumeFx() {
       bossBanner();
     } else if (fx.type === 'bossReward') {
       play('epic'); vibrate(24);
-      const parts = [];
-      if (fx.pulls) parts.push(`무료 소환 +${fx.pulls}`);
-      if (fx.gold) parts.push(`+${fmt(fx.gold)} 골드`);
-      floatText(window.innerWidth / 2, window.innerHeight * 0.3, `보스 격파! ${parts.join(' · ')}`, 'gold');
-      syncUnits();
+      floatText(window.innerWidth / 2, window.innerHeight * 0.3, `보스 격파! +${fmt(fx.gold || 0)} 골드`, 'gold');
     } else if (fx.type === 'bossGrant') {
       // 메운디밸런스: 보스 처치 무료 고등급 유닛 — 획득 연출 + 로스터 갱신
       syncUnits();

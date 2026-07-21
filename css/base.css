@@ -48,9 +48,10 @@
   --r5: #c9a227;
   --r6: #5fe3ff;
 
-  --font: 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', system-ui, sans-serif;
-  /* 제목용 명조 — 기기 내장 세리프만 사용 (오프라인 보장). 없으면 시스템 serif로 */
-  --font-display: 'Nanum Myeongjo', 'Noto Serif KR', 'Noto Serif CJK KR', Batang, AppleMyungjo, serif;
+  /* 2026-07-22 수석: 전 화면 글씨체 맑은 고딕으로 통일(캐릭터명 등 명조 혼용 제거). */
+  --font: 'Malgun Gothic', '맑은 고딕', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
+  /* 제목도 동일 고딕(별도 display 서체 폐지 — 통일성). 변수는 호환 위해 유지. */
+  --font-display: 'Malgun Gothic', '맑은 고딕', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
 
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* 눌렀을 때 탄성 */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
@@ -462,7 +463,18 @@ body.force-rotate #viewport {
   100% { transform: translateY(0); }
 }
 
-.modal-title { font-size: 17px; font-weight: 800; margin-bottom: 10px; }
+/* 통일된 닫기(✕) — 모든 모달 우상단(수석 2026-07-22). 44px 터치 타깃. */
+.modal-x {
+  position: absolute; top: 10px; right: 10px; z-index: 3;
+  width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--ink-600); border-radius: 50%;
+  background: rgba(20, 16, 10, 0.6); color: var(--paper-dim);
+  font-size: 15px; line-height: 1; cursor: pointer; padding: 0;
+  transition: background 0.15s, color 0.15s, transform 0.1s;
+}
+.modal-x:hover { background: rgba(201, 162, 39, 0.25); color: var(--paper); }
+.modal-x:active { transform: scale(0.9); }
+.modal-title { font-size: 17px; font-weight: 800; margin-bottom: 10px; padding-right: 34px; }
 .modal-body { font-size: 13.5px; color: var(--paper-dim); line-height: 1.6; }
 .modal-body b { color: var(--paper); }
 .modal-actions { display: flex; gap: 8px; margin-top: 18px; }
@@ -612,9 +624,9 @@ body.modal-open #tab-bar { visibility: hidden; }
   display: block; font-style: normal; font-size: 13px; letter-spacing: 0.4em;
   margin-left: 0.4em; color: var(--gold-bright); opacity: 0.9; margin-bottom: 6px;
 }
-/* 삼랜디 — 로고의 주인공(큼직·금빛) */
+/* 삼국지 랜덤 디펜스 — 로고의 주인공(큼직·금빛). 2026-07-22 수석: 약어(삼랜디) 대신 정식 명칭. */
 .title-brand {
-  display: block; font-size: 78px; font-weight: 900; line-height: 1; letter-spacing: 0.03em;
+  display: block; font-size: 58px; font-weight: 900; line-height: 1.04; letter-spacing: 0.02em;
   background: linear-gradient(180deg, #fff4c8, #f0c548 44%, #a8781f);
   -webkit-background-clip: text; background-clip: text; color: transparent;
   filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.7)) drop-shadow(0 0 24px rgba(228, 197, 92, 0.42));
