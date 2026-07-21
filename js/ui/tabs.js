@@ -6,12 +6,18 @@ import * as settingsScreen from './settings-screen.js';
 import { vibrate } from './sound.js';
 import { on, emit } from '../core/events.js';
 
+// 액션 아이콘 — 각 기능이 한눈에 읽히게 재도안(2026-07-22 수석). currentColor 라인아트 + 포인트 채움.
 const ICONS = {
-  summon: `<svg viewBox="0 0 24 24"><path d="M7 4h10v16l-5-3-5 3z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M9.5 9h5M9.5 12h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`,
-  upgrade: `<svg viewBox="0 0 24 24"><path d="M12 4l6 7h-3.6v7h-4.8v-7H6z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>`,
-  merge: `<svg viewBox="0 0 24 24"><path d="M5 5l6 6M19 5l-6 6M12 11v7.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="19.5" r="1.5" fill="currentColor"/></svg>`,
-  refund: `<svg viewBox="0 0 24 24"><circle cx="13.5" cy="12" r="6.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M8 12H3M5.4 9.6 3 12l2.4 2.4" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-  gamble: `<svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="3" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="9.5" cy="9.5" r="1.1" fill="currentColor"/><circle cx="12" cy="12" r="1.1" fill="currentColor"/><circle cx="14.5" cy="14.5" r="1.1" fill="currentColor"/></svg>`,
+  // 소환 — 빛나는 별(가챠 소환 연출)
+  summon: `<svg viewBox="0 0 24 24"><path d="M12 3l1.9 5.7L20 10l-6.1 1.3L12 21l-1.9-9.7L4 10l6.1-1.3z" fill="currentColor"/><circle cx="18.6" cy="5.4" r="1.05" fill="currentColor"/><circle cx="5.4" cy="16.5" r="0.9" fill="currentColor"/></svg>`,
+  // 단련 — 강화(위로 겹친 이중 화살표)
+  upgrade: `<svg viewBox="0 0 24 24"><path d="M6 12.5l6-6 6 6M6 18l6-6 6 6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  // 합성 — 두 갈래가 모여 상위 별 1개로
+  merge: `<svg viewBox="0 0 24 24"><path d="M6 4.5l3.6 5.2M18 4.5l-3.6 5.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M12 9.5l1.5 3.5 3.8.3-2.9 2.5.9 3.7L12 21l-3.3 1.5.9-3.7-2.9-2.5 3.8-.3z" fill="currentColor"/></svg>`,
+  // 반환 — 되돌림 화살표 + 금화
+  refund: `<svg viewBox="0 0 24 24"><path d="M6.4 9.2a6 6 0 1 1-1.1 5.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M6.6 4.8v4.4h4.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="13.2" cy="12.6" r="2.15" fill="currentColor"/></svg>`,
+  // 행운 — 모서리 둥근 주사위 두 개
+  gamble: `<svg viewBox="0 0 24 24"><rect x="3.4" y="9" width="9.6" height="9.6" rx="2.7" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="6.1" cy="11.7" r="0.95" fill="currentColor"/><circle cx="10.3" cy="15.9" r="0.95" fill="currentColor"/><circle cx="8.2" cy="13.8" r="0.95" fill="currentColor"/><rect x="12" y="4" width="8.6" height="8.6" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.6" transform="rotate(14 16.3 8.3)"/><circle cx="14.7" cy="7.2" r="0.85" fill="currentColor"/><circle cx="17.6" cy="9.1" r="0.85" fill="currentColor"/></svg>`,
 };
 
 const ACTIONS = [

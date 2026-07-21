@@ -54,13 +54,14 @@ export const SFX = [
   { id: 'chapter', kind: 'sfx', seconds: 1.6, prompt: 'new chapter opening, deep gong strike followed by a solemn bamboo flute phrase, epic ink-brush reveal' },
   { id: 'rival',   kind: 'sfx', seconds: 1.2, prompt: 'rival warlord appears, tense double war drum and a low ominous flute, dramatic encounter sting' },
   { id: 'wipe',    kind: 'sfx', seconds: 1.2, prompt: 'army defeated, descending dark whoosh and a low mournful gong, retreat sting' },
-  // 적 사망음 — 라운드 적 종류별 프로파일(defense-screen ENEMY_DEATH 매핑, id: death-<profile>)
-  { id: 'death-gasp',   kind: 'sfx', seconds: 0.7, prompt: 'short raspy male peasant death gasp, weak pained cry cut short as he collapses, dry, single' },
-  { id: 'death-yelp',   kind: 'sfx', seconds: 0.6, prompt: 'short quick male soldier death yelp, startled sharp pained gasp as he is struck down, dry, single' },
-  { id: 'death-grunt',  kind: 'sfx', seconds: 0.7, prompt: 'short male soldier death grunt, pained low groan as he falls, dry, single' },
-  { id: 'death-bellow', kind: 'sfx', seconds: 0.8, prompt: 'short deep heavy warrior death bellow, low pained roar as the big man collapses, dry, single' },
-  { id: 'death-cry',    kind: 'sfx', seconds: 0.7, prompt: 'short sharp male warrior death cry, high proud yell cut short as he is slain, dry, single' },
-  { id: 'death-wild',   kind: 'sfx', seconds: 0.8, prompt: 'short wild savage tribal warrior death roar cut short, fierce guttural cry, dry, single' },
+  // 적 사망음 — 스타크래프트 마린 죽을 때처럼: 짧고 또렷하고 펀치감 있는 아케이드 사망 비명(수석 2026-07-22).
+  //   공통: single male vocal death cry, very short, punchy, crisp, dry mono, retro arcade video game sound, close mic, no music, no reverb, no ambience
+  { id: 'death-gasp',   kind: 'sfx', seconds: 0.6, prompt: 'single male soldier death cry "aargh", very short and punchy, sharp pained yell cut off, crisp dry mono, retro arcade video game death sound, close mic, no music, no reverb' },
+  { id: 'death-yelp',   kind: 'sfx', seconds: 0.5, prompt: 'single quick male "ah!" death yelp, startled high yelp instantly cut off as he is shot down, very short punchy, crisp dry mono, retro arcade video game sound, no music, no reverb' },
+  { id: 'death-grunt',  kind: 'sfx', seconds: 0.6, prompt: 'single male "ugh" death grunt, short heavy pained groan cut off as he drops, punchy crisp dry mono, retro arcade video game death sound, no music, no reverb' },
+  { id: 'death-bellow', kind: 'sfx', seconds: 0.7, prompt: 'single deep male "rraahh" death bellow, short heavy low pained roar cut off as the big warrior falls, punchy crisp dry mono, retro arcade video game sound, no music, no reverb' },
+  { id: 'death-cry',    kind: 'sfx', seconds: 0.6, prompt: 'single sharp male "gah!" death cry, short high proud yell instantly cut off when slain, punchy crisp dry mono, retro arcade video game death sound, no music, no reverb' },
+  { id: 'death-wild',   kind: 'sfx', seconds: 0.7, prompt: 'single wild male "yaargh" death roar, short fierce guttural savage cry cut off, punchy crisp dry mono, retro arcade video game sound, no music, no reverb' },
   // 보스 등장 멘트(TTS, 한국어). id: boss-voice-<sprite>. bossSpawn 시 재생.
   { id: 'boss-voice-zhangjiao',   kind: 'tts', text: '창천은 이미 죽었다! 황천의 시대가 열리리라!' },
   { id: 'boss-voice-boss-general', kind: 'tts', text: '감히 내 앞을 막아서다니, 무모하구나!' },

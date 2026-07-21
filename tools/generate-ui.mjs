@@ -51,15 +51,16 @@ const ITEMS = {
       'subtle dragon engraving on the rim only, empty smooth center, on pure black background, ' +
       'flat front view, game UI asset, no text, no watermark',
   },
-  // 타이틀 키 아트 — 주요 영웅들이 싸우는 가로 전투 씬(삼랜디)
+  // 타이틀/로딩 공용 키 아트 — 주요 영웅들이 돌격하는 웅장한 가로 전투 씬. 2026-07-22 수석: 치비 제거(징그러움)·정식 무기.
   'title-art': {
     w: 896, h: 512,
     prompt:
-      'epic wide landscape key art for a mobile game, a few heroic chibi three kingdoms warriors clashing in an intense battle: ' +
-      'a bearded general swinging a huge green-dragon crescent-blade guandao polearm, a fierce warrior thrusting a crescent halberd, ' +
-      'a robed strategist casting glowing golden magic, charging against a horde of small yellow-turban soldiers, ' +
-      'dynamic action poses, dust clouds and golden sparks, dramatic warm sunset battlefield, painterly cinematic 3D render, ' +
-      'rich warm colors, some open sky area at the top for a logo, no text, no watermark',
+      'epic cinematic splash key art for a Three Kingdoms mobile game, a heroic ancient Chinese general in ornate green and gold ' +
+      'lamellar armor with a long flowing black beard standing powerfully at the front, gripping a green-dragon crescent guandao ' +
+      'polearm with a large curved crescent blade, two more warrior heroes charging behind him with spear and sword, war banners, ' +
+      'dramatic golden sunset battlefield, swirling dust and glowing embers, wide landscape composition with a darker open sky at the ' +
+      'top for a title, highly detailed painterly digital illustration, heroic proportions, dramatic rim lighting, rich warm epic ' +
+      'color palette, professional AAA game splash art, artstation quality, sharp focus, no chibi, no text, no watermark, no logo',
   },
   'ribbon-header': {
     w: 512, h: 192,

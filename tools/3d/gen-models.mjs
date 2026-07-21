@@ -27,7 +27,10 @@ const KEY = readKey();
 if (!KEY) { console.error('키 없음: tools/3d/meshy-key.txt 의 주석 아래에 Meshy API 키를 붙여넣으세요(또는 MESHY_API_KEY 환경변수).'); process.exit(1); }
 
 const HEROES = ['lvbu','guanyu','caocao','zhugeliang','zhangfei','zhaoyun','zhouyu','xiahoudun','sunce','dongzhuo','zhangliao','ganning','liubei','sunshangxiang','yuanshao','xunyu','huaxiong','zhoucang','caohong','handang','jiling','liaohua','yujin','chengpu'];
-const ENEMIES = ['yellow-turban','dong-soldier','warlord-soldier','yuan-soldier','wu-soldier','nanman-soldier','zhangjiao'];
+const ENEMIES = ['yellow-turban','dong-soldier','warlord-soldier','yuan-soldier','wu-soldier','nanman-soldier','zhangjiao',
+  // 2026-07-22 수석: "적군이 2D" — 아래 스프라이트들이 GLB 없어 2D 폴백 중. 3D 모델 생성 대상 추가.
+  'bandit-archer','halberdier','shield-brute','twin-blade','crossbowman','axe-raider','spear-guard','flag-bearer',
+  'boss-general','boss-warlock'];
 
 const API = 'https://api.meshy.ai/openapi/v1/image-to-3d';
 const OUT = join(ROOT, 'assets/models');
