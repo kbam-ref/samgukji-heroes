@@ -2388,6 +2388,18 @@
 .rd-gm-won { display: block; font-family: var(--font-display); font-size: 22px; font-weight: 900; color: var(--gold-bright); letter-spacing: 0.02em; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); }
 .rd-gm-won.lucky { color: #ffe9a8; font-size: 25px; text-shadow: 0 0 12px rgba(240, 196, 78, 0.95); }
 .rd-gm-dice.lucky em { color: #ffe9a8; }
+/* 도박 — 필드 중앙 주사위 낙하 무대(v118) */
+.rd-dice-stage {
+  position: absolute; left: 50%; top: 44%; transform: translate(-50%, -50%);
+  width: 62%; height: 74%; z-index: 12; pointer-events: none;
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+}
+.rd-dice-stage[hidden] { display: none; }
+.rd-field-dice { position: absolute; inset: 0; width: 100%; height: 100%; }
+.rd-dice-result { position: relative; z-index: 2; margin-bottom: 3%; text-align: center; opacity: 0; }
+.rd-dice-result[hidden] { display: none; }
+.rd-dice-result.pop { animation: rd-gm-pop 0.4s var(--ease-spring) forwards; }
+.rd-dice-result .rd-gm-face { font-size: 34px; }
 .rd-gm-go {
   width: 100%; min-height: 50px; font-weight: 800; font-size: 15px; justify-content: center;
   letter-spacing: 0.02em; border-radius: 13px;
@@ -2519,6 +2531,33 @@
 }
 .rd-gear svg { width: 18px; height: 18px; }
 .rd-gear:active { transform: scale(0.92); }
+/* 도움말 ? 버튼 — 톱니 아래 */
+.rd-help {
+  position: absolute; top: 44px; left: 8px; z-index: 4;
+  width: 30px; height: 30px; padding: 0; border-radius: 15px;
+  border: 1px solid var(--ink-600); background: rgba(23, 19, 16, 0.62);
+  color: var(--gold-bright); cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 17px; font-weight: 800; line-height: 1;
+}
+.rd-help:active { transform: scale(0.92); }
+/* 도움말 팝업 내용 */
+.rd-help-body { display: flex; flex-direction: column; gap: 12px; text-align: left; font-size: 12.5px; line-height: 1.5; color: var(--paper-dim); }
+.rd-hs h4 { font-family: var(--font-display); font-size: 14px; color: var(--gold-bright); margin-bottom: 3px; }
+.rd-hs p { margin: 2px 0; }
+.rd-hs b { color: var(--paper); font-weight: 700; }
+.rd-hs ul { list-style: none; display: flex; flex-direction: column; gap: 3px; }
+.rd-hs li { padding-left: 11px; position: relative; }
+.rd-hs li::before { content: '·'; position: absolute; left: 2px; color: var(--gold-bright); font-weight: 800; }
+.rd-hs-grades { display: flex; flex-wrap: wrap; gap: 5px; margin: 3px 0; }
+.rd-hs-grades .g { font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 6px; }
+.rd-hs-grades .g1 { color: #cfc6b8; box-shadow: inset 0 0 0 1px #8a8175; }
+.rd-hs-grades .g2 { color: #a6e6b0; box-shadow: inset 0 0 0 1px #86d992; }
+.rd-hs-grades .g3 { color: #8ecbff; box-shadow: inset 0 0 0 1px #5aa8f2; }
+.rd-hs-grades .g4 { color: #d9b6ff; box-shadow: inset 0 0 0 1px #b884f2; }
+.rd-hs-grades .g5 { color: #ffdd7a; box-shadow: inset 0 0 0 1px #f2c34a; }
+.rd-hs-grades .g6 { color: #ffe486; box-shadow: inset 0 0 0 1px #ffe486; }
+.rd-hs-elem { font-weight: 800; font-size: 13px; }
+.rd-hs-elem em { color: var(--paper-faint); font-size: 11px; font-weight: 400; font-style: normal; }
 
 /* 설정 오버레이 — 상단 톱니가 여는 작은 패널(전투 화면 위) */
 .settings-overlay {

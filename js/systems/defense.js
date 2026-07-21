@@ -5,7 +5,7 @@
 import { HEROES } from '../data/heroes.js';
 import {
   DEFENSE, SUMMON_POOL, HERO_ELEMENT, HERO_SIZE_ROLE,
-  ELEMENT_BEATS, SIZE_ROLE_MULT, ENEMY_SPRITES, BOSS_SPRITES, ELEMENTS,
+  ELEMENT_BEATS, SIZE_ROLE_MULT, ENEMY_SPRITES, BOSS_SPRITES, ELEMENTS, HERO_CAST,
 } from '../data/defense.js';
 
 const BASE = new Map(HEROES.map((h) => [h.id, h.base]));
@@ -492,7 +492,8 @@ export function tick(run, dt) {
   //   코너에서 바깥 오프셋 벡터가 급회전하면 렌더 위치가 코너를 크게 휘돌아 '빨라' 보인다 →
   //   실제 이동 거리를 기본 속도의 ~1.5배로 상한(cap)해 코너에서도 균일한 속도로 부드럽게 돈다.
   for (const e of run.enemies) {
-    const sp = w.speed * (e.isBoss ? w.boss.speedMult : w.sizes[e.size].speed);
+    let sp = w.speed * (e.isBoss ? w.boss.speedMult : w.sizes[e.size].speed);
+    if (e.slowT > 0) { e.slowT -= dt; sp *= (e.slowF || 1); } // 제갈량 끈끈이 — 이동 둔화
     const progStep = (sp / 100) * dt;
     e.prog += progStep;
     if (e.hit > 0) e.hit -= dt;
@@ -555,6 +556,21 @@ export function tick(run, dt) {
           e.hp -= aoeDmg; e.hit = 0.18;
           if (e.hp <= 0 && !e.dead) registerKill(run, e);
         }
+      }
+    }
+
+    // 마법 시전(제갈량 끈끈이) — cd초마다 적 밀집점에 슬로우 장 전개
+    const cast = HERO_CAST[u.heroId];
+    if (cast && cast.type === 'slow' && !prepping) {
+      u.castCd = (u.castCd ?? cast.cd) - dt;
+      if (u.castCd <= 0 && run.enemies.length) {
+        u.castCd = cast.cd;
+        let cx = u.x, cy = u.y, bestD = 1e9; // 가장 가까운 적 지점을 중심으로
+        for (const e of run.enemies) { const d = Math.hypot(e.x - u.x, e.y - u.y); if (d < bestD) { bestD = d; cx = e.x; cy = e.y; } }
+        for (const e of run.enemies) {
+          if (Math.hypot(e.x - cx, e.y - cy) <= cast.radius) { e.slowT = cast.dur; e.slowF = cast.factor; }
+        }
+        run.fx.push({ type: 'slowField', uid: u.uid, x: cx, y: cy, radius: cast.radius, element: u.element });
       }
     }
 

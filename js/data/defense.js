@@ -89,7 +89,7 @@ export const DEFENSE = {
     cost: 250,
     perPip: 30,      // 주사위 합계 1당 골드 (더블 아닐 때)
     doubleGold: 500, // 같은 수(1·1, 2·2 …) 잭팟
-    cooldown: 30,    // 2026-07-20 수석: 30초에 1회만(스팸/무한골드 방지)
+    cooldown: 60,    // 2026-07-21 수석: 1분에 1회
   },
 
   // ── 합성 — 2026-07-20 수석 지시: '같은 영웅' 3장 → 상위 등급 랜덤 1장(수동). 전설은 합성 없음 ──
@@ -220,6 +220,12 @@ export const HERO_ATTACK_TYPE = {
   lvbu: 'magic', zhaoyun: 'magic', zhangliao: 'magic', caohong: 'magic', // 2026-07-21 수석: 기마→마법(파이어볼)
   zhangfei: 'spear', xiahoudun: 'spear', jiling: 'spear', chengpu: 'spear', huaxiong: 'spear', handang: 'spear', zhoucang: 'spear',
   // 나머지(관우·조조·주유·손책·동탁·유비·원소·요화·우금)는 칼(기본)
+};
+
+// 지능(마법) 영웅 특수 시전 — 제갈량: 디파일러 끈끈이(Ensnare)식 광역 슬로우.
+// cd초마다 사거리 내 적 밀집점에 radius(필드%) 슬로우 장을 깔아 dur초간 이동속도 ×factor.
+export const HERO_CAST = {
+  zhugeliang: { type: 'slow', radius: 20, factor: 0.45, dur: 2.6, cd: 4.5 },
 };
 
 // 등급별 소환 후보(영웅 id). 소환·합성 시 등급 안에서 랜덤 1명.

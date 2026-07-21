@@ -332,6 +332,15 @@ function spawnBoom(pos, colorHex, pw = 1) {
   r.position.set(pos.x, 0.07, pos.z); r.scale.setScalar(0.3 * pw); r.material.opacity = 0.6;
   fx3d.push({ kind: 'shock', mk: 'ring', mesh: r, t: 0, dur: 0.4, pw });
 }
+// 제갈량 끈끈이 — 바닥에 초록 점액 장(반경 radiusPct)이 잠깐 깔렸다 사라진다
+export function spawnSlowField3d(x, y, radiusPct, colorHex) {
+  if (!renderer) return;
+  const m = takeFx('burst', colorHex);
+  m.position.set(wx(x), 0.04, wz(y)); m.rotation.x = -Math.PI / 2;
+  const d = (radiusPct / 100) * FIELD_W * 2; // 지름(월드)
+  m.scale.set(d, d, 1); m.material.opacity = 0.45;
+  fx3d.push({ kind: 'slowfield', mk: 'burst', mesh: m, t: 0, dur: 2.6, d });
+}
 // 초월 광역기 — 바닥에서 링이 전장으로 퍼진다
 export function spawnAoe3d(x, y, colorHex) {
   if (!renderer) return;
@@ -396,6 +405,13 @@ function updateFx(dt) {
       // 폭발 충격 링 — 지면을 훑는 작은 파문
       f.mesh.scale.setScalar((0.3 + p * 2.0) * (f.pw || 1)); f.mesh.material.opacity = 0.6 * (1 - p);
       if (p >= 1) { freeFx('ring', f.mesh); fx3d.splice(i, 1); }
+    } else if (f.kind === 'slowfield') {
+      // 끈끈이 장 — 바닥에 눕힌 채(빌보드 X) 살짝 맥박, 뒤쪽 25%에서 서서히 사라짐
+      f.mesh.rotation.x = -Math.PI / 2;
+      const fade = p < 0.75 ? 1 : 1 - (p - 0.75) / 0.25;
+      f.mesh.scale.set(f.d * (0.96 + 0.04 * Math.sin(clock * 4)), f.d, 1);
+      f.mesh.material.opacity = 0.42 * fade;
+      if (p >= 1) { freeFx('burst', f.mesh); fx3d.splice(i, 1); }
     } else if (f.kind === 'burst') {
       faceCam(f.mesh); f.mesh.scale.setScalar((0.3 + p * 1.0) * (f.pw || 1)); f.mesh.material.opacity = 1 - p;
       if (p >= 1) { freeFx('burst', f.mesh); fx3d.splice(i, 1); }

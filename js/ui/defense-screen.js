@@ -92,7 +92,7 @@ on('rd:summon', () => actGuard(() => { closeSheet(); doSummon1(); })); // 원클
 on('rd:upgrade', () => actGuard(() => toggleSheet('upgrade')));
 on('rd:merge', () => actGuard(() => { closeSheet(); play('tap'); openMergePicker(); }));
 on('rd:refund', () => actGuard(() => toggleSheet('refund')));
-on('rd:gamble', () => actGuard(() => toggleSheet('gamble')));
+on('rd:gamble', () => actGuard(() => rollGambleCenter())); // 필드 중앙에 주사위 낙하 연출
 
 let fieldEl = null;
 let labelLayer = null; // 유닛 이름·별 오버레이(3D 위에 투영)
@@ -389,12 +389,17 @@ export function render(root) {
         <div class="rd-shots" id="rd-shots" aria-hidden="true"></div>
         <button class="rd-gear" id="rd-gear" aria-label="설정"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.1" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 3.8 V6 M12 18 V20.2 M3.8 12 H6 M18 12 H20.2 M6.3 6.3 L7.9 7.9 M16.1 16.1 L17.7 17.7 M17.7 6.3 L16.1 7.9 M7.9 16.1 L6.3 17.7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button>
         <button class="rd-speed" id="rd-speed" aria-label="전투 배속">1×</button>
+        <button class="rd-help" id="rd-help" aria-label="도움말">?</button>
         <div class="rd-timer" id="rd-timer" hidden><b id="rd-timer-n">60</b><span>초</span></div>
         <div class="rd-prep" id="rd-prep" hidden>
           <b class="rd-prep-n">15</b>
           <span class="rd-prep-sub">전투 시작까지 · 장수를 배치하세요</span>
         </div>
         <button class="rd-next" id="rd-next" hidden>다음 라운드 ▶</button>
+        <div class="rd-dice-stage" id="rd-dice-stage" hidden>
+          <canvas class="rd-field-dice" id="rd-field-dice"></canvas>
+          <div class="rd-dice-result" id="rd-dice-result" hidden></div>
+        </div>
         <div class="rd-over" id="rd-over" hidden></div>
       </div>
         <p class="rd-tip" id="rd-tip"><b>소환</b>한 장수를 <b>끌어</b> 적 길목에 배치하세요</p>
@@ -413,6 +418,7 @@ export function render(root) {
 
   // 설정 — 상단 톱니 버튼이 설정 오버레이를 연다
   document.getElementById('rd-gear').addEventListener('click', () => { play('tap'); emit('nav:settings'); });
+  document.getElementById('rd-help').addEventListener('click', () => { play('tap'); showHelp(); });
 
   // 다음 라운드 — 다 잡았는데 타이머가 남았으면 기다리지 않고 바로 넘어간다(수석)
   document.getElementById('rd-next').addEventListener('click', () => {
@@ -568,6 +574,31 @@ function gradeReveal(rarity, heroName) {
   el.innerHTML = `<i class="rd-gr-rays"></i><i class="rd-gr-burst"></i><b class="rd-gr-grade">${GRADE_NAME[rarity]} 획득!</b><span class="rd-gr-name">${heroName || ''}</span>`;
   layer.appendChild(el);
   setTimeout(() => el.remove(), rarity >= 5 ? 2100 : 1700);
+}
+
+// 도움말 — 게임 방법 · 버튼 · 등급 · 속성/크기 상성. ? 버튼으로 연다.
+function showHelp() {
+  const box = document.createElement('div');
+  box.className = 'rd-help-body';
+  box.innerHTML = `
+    <section class="rd-hs"><h4>게임 방법</h4>
+      <p>소환한 장수를 <b>끌어</b> 배치하면 사거리 안의 적을 자동 공격합니다. 적은 길목을 돌며 계속 <b>누적</b>돼요 — 시간은 웨이브와 무관하게 흐릅니다. 화면에 적이 <b>100</b> 쌓이면 패배!</p></section>
+    <section class="rd-hs"><h4>버튼</h4><ul>
+      <li><b>소환</b> — 랜덤 장수 1명(꾹 누르면 연속). 50뽑마다 등급업 확정(천장)</li>
+      <li><b>단련</b> — 속성별 전 유닛 공격력·공속 강화</li>
+      <li><b>합성</b> — 같은 장수 3장 → 상위 등급 랜덤 1장</li>
+      <li><b>반환</b> — 필요 없는 장수를 골드로 되돌림</li>
+      <li><b>도박</b> — 주사위 2개, 합계×배수 골드(더블이면 잭팟)</li>
+    </ul></section>
+    <section class="rd-hs"><h4>영웅 등급 (6단계)</h4>
+      <p class="rd-hs-grades"><span class="g g1">일반</span><span class="g g2">희귀</span><span class="g g3">영웅</span><span class="g g4">전설</span><span class="g g5">신화</span><span class="g g6">초월</span></p>
+      <p>높을수록 사거리·동시타격·데미지↑. <b>전설</b>부터는 몸에서 오라·빛기둥이 뿜어져 나옵니다.</p></section>
+    <section class="rd-hs"><h4>속성 상성</h4>
+      <p class="rd-hs-elem"><span style="color:#e0613a">불</span> ▸ <span style="color:#57bd86">바람</span> ▸ <span style="color:#b0803f">땅</span> ▸ <span style="color:#4f9dd6">물</span> ▸ <span style="color:#e0613a">불</span> <em>(▸ = 이김)</em></p>
+      <p>상성 우위 데미지 <b>×1.5</b>, 열위 <b>×0.75</b>. 라운드마다 적 속성이 <b>통일</b>되니 그 속성을 이기는 장수를 준비하세요.</p></section>
+    <section class="rd-hs"><h4>유닛 크기 상성</h4>
+      <p>적은 <b>소형</b>(빠르고 약함)·<b>중형</b>·<b>대형</b>(느리고 단단, 보상↑). 각 장수는 한 체급에 <b>강함(×1.25)</b>·다른 체급에 <b>약함(×0.8)</b> — 영웅을 탭해 확인.</p></section>`;
+  showModal({ title: '도움말', body: box, actions: [{ label: '닫기', primary: true }] });
 }
 
 // ── 하단 컨텍스트 시트 — 소환/반환/도박 옵션을 도크 빈 공간에 펼친다 ──
@@ -737,6 +768,37 @@ function doRefundBulk() {
   syncUnits();
   updateHud();
   updateRefundSheet();
+}
+// 도박 — 필드 중앙에 주사위를 떨어뜨려 굴리고, 멈추면 눈을 보여준 뒤 '획득' 표시(수석)
+const FACE = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+let gambleRolling = false;
+function rollGambleCenter() {
+  if (gambleRolling || !run) return;
+  if (run.gambleCd > 0) { vibrate(8); floatText(window.innerWidth / 2, window.innerHeight * 0.4, `${Math.ceil(run.gambleCd)}초 후 가능`, 'warn'); return; }
+  if (run.gold < DEFENSE.gamble.cost) { vibrate(8); floatText(window.innerWidth / 2, window.innerHeight * 0.4, '골드가 부족해요', 'warn'); return; }
+  const res = engine.gamble(run); // {won,d1,d2,jackpot} — 골드 즉시 차감·지급
+  if (!res) { vibrate(8); return; }
+  gambleRolling = true; play('tap'); vibrate(8);
+  const stage = document.getElementById('rd-dice-stage');
+  const resEl = document.getElementById('rd-dice-result');
+  const cv = document.getElementById('rd-field-dice');
+  if (!stage || !cv || !resEl) { gambleRolling = false; return; }
+  resEl.hidden = true; resEl.classList.remove('pop');
+  stage.hidden = false;
+  requestAnimationFrame(() => {
+    const w = Math.round(cv.clientWidth) || 300, h = Math.round(cv.clientHeight) || 260;
+    dice3d.dispose(); dice3d.init(cv, w, h); dice3d.lucky(false);
+    dice3d.roll(res.d1, res.d2, () => { // 주사위가 멈춘 뒤
+      const dice = `<span class="rd-gm-face">${FACE[res.d1]}</span><span class="rd-gm-face">${FACE[res.d2]}</span>`;
+      setTimeout(() => { // 눈을 ~1초 보여준 뒤 '획득' 표시
+        if (res.jackpot) { resEl.innerHTML = `<div class="rd-gm-dice lucky">${dice}<em>더블 ${res.d1}!</em></div><b class="rd-gm-won lucky">럭키! +${fmt(res.won)}골드</b>`; dice3d.lucky(true); play('legend'); flash('gold'); vibrate(50); }
+        else { resEl.innerHTML = `<div class="rd-gm-dice">${dice}<em>= ${res.d1 + res.d2}</em></div><b class="rd-gm-won">+${fmt(res.won)}골드 획득</b>`; play('claim'); vibrate(12); }
+        resEl.hidden = false; void resEl.offsetWidth; resEl.classList.add('pop');
+        updateHud();
+      }, 1000);
+      setTimeout(() => { stage.hidden = true; if (dice3d.ready()) dice3d.dispose(); gambleRolling = false; }, 2800); // 정리
+    });
+  });
 }
 function doGamble() {
   if (rolling) return;
@@ -988,6 +1050,10 @@ function consumeFx() {
       // 초월 광역기 — 유닛 자리에서 3D 파문이 전장을 훑고 섬광
       play('legend'); flash('gold'); vibrate(28);
       r3d.spawnAoe3d(fx.x, fx.y, ELEMENT_COLOR[fx.element] || '#ffe6a2');
+    } else if (fx.type === 'slowField') {
+      // 제갈량 끈끈이 — 바닥에 초록 점액 장(적 둔화)
+      play('tap');
+      r3d.spawnSlowField3d(fx.x, fx.y, fx.radius, '#5fd98a');
     } else if (fx.type === 'summon') {
       syncUnits();
     } else if (fx.type === 'prepEnd') {
