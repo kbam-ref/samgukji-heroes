@@ -660,6 +660,15 @@ export function syncEnemies(list) {
   }
 }
 
+// 공격 내려치기 포즈 — 2026-07-22 수석 "대가리만 흔든다": 윈드업(뒤로 젖힘)→강한 사선 내려치기→복귀로
+//   '친다'가 확실히 읽히는 큰 스윙. u: 0→1 진행. {rx: X축 젖힘, rz: 사선 트위스트, hop: 상하}.
+function strikePose(u) {
+  let rx, hop;
+  if (u < 0.26) { const w = u / 0.26; rx = 0.28 * w; hop = 0.06 * w; }            // 윈드업 — 뒤로 젖히며 무기 든다
+  else { const c = (u - 0.26) / 0.74, e = Math.sin(c * Math.PI * 0.5); rx = 0.28 - e * 1.02; hop = 0.06 + Math.sin(c * Math.PI) * 0.16; } // 내려치기
+  return { rx, rz: -0.22 * Math.sin(u * Math.PI), hop };
+}
+
 // 매 프레임 — 빌보드가 카메라를 바라보게(수직 유지) + idle bob + 좌우 뒤집기, 그리고 렌더.
 export function frame(dt) {
   if (!renderer) return;
@@ -692,16 +701,15 @@ export function frame(dt) {
           const dur = n._clipDur || (n._clipDur = (n.action.getClip && n.action.getClip() ? n.action.getClip().duration : 0.5));
           if (n.action.time >= dur - 0.02) { n.action.time = 0; n.action.paused = true; n.attacking = false; }
         }
-        if (n.strikeT > 0) { // 내려치기 — 앞으로 숙였다 복귀 + 살짝 솟구쳐 내려침(강한 타격감)
+        if (n.strikeT > 0) { // 내려치기 — 윈드업→강한 사선 내려치기(리그 클립 위에 절차적 스윙 강조)
           n.strikeT -= dt;
-          const sp = Math.sin(Math.max(0, 1 - n.strikeT / 0.26) * Math.PI);
-          n.modelObj.rotation.x = -sp * 0.52;
-          n.modelObj.rotation.z = sp * 0.1;
-          n.modelObj.position.y = (n.hit ? -0.06 : 0) + sp * 0.09;
-        } else { // 대기 — 은은한 숨쉬기(고개만 흔드는 느낌 제거)
+          const s = strikePose(Math.min(1, 1 - n.strikeT / 0.32));
+          n.modelObj.rotation.x = s.rx; n.modelObj.rotation.z = s.rz;
+          n.modelObj.position.y = (n.hit ? -0.06 : 0) + s.hop;
+        } else { // 대기 — 아주 은은한 호흡만(고개 흔드는 느낌 제거: 진폭 대폭 축소)
           n.modelObj.rotation.x = 0;
-          n.modelObj.rotation.z = Math.sin(clock * 1.5 + n.phase) * 0.028;
-          n.modelObj.position.y = (n.hit ? -0.06 : 0) + Math.sin(clock * 2.1 + n.phase) * 0.03;
+          n.modelObj.rotation.z = Math.sin(clock * 1.3 + n.phase) * 0.014;
+          n.modelObj.position.y = (n.hit ? -0.06 : 0) + Math.sin(clock * 1.9 + n.phase) * 0.02;
         }
       } else if (n.mixer) { // 적(걷기 루프)
         n.modelObj.position.y = n.hit ? -0.06 : 0; n.modelObj.rotation.z = 0;
@@ -710,8 +718,8 @@ export function frame(dt) {
         n.modelObj.position.y = (n.hit ? -0.06 : 0) + (moving ? Math.abs(Math.sin(t)) * 0.07 : Math.sin(t) * BOB_AMP * 0.6);
         if (n.strikeT > 0) {
           n.strikeT -= dt;
-          const sp = Math.sin(Math.max(0, 1 - n.strikeT / 0.26) * Math.PI);
-          n.modelObj.rotation.x = -sp * 0.62; n.modelObj.rotation.z = sp * 0.12;
+          const s = strikePose(Math.min(1, 1 - n.strikeT / 0.32));
+          n.modelObj.rotation.x = s.rx; n.modelObj.rotation.z = s.rz;
         } else { n.modelObj.rotation.x = 0; n.modelObj.rotation.z = moving ? Math.sin(t) * 0.05 : 0; }
       }
     } else {
@@ -776,8 +784,8 @@ export function fieldFromPx(px, py) {
 export function playAttack(uid) {
   const n = units.get(uid);
   if (!n) return;
-  if (n.action && n.isAttacker) { n.action.reset(); n.action.timeScale = 2.6; n.action.paused = false; n.action.play(); n.attacking = true; }
-  n.strikeT = 0.26; // 모든 영웅 — 절차적 '내려치기'(클립이 미묘해도 '친다'가 확실히 읽히게)
+  if (n.action && n.isAttacker) { n.action.reset(); n.action.timeScale = 2.4; n.action.paused = false; n.action.play(); n.attacking = true; }
+  n.strikeT = 0.32; // 모든 영웅 — 절차적 '윈드업→내려치기'(클립이 미묘해도 '친다'가 확실히 읽히게)
 }
 
 // 공격 순간 그 적(tx,ty%) 쪽으로 잠깐 돌진하는 연출
