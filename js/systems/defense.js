@@ -493,6 +493,18 @@ function spawnEnemy(run) {
   run.spawned += 1;
 }
 
+// 광역 시전 중심 — 반경 안에 가장 많은 적이 드는 '적 밀집점'(살아있는 적 기준). 시전자 발밑이 아니라 적 무리에 깔린다.
+function densestEnemyPoint(run, radius) {
+  let best = null, bestCount = -1;
+  for (const e of run.enemies) {
+    if (e.dead) continue;
+    let cnt = 0;
+    for (const o of run.enemies) { if (!o.dead && Math.hypot(o.x - e.x, o.y - e.y) <= radius) cnt++; }
+    if (cnt > bestCount) { bestCount = cnt; best = { x: e.x, y: e.y }; }
+  }
+  return best;
+}
+
 // 적 처치 정산 — 골드·처치수·처치 fx·보스 보상. (일반타격·광역기 공용)
 function registerKill(run, target) {
   target.dead = true;
@@ -608,12 +620,14 @@ export function tick(run, dt) {
       u.castCd = (u.castCd ?? cast.cd) - dt;
       if (u.castCd <= 0 && run.enemies.length) {
         u.castCd = cast.cd;
-        let cx = u.x, cy = u.y, bestD = 1e9; // 가장 가까운 적 지점을 중심으로
-        for (const e of run.enemies) { const d = Math.hypot(e.x - u.x, e.y - u.y); if (d < bestD) { bestD = d; cx = e.x; cy = e.y; } }
-        for (const e of run.enemies) {
-          if (Math.hypot(e.x - cx, e.y - cy) <= cast.radius) { e.slowT = cast.dur; e.slowF = cast.factor; }
+        // 2026-07-22 수석: 시전자 발밑이 아니라 '적 밀집점'에 깔리게(자기한테 걸린 것처럼 보이던 문제)
+        const c = densestEnemyPoint(run, cast.radius);
+        if (c) {
+          for (const e of run.enemies) {
+            if (!e.dead && Math.hypot(e.x - c.x, e.y - c.y) <= cast.radius) { e.slowT = cast.dur; e.slowF = cast.factor; }
+          }
+          run.fx.push({ type: 'slowField', uid: u.uid, x: c.x, y: c.y, radius: cast.radius, element: u.element });
         }
-        run.fx.push({ type: 'slowField', uid: u.uid, x: cx, y: cy, radius: cast.radius, element: u.element });
       }
     }
     // 싸이오닉 스톰(조조) — cd초마다 적 밀집점에 전기 폭풍 소환(지속 광역 데미지)
@@ -621,11 +635,12 @@ export function tick(run, dt) {
       u.castCd = (u.castCd ?? cast.cd) - dt;
       if (u.castCd <= 0 && run.enemies.length) {
         u.castCd = cast.cd;
-        let cx = u.x, cy = u.y, bestD = 1e9;
-        for (const e of run.enemies) { const d = Math.hypot(e.x - u.x, e.y - u.y); if (d < bestD) { bestD = d; cx = e.x; cy = e.y; } }
-        const dmg = u.base * info.dmg * cast.dmgMult * (run.dmgMult || 1) * atkBoost;
-        (run.storms = run.storms || []).push({ x: cx, y: cy, radius: cast.radius, dmg, t: 0, dur: cast.dur, tickCd: 0, tickEvery: cast.tickEvery });
-        run.fx.push({ type: 'storm', uid: u.uid, x: cx, y: cy, radius: cast.radius, dur: cast.dur, element: u.element });
+        const c = densestEnemyPoint(run, cast.radius); // 적 밀집점에 폭풍
+        if (c) {
+          const dmg = u.base * info.dmg * cast.dmgMult * (run.dmgMult || 1) * atkBoost;
+          (run.storms = run.storms || []).push({ x: c.x, y: c.y, radius: cast.radius, dmg, t: 0, dur: cast.dur, tickCd: 0, tickEvery: cast.tickEvery });
+          run.fx.push({ type: 'storm', uid: u.uid, x: c.x, y: c.y, radius: cast.radius, dur: cast.dur, element: u.element });
+        }
       }
     }
 

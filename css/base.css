@@ -594,9 +594,10 @@ body.modal-open #tab-bar { visibility: hidden; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center; /* v121 가로 — 세로 중앙 정렬(dvh 대신) */
+  justify-content: space-between; /* 2026-07-22: 로고=상단 하늘, 버튼=하단 → 가운데 기병 아트가 안 가림 */
+  padding: 4% 0 6%;
   background:
-    linear-gradient(180deg, rgba(11, 10, 8, 0.25), rgba(11, 10, 8, 0.05) 40%, rgba(11, 10, 8, 0.72) 88%),
+    linear-gradient(180deg, rgba(9, 8, 6, 0.55), rgba(9, 8, 6, 0.05) 34%, rgba(9, 8, 6, 0.2) 62%, rgba(9, 8, 6, 0.82) 100%),
     url('../assets/ui/title-art.png') center / cover no-repeat,
     radial-gradient(120% 80% at 50% 20%, #2a2213, #0b0a08 75%);
   animation: title-in 0.6s ease-out;
@@ -612,24 +613,34 @@ body.modal-open #tab-bar { visibility: hidden; }
   pointer-events: none;
 }
 .title-logo {
-  margin-top: 0; /* v121 가로 — justify-center가 세로 배치 담당 */
+  position: relative;
   text-align: center;
-  font-family: var(--font-display);
+  padding: 14px 40px 16px;
+  border-radius: 18px;
+  /* 어두운 후광 플레이트 — 아트 위에서도 글씨가 항상 읽히게(수석: 배경색과 글씨색이 비슷해 안 보임) */
+  background: radial-gradient(115% 130% at 50% 42%, rgba(6, 5, 3, 0.82), rgba(6, 5, 3, 0.5) 60%, transparent 82%);
   animation: logo-drop 0.8s var(--ease-out) both 0.15s;
 }
+/* 타이틀/로딩 로고 전용 서체 — 인게임 맑은 고딕과 구분되는 묵직한 명조(첫화면 임팩트, 수석 2026-07-22) */
+.title-brand, .load-logo { font-family: 'Noto Serif KR', 'AppleMyungjo', 'Nanum Myeongjo', 'Batang', 'Times New Roman', serif; }
 @keyframes logo-drop {
   from { opacity: 0; transform: translateY(-18px) scale(0.96); }
 }
 .title-eyebrow {
   display: block; font-style: normal; font-size: 13px; letter-spacing: 0.4em;
-  margin-left: 0.4em; color: var(--gold-bright); opacity: 0.9; margin-bottom: 6px;
+  margin-left: 0.4em; color: #ffe6a6; opacity: 0.95; margin-bottom: 6px;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9), 0 0 2px rgba(0, 0, 0, 0.8);
 }
-/* 삼국지 랜덤 디펜스 — 로고의 주인공(큼직·금빛). 2026-07-22 수석: 약어(삼랜디) 대신 정식 명칭. */
+/* 삼국지 랜덤 디펜스 — 로고의 주인공(큼직·금빛·묵직한 외곽선). 2026-07-22 수석: 정식 명칭·가독성 강화. */
 .title-brand {
-  display: block; font-size: 58px; font-weight: 900; line-height: 1.04; letter-spacing: 0.02em;
-  background: linear-gradient(180deg, #fff4c8, #f0c548 44%, #a8781f);
+  display: block; font-size: 58px; font-weight: 900; line-height: 1.08; letter-spacing: 0.01em;
+  background: linear-gradient(180deg, #fff6cf, #f2ca4e 46%, #b07f22);
   -webkit-background-clip: text; background-clip: text; color: transparent;
-  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.7)) drop-shadow(0 0 24px rgba(228, 197, 92, 0.42));
+  /* 어두운 외곽선(4방향) + 깊은 그림자 — 밝은 아트 위에서도 또렷하게 */
+  filter:
+    drop-shadow(1.5px 1.5px 0 rgba(24, 12, 4, 0.95)) drop-shadow(-1.5px 1.5px 0 rgba(24, 12, 4, 0.95))
+    drop-shadow(1.5px -1.5px 0 rgba(24, 12, 4, 0.95)) drop-shadow(-1.5px -1.5px 0 rgba(24, 12, 4, 0.95))
+    drop-shadow(0 5px 14px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 26px rgba(228, 197, 92, 0.45));
 }
 .title-full {
   display: block; margin-top: 9px; font-size: 16px; font-weight: 700;

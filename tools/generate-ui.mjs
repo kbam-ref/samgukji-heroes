@@ -51,16 +51,19 @@ const ITEMS = {
       'subtle dragon engraving on the rim only, empty smooth center, on pure black background, ' +
       'flat front view, game UI asset, no text, no watermark',
   },
-  // 타이틀/로딩 공용 키 아트 — 주요 영웅들이 돌격하는 웅장한 가로 전투 씬. 2026-07-22 수석: 치비 제거(징그러움)·정식 무기.
+  // 타이틀/로딩 공용 키 아트 — 삼영전여포(호뢰관): 유비·관우·장비 셋이 여포 하나와 말 위에서 격돌.
+  // 2026-07-22 수석: 상단에 '반드시 비워둔' 하늘(제목 자리). 뒤에 병사·성. 치비 금지.
   'title-art': {
     w: 896, h: 512,
     prompt:
-      'epic cinematic splash key art for a Three Kingdoms mobile game, a heroic ancient Chinese general in ornate green and gold ' +
-      'lamellar armor with a long flowing black beard standing powerfully at the front, gripping a green-dragon crescent guandao ' +
-      'polearm with a large curved crescent blade, two more warrior heroes charging behind him with spear and sword, war banners, ' +
-      'dramatic golden sunset battlefield, swirling dust and glowing embers, wide landscape composition with a darker open sky at the ' +
-      'top for a title, highly detailed painterly digital illustration, heroic proportions, dramatic rim lighting, rich warm epic ' +
-      'color palette, professional AAA game splash art, artstation quality, sharp focus, no chibi, no text, no watermark, no logo',
+      'epic cinematic splash key art, the legendary Battle of Hulao Pass, three heroic ancient Chinese warriors on horseback fighting ' +
+      'together against one mighty enemy warlord: a bearded general with a long green-dragon crescent guandao polearm, a huge fierce ' +
+      'warrior with a serpent spear, and a noble leader with twin swords, all clashing against a single powerful armored warlord on a ' +
+      'black horse wielding a long halberd in the center, dramatic cavalry clash, behind them ranks of soldiers with tall banners and a ' +
+      'great stone fortress gate, dust and sparks, dramatic sky, wide cinematic landscape, IMPORTANT: keep the entire top third an empty ' +
+      'plain dark stormy sky with no characters so a title can be placed there, highly detailed painterly digital illustration, heroic ' +
+      'proportions, dramatic rim lighting, epic warm and moody color palette, professional AAA game splash art, artstation quality, ' +
+      'sharp focus, no chibi, no text, no watermark, no logo',
   },
   'ribbon-header': {
     w: 512, h: 192,

@@ -693,7 +693,7 @@ function sheetGambleHtml() {
     <div class="rd-sheet-head"><b>행운의 주사위 — 두 개</b><button class="rd-sheet-x" data-x aria-label="닫기">✕</button></div>
     <canvas class="rd-dice3d" id="rd-dice3d"></canvas>
     <div class="rd-gm-result" id="rd-gm-result" hidden></div>
-    <div class="rd-gm-info" id="rd-gm-info">합계 ×${g.perPip}골드 · <em>더블이면 럭키! ${g.doubleGold}골드</em></div>
+    <div class="rd-gm-info" id="rd-gm-info">굴려서 골드 획득 · <em>더블이면 럭키! ${g.doubleGold}골드</em></div>
     <button class="btn primary rd-gm-go" data-roll>굴리기 · 골드 ${g.cost}</button>`;
 }
 
@@ -802,10 +802,9 @@ function rollGambleCenter() {
     const w = Math.round(cv.clientWidth) || 300, h = Math.round(cv.clientHeight) || 260;
     dice3d.dispose(); dice3d.init(cv, w, h); dice3d.lucky(false);
     dice3d.roll(res.d1, res.d2, () => { // 주사위가 멈춘 뒤
-      const dice = `<span class="rd-gm-face">${FACE[res.d1]}</span><span class="rd-gm-face">${FACE[res.d2]}</span>`;
-      setTimeout(() => { // 눈을 ~1초 보여준 뒤 '획득' 표시
-        if (res.jackpot) { resEl.innerHTML = `<div class="rd-gm-dice lucky">${dice}<em>더블 ${res.d1}!</em></div><b class="rd-gm-won lucky">럭키! +${fmt(res.won)}골드</b>`; dice3d.lucky(true); play('legend'); flash('gold'); vibrate(50); }
-        else { resEl.innerHTML = `<div class="rd-gm-dice">${dice}<em>= ${res.d1 + res.d2}</em></div><b class="rd-gm-won">+${fmt(res.won)}골드 획득</b>`; play('claim'); vibrate(12); }
+      setTimeout(() => { // 눈을 ~1초 보여준 뒤 — 합계/공식 없이 '획득 골드'만 크게(수석)
+        if (res.jackpot) { resEl.innerHTML = `<b class="rd-gm-won lucky">럭키! +${fmt(res.won)}골드</b>`; dice3d.lucky(true); play('legend'); flash('gold'); vibrate(50); }
+        else { resEl.innerHTML = `<b class="rd-gm-won">+${fmt(res.won)}골드 획득!</b>`; play('claim'); vibrate(12); }
         resEl.hidden = false; void resEl.offsetWidth; resEl.classList.add('pop');
         updateHud();
       }, 1000);
@@ -832,16 +831,14 @@ function doGamble() {
   dice3d.lucky(false);
   const resEl = document.getElementById('rd-gm-result');
   if (resEl) { resEl.hidden = true; resEl.classList.remove('pop'); } // 이전 결과 숨김
-  const FACE = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
   dice3d.roll(res.d1, res.d2, () => { // 3D 주사위가 물리적으로 굴러 결과 면이 위로 안착
     rolling = false;
-    const dice = `<span class="rd-gm-face">${FACE[res.d1]}</span><span class="rd-gm-face">${FACE[res.d2]}</span>`;
-    if (res.jackpot) {
-      if (resEl) resEl.innerHTML = `<div class="rd-gm-dice lucky">${dice}<em>더블 ${res.d1}!</em></div><b class="rd-gm-won lucky">럭키! +${fmt(res.won)}골드</b>`;
+    if (res.jackpot) { // 합계/공식 없이 획득 골드만(수석)
+      if (resEl) resEl.innerHTML = `<b class="rd-gm-won lucky">럭키! +${fmt(res.won)}골드</b>`;
       dice3d.lucky(true);
       play('legend'); flash('gold'); vibrate(50);
     } else {
-      if (resEl) resEl.innerHTML = `<div class="rd-gm-dice">${dice}<em>= ${res.d1 + res.d2}</em></div><b class="rd-gm-won">+${fmt(res.won)}골드</b>`;
+      if (resEl) resEl.innerHTML = `<b class="rd-gm-won">+${fmt(res.won)}골드 획득!</b>`;
       play('claim'); vibrate(12);
     }
     if (resEl) { resEl.hidden = false; void resEl.offsetWidth; resEl.classList.add('pop'); } // 리플로우 후 팝 애니
@@ -1123,6 +1120,7 @@ function beginRun(newRun) {
   if (over) { over.hidden = true; over.innerHTML = ''; }
   wipeNodes();
   shownArena = '';
+  r3d.preloadModels(); // 준비시간 동안 전 적/보스 3D 모델 미리 로드(첫 스폰부터 3D)
   syncEnemies();
   syncUnits();
   r3d.frame(0);
@@ -1173,8 +1171,16 @@ function startNewPlay() {
   if (!fieldEl) return;             // 그래도 없으면(이론상) 도전만 날리지 않게 중단
   if (!meta.consumePlay()) { emit('plays:empty'); return; }
   speed = 1; setSetting('rdSpeed', 1); updateSpeedChip(); // 새 판은 배속 1부터(수석)
+  resetRunSettings(); // 2026-07-22 수석: 새 판 = 게임 자동설정 초기화(오디오는 유지)
   started = true;
   beginRun(engine.createRun({}));
+}
+
+// 새 판 시작 시 게임 관련 자동설정을 기본값으로 초기화(영속). 효과음·배경음 등 오디오 설정은 건드리지 않는다.
+function resetRunSettings() {
+  autoMergeMax = 0; setSetting('rdAutoMerge', 0);
+  autoRefundOn = false; setSetting('rdAutoRefund', false);
+  rfFilter = { maxRarity: 1, element: 'all' }; setSetting('rdRefund', { maxRarity: 1, element: 'all' });
 }
 
 // SW 자동 업데이트로 새로고침되기 직전 — 진행 중이던 판을 저장해 새 버전에서 도전 소모 없이 이어가게 한다.

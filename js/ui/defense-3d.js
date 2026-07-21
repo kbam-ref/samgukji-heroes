@@ -5,7 +5,7 @@
 import * as THREE from '../vendor/three.module.js';
 import { GLTFLoader } from '../vendor/GLTFLoader.js';
 import { clone as skeletonClone } from '../vendor/SkeletonUtils.js';
-import { DEFENSE, ELEMENT_COLOR } from '../data/defense.js';
+import { DEFENSE, ELEMENT_COLOR, ENEMY_SPRITES, BOSS_SPRITES } from '../data/defense.js';
 
 // ── 튜닝값 (라이브 조정) ──────────────────────────────
 const FIELD_W = 10;              // 월드 가로(=필드 100%). 세로는 화면 비율로 파생.
@@ -636,6 +636,12 @@ export function syncUnits(list) {
   for (const [uid, n] of units) if (!seen.has(uid)) { disposeNode(n); units.delete(uid); }
 }
 
+// 준비시간(적 나오기 전)에 전 적/보스 모델을 미리 로드 — 첫 스폰부터 3D(2D 빌보드로 잠깐 뜨는 현상 방지, 수석 2026-07-22)
+export function preloadModels() {
+  if (!renderer) return;
+  for (const id of [...ENEMY_SPRITES, ...BOSS_SPRITES]) loadModel(id);
+}
+
 export function syncEnemies(list) {
   const seen = new Set();
   const sizes = DEFENSE.wave.sizes, bscale = DEFENSE.wave.boss.scale;
@@ -660,13 +666,18 @@ export function syncEnemies(list) {
   }
 }
 
-// 공격 내려치기 포즈 — 2026-07-22 수석 "대가리만 흔든다": 윈드업(뒤로 젖힘)→강한 사선 내려치기→복귀로
-//   '친다'가 확실히 읽히는 큰 스윙. u: 0→1 진행. {rx: X축 젖힘, rz: 사선 트위스트, hop: 상하}.
+// 공격 포즈 — 2026-07-22 수석 "누워서 쏘는 듯 과함": 몸통 대회전(넘어짐처럼 보임) 폐지.
+//   대신 '짧게 앞으로 찌르는 런지 + 임팩트 스쿼시 + 아주 작은 앞숙임'만. 진짜 '공격'은 투사체·참격 fx가 판다.
+//   u: 0→1. jab=타깃 방향 전진량(월드), hop=상하, pitch=앞숙임(작게), sqY/sqXZ=임팩트 눌림.
 function strikePose(u) {
-  let rx, hop;
-  if (u < 0.26) { const w = u / 0.26; rx = 0.28 * w; hop = 0.06 * w; }            // 윈드업 — 뒤로 젖히며 무기 든다
-  else { const c = (u - 0.26) / 0.74, e = Math.sin(c * Math.PI * 0.5); rx = 0.28 - e * 1.02; hop = 0.06 + Math.sin(c * Math.PI) * 0.16; } // 내려치기
-  return { rx, rz: -0.22 * Math.sin(u * Math.PI), hop };
+  const swing = Math.sin(Math.min(1, u) * Math.PI); // 0→1→0
+  return {
+    jab: swing * 0.24,           // 타깃 쪽으로 찌르고 복귀
+    hop: swing * 0.045,
+    pitch: -swing * 0.1,         // ~6°만 (누워보이지 않게)
+    sqY: 1 - swing * 0.09,       // 임팩트 순간 살짝 눌림(펀치감)
+    sqXZ: 1 + swing * 0.06,
+  };
 }
 
 // 매 프레임 — 빌보드가 카메라를 바라보게(수직 유지) + idle bob + 좌우 뒤집기, 그리고 렌더.
@@ -682,7 +693,6 @@ export function frame(dt) {
     const dx = g.position.x - (n.prevX ?? g.position.x), dz = g.position.z - (n.prevZ ?? g.position.z);
     n.prevX = g.position.x; n.prevZ = g.position.z;
     const speed = Math.hypot(dx, dz);
-    if (n.lungeAmt > 0) { g.position.x += n.lx * n.lungeAmt; g.position.z += n.lz * n.lungeAmt; n.lungeAmt -= dt * 6; if (n.lungeAmt < 0) n.lungeAmt = 0; }
     // 바라볼 방향: 공격 중=타겟, 이동 중=이동 방향(마린/저글링), 정지=마지막 방향
     let yaw;
     if (n.faceT > 0) { n.faceT -= dt; yaw = n.atkYaw; }
@@ -701,26 +711,35 @@ export function frame(dt) {
           const dur = n._clipDur || (n._clipDur = (n.action.getClip && n.action.getClip() ? n.action.getClip().duration : 0.5));
           if (n.action.time >= dur - 0.02) { n.action.time = 0; n.action.paused = true; n.attacking = false; }
         }
-        if (n.strikeT > 0) { // 내려치기 — 윈드업→강한 사선 내려치기(리그 클립 위에 절차적 스윙 강조)
+        if (n.strikeT > 0) { // 공격 — 타깃 쪽으로 짧게 찌르는 런지 + 임팩트 스쿼시(몸 대회전 없음: 누워보임 방지)
           n.strikeT -= dt;
-          const s = strikePose(Math.min(1, 1 - n.strikeT / 0.32));
-          n.modelObj.rotation.x = s.rx; n.modelObj.rotation.z = s.rz;
-          n.modelObj.position.y = (n.hit ? -0.06 : 0) + s.hop;
-        } else { // 대기 — 아주 은은한 호흡만(고개 흔드는 느낌 제거: 진폭 대폭 축소)
+          const s = strikePose(1 - n.strikeT / 0.32), ay = n.atkYaw ?? n.headYaw ?? 0;
+          n.modelObj.position.set(Math.sin(ay) * s.jab, (n.hit ? -0.06 : 0) + s.hop, Math.cos(ay) * s.jab);
+          n.modelObj.rotation.x = s.pitch; n.modelObj.rotation.z = 0;
+          n.modelObj.scale.set(s.sqXZ, s.sqY, s.sqXZ);
+        } else { // 대기 — 아주 은은한 호흡만(고개 흔드는 느낌 제거)
+          n.modelObj.position.x = 0; n.modelObj.position.z = 0;
           n.modelObj.rotation.x = 0;
           n.modelObj.rotation.z = Math.sin(clock * 1.3 + n.phase) * 0.014;
           n.modelObj.position.y = (n.hit ? -0.06 : 0) + Math.sin(clock * 1.9 + n.phase) * 0.02;
+          n.modelObj.scale.set(1, 1, 1);
         }
       } else if (n.mixer) { // 적(걷기 루프)
         n.modelObj.position.y = n.hit ? -0.06 : 0; n.modelObj.rotation.z = 0;
-      } else { // 절차적(정적 모델, 무믹서) — 걸음 튐 + 내려치기
+      } else { // 절차적(정적 모델, 무믹서) — 걸음 튐 + 찌르기 런지
         const t = clock * (moving ? 8.5 : 2.4) + n.phase;
-        n.modelObj.position.y = (n.hit ? -0.06 : 0) + (moving ? Math.abs(Math.sin(t)) * 0.07 : Math.sin(t) * BOB_AMP * 0.6);
-        if (n.strikeT > 0) {
+        if (n.strikeT > 0) { // 공격 — 타깃 쪽 찌르기 + 스쿼시(대회전 없음)
           n.strikeT -= dt;
-          const s = strikePose(Math.min(1, 1 - n.strikeT / 0.32));
-          n.modelObj.rotation.x = s.rx; n.modelObj.rotation.z = s.rz;
-        } else { n.modelObj.rotation.x = 0; n.modelObj.rotation.z = moving ? Math.sin(t) * 0.05 : 0; }
+          const s = strikePose(1 - n.strikeT / 0.32), ay = n.atkYaw ?? n.headYaw ?? 0;
+          n.modelObj.position.set(Math.sin(ay) * s.jab, (n.hit ? -0.06 : 0) + s.hop, Math.cos(ay) * s.jab);
+          n.modelObj.rotation.x = s.pitch; n.modelObj.rotation.z = 0;
+          n.modelObj.scale.set(s.sqXZ, s.sqY, s.sqXZ);
+        } else {
+          n.modelObj.position.x = 0; n.modelObj.position.z = 0;
+          n.modelObj.position.y = (n.hit ? -0.06 : 0) + (moving ? Math.abs(Math.sin(t)) * 0.07 : Math.sin(t) * BOB_AMP * 0.6);
+          n.modelObj.rotation.x = 0; n.modelObj.rotation.z = moving ? Math.sin(t) * 0.05 : 0;
+          n.modelObj.scale.set(1, 1, 1);
+        }
       }
     } else {
       g.rotation.y = Math.atan2(camX - g.position.x, camZ - g.position.z);
@@ -793,9 +812,8 @@ export function lunge(uid, tx, ty) {
   const n = units.get(uid); if (!n || !n.sized) return;
   const dx = wx(tx) - n.group.position.x, dz = wz(ty) - n.group.position.z;
   const m = Math.hypot(dx, dz) || 1;
-  const amt = n.isAttacker ? 0.13 : 0.45; // 스켈레탈은 클립이 팔다리를 움직이니 돌진 최소화(앞뒤 슬라이드 방지)
-  n.lx = (dx / m) * amt; n.lz = (dz / m) * amt; n.lungeAmt = 1;
-  n.atkYaw = Math.atan2(dx / m, dz / m); n.faceT = 0.45; // 그 적을 바라보며 공격
+  // 2026-07-22: 전진 '찌르기'는 modelObj(홀더)에서 처리 → 그룹 위치는 안 건드림(이동감지 오염·이중전진·미끄러짐 방지).
+  n.atkYaw = Math.atan2(dx / m, dz / m); n.faceT = 0.45; // 그 적을 바라보며 공격(찌르기 방향)
 }
 
 export function dispose() {
