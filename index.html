@@ -16,17 +16,15 @@
   <link rel="stylesheet" href="css/effects.css">
 </head>
 <body>
-  <div id="app">
-    <header id="resource-bar"></header>
-    <main id="screen-root"></main>
-    <nav id="tab-bar"></nav>
-  </div>
-  <div id="fx-layer"></div>
-  <div id="modal-root"></div>
-  <div id="rotate-guard" aria-hidden="true">
-    <div class="rg-icon">▭</div>
-    <b>가로로 돌려 주세요</b>
-    <span>삼국지 랜덤 디펜스는 가로 화면 전용이에요</span>
+  <!-- v117: 세로로 들어도 게임을 90° 돌려 항상 가로로 띄운다(강제 가로). 회전 요청 화면 제거. -->
+  <div id="viewport">
+    <div id="app">
+      <header id="resource-bar"></header>
+      <main id="screen-root"></main>
+      <nav id="tab-bar"></nav>
+    </div>
+    <div id="fx-layer"></div>
+    <div id="modal-root"></div>
   </div>
   <script type="module" src="js/main.js"></script>
 </body>

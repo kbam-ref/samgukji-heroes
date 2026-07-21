@@ -14,8 +14,11 @@ export function floatText(x, y, text, cls = '') {
   const el = document.createElement('span');
   el.className = `float-text ${cls}`;
   el.textContent = text;
-  el.style.left = `${x}px`;
-  el.style.top = `${y}px`;
+  // 강제 가로(90° 회전 레이어) — 뷰포트 기준 좌표를 회전 레이어 로컬로 매핑
+  let px = x, py = y;
+  if (document.body.classList.contains('force-rotate')) { px = y; py = window.innerWidth - x; }
+  el.style.left = `${px}px`;
+  el.style.top = `${py}px`;
   layer.appendChild(el);
   const life = reducedMotion ? 400 : 900;
   setTimeout(() => el.remove(), life);

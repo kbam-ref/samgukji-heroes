@@ -105,7 +105,6 @@ let saveTick = 0;
 const AUTOSAVE_SEC = 3; // 연속 자동저장 주기(초) — 강제종료 되감기(세이브 스컴) 방지
 let drag = null; // { uid, startX, startY, moved }
 // 폰 가로 전환 — 세로 전용이라 가로에선 게임 루프를 멈춘다(CSS #rotate-guard가 화면을 덮음)
-const portraitGuardMQ = matchMedia('(orientation: portrait) and (pointer: coarse)'); // v114: 가로 전용 — 세로(폰)면 게임 정지
 
 // ── 왼쪽 정보 패널 — 영웅을 탭하면 그 영웅 상세를 표시(v114 가로) ──
 let selectedUid = null;
@@ -143,9 +142,13 @@ function renderHeroInfo() {
     ${h.perk ? `<div class="rd-hi-perk">특성 · ${PERK_LABELS[h.perk.kind] || ''} +${h.perk.value}%</div>` : ''}`;
 }
 
-// 화면 좌표 → 필드 %(3D 바닥 레이캐스트)
+// 화면 좌표 → 필드 %(3D 바닥 레이캐스트). 강제 가로(90°CW 회전) 땐 포인터를 필드 로컬 px로 역매핑.
 function fieldFromClient(clientX, clientY) {
   const r = fieldEl.getBoundingClientRect();
+  if (document.body.classList.contains('force-rotate')) {
+    // 회전 매핑: 필드로컬 x = clientY - r.top, y = (r.left + r.width) - clientX
+    return r3d.fieldFromPx(clientY - r.top, r.left + r.width - clientX);
+  }
   return r3d.fieldFromPx(clientX - r.left, clientY - r.top);
 }
 // 누른 지점에서 가장 가까운 유닛을 잡는다(9% 이내). 배치 드래그 대상 선택.
@@ -226,8 +229,9 @@ function updateBg() {
 
 function measureField() {
   const r = fieldEl.getBoundingClientRect();
-  fieldW = r.width;
-  fieldH = r.height;
+  // 강제 가로(90° 회전) 상태면 getBoundingClientRect가 회전된 AABB를 줘 가로/세로가 뒤바뀜 → 되돌린다
+  if (document.body.classList.contains('force-rotate')) { fieldW = r.height; fieldH = r.width; }
+  else { fieldW = r.width; fieldH = r.height; }
 }
 function place(el, x, y) {
   el.style.transform = `translate3d(${(x / 100) * fieldW}px, ${(y / 100) * fieldH}px, 0) translate(-50%, -50%)`;
@@ -1182,8 +1186,7 @@ function startReveal(units) {
 
 function loop(now) {
   if (!run) { rafId = 0; return; }
-  // 폰 가로 전환 중엔 월드 정지 — 세로 전용이라 화면이 '세로로 돌려주세요'로 덮여 있다
-  if (portraitGuardMQ.matches) { last = now; if (rafId) rafId = requestAnimationFrame(loop); return; }
+  // v117: 세로로 들어도 강제 가로로 렌더하므로 방향에 따른 정지 없음(항상 진행)
   // '시작하기' 전엔 월드 정지 — 로딩·타이틀 뒤에서 적이 미리 스폰되지 않게
   if (!started) { last = now; if (rafId) rafId = requestAnimationFrame(loop); return; }
   // 소환 리빌 중엔 월드를 멈춘다 — 깃발을 뒤집는 순간의 긴장을 온전히 (적이 새지 않게)

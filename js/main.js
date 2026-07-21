@@ -21,6 +21,23 @@ import { fmt, formatDuration } from './ui/format.js';
 import { countUp, flyCoins } from './ui/effects.js';
 import { initSound, play, vibrate } from './ui/sound.js';
 
+// ── 강제 가로 (v117) — 세로로 들면 #viewport를 90° 회전시켜 가로로 채운다(회전 요청 화면 없이 바로 플레이) ──
+function applyForceRotate() {
+  const vp = document.getElementById('viewport');
+  if (!vp) return;
+  const portrait = window.innerHeight > window.innerWidth;
+  document.body.classList.toggle('force-rotate', portrait);
+  if (portrait) { // 회전 후 가로폭=화면높이, 가로높이=화면폭
+    vp.style.width = window.innerHeight + 'px';
+    vp.style.height = window.innerWidth + 'px';
+    vp.style.left = window.innerWidth + 'px';
+  } else { vp.style.width = ''; vp.style.height = ''; vp.style.left = ''; }
+}
+applyForceRotate();
+// resize보다 먼저 등록 → 방어화면 onResize가 뒤이어 실행돼 회전 반영된 크기로 재측정
+window.addEventListener('resize', applyForceRotate);
+window.addEventListener('orientationchange', applyForceRotate);
+
 const AUTOSAVE_MS = 10000;
 
 // 아직 거두지 않은 복귀 보상 — 새 보상이 오면 합산해 다시 보여준다.
