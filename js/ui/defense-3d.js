@@ -618,10 +618,14 @@ export function frame(dt) {
         n.mixer.update(dt);
         n.modelObj.position.y = n.hit ? -0.06 : 0;
         n.modelObj.rotation.z = n.isAttacker ? Math.sin(clock * 1.6 + n.phase) * 0.02 : 0;
-      } else { // 절차적(정적 모델) — 이동 시 걸음 튐, 정지 시 미세 숨쉬기
+      } else { // 절차적(정적 모델) — 이동 시 걸음 튐, 정지 시 미세 숨쉬기, 공격 시 내려치기 스윙
         const t = clock * (moving ? 8.5 : 2.4) + n.phase;
         n.modelObj.position.y = (n.hit ? -0.06 : 0) + (moving ? Math.abs(Math.sin(t)) * 0.07 : Math.sin(t) * BOB_AMP * 0.6);
-        n.modelObj.rotation.z = moving ? Math.sin(t) * 0.05 : 0;
+        if (n.swingT > 0) { // 공격 스윙 — 앞으로 숙였다 복귀(무기 없어도 '친다'는 느낌)
+          n.swingT -= dt;
+          const sp = Math.sin((1 - n.swingT / 0.28) * Math.PI); // 0→1→0
+          n.modelObj.rotation.x = -sp * 0.6; n.modelObj.rotation.z = sp * 0.12;
+        } else { n.modelObj.rotation.x = 0; n.modelObj.rotation.z = moving ? Math.sin(t) * 0.05 : 0; }
       }
     } else {
       g.rotation.y = Math.atan2(camX - g.position.x, camZ - g.position.z);
@@ -684,8 +688,9 @@ export function fieldFromPx(px, py) {
 // 영웅 공격 애니 1회 재생(스켈레탈 공격 클립). 정적/절차적 모델이면 무시.
 export function playAttack(uid) {
   const n = units.get(uid);
-  if (!n || !n.action || !n.isAttacker) return;
-  n.action.reset(); n.action.timeScale = 2.6; n.action.paused = false; n.action.play();
+  if (!n) return;
+  if (n.action && n.isAttacker) { n.action.reset(); n.action.timeScale = 2.6; n.action.paused = false; n.action.play(); }
+  else n.swingT = 0.28; // 공격 클립 없는 모델(리깅 실패 4종) — 절차적 '내려치기' 스윙
 }
 
 // 공격 순간 그 적(tx,ty%) 쪽으로 잠깐 돌진하는 연출
