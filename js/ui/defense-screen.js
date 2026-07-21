@@ -656,9 +656,11 @@ function sheetUpgradeHtml() {
       <button class="rd-eu-btn" data-eu="${k}" data-euk="atk"><span>공격 <em data-eulv="${k}-atk"></em></span><span class="rd-eu-cost" data-eucost="${k}-atk"></span></button>
       <button class="rd-eu-btn" data-eu="${k}" data-euk="spd"><span>공속 <em data-eulv="${k}-spd"></em></span><span class="rd-eu-cost" data-eucost="${k}-spd"></span></button>
     </div>`).join('');
+  const g = DEFENSE.gamble.up;
   return `
     <div class="rd-sheet-head"><b>속성 단련 — 그 속성 전 유닛 공격력·공속</b><button class="rd-sheet-x" data-x aria-label="닫기">✕</button></div>
-    <div class="rd-eu-list">${rows}</div>`;
+    <div class="rd-eu-list">${rows}</div>
+    <button class="btn rd-gup-btn" data-gup>🎲 승급 도박 · 골드 ${g.cost} <em>${Math.round(g.chance * 100)}% 확률로 1등급↑</em></button>`;
 }
 function sheetRefundHtml() {
   const rar = [1, 2, 3, 4].map((r) => `<button class="rd-chip${rfFilter.maxRarity === r ? ' on' : ''}" data-mr="${r}">${r}★ 이하</button>`).join('');
@@ -867,6 +869,13 @@ function onSheetClick(e) {
   if (e.target.closest('[data-go]')) { doRefundBulk(); return; }
   if (e.target.closest('[data-autorf]')) { toggleAutoRefund(); return; }
   if (e.target.closest('[data-roll]')) { doGamble(); return; }
+  if (e.target.closest('[data-gup]')) { doGambleUpgrade(); return; }
+}
+// 승급 도박 — 골드로 20% 유닛 1등급 승급. 성공/실패 연출은 consumeFx(gambleUp)가 처리.
+function doGambleUpgrade() {
+  const r = engine.gambleUpgrade(run);
+  if (!r.ok) { vibrate(8); floatText(window.innerWidth / 2, window.innerHeight * 0.42, r.noTarget ? '승급할 유닛이 없어요' : '골드가 부족해요', 'warn'); return; }
+  play('tap'); vibrate(8); updateHud();
 }
 // 자동 반환 스위치 — 켜면 지금 한 번 반환 + 이후 소환할 때마다 이 조건으로 자동 반환
 function toggleAutoRefund() {
@@ -1046,6 +1055,15 @@ function consumeFx() {
       if (fx.gold) parts.push(`+${fmt(fx.gold)} 골드`);
       floatText(window.innerWidth / 2, window.innerHeight * 0.3, `보스 격파! ${parts.join(' · ')}`, 'gold');
       syncUnits();
+    } else if (fx.type === 'bossGrant') {
+      // 메운디밸런스: 보스 처치 무료 고등급 유닛 — 획득 연출 + 로스터 갱신
+      syncUnits();
+      gradeReveal(fx.rarity, HERO_NAME.get(fx.heroId));
+      if (fx.rarity < 4) floatText(window.innerWidth / 2, window.innerHeight * 0.42, `${RARITY[fx.rarity]?.name || ''} ${HERO_NAME.get(fx.heroId)} 무료 획득!`, 'gold');
+    } else if (fx.type === 'gambleUp') {
+      if (fx.success) { play('legend'); vibrate(30); syncUnits(); gradeReveal(fx.rarity, null); floatText(window.innerWidth / 2, window.innerHeight * 0.42, `승급 성공! ${RARITY[fx.rarity]?.name || ''}`, 'gold'); }
+      else { play('foehit'); vibrate(10); floatText(window.innerWidth / 2, window.innerHeight * 0.42, '승급 실패…', 'warn'); }
+      updateHud();
     } else if (fx.type === 'aoe') {
       // 초월 광역기 — 유닛 자리에서 3D 파문이 전장을 훑고 섬광
       play('legend'); flash('gold'); vibrate(28);

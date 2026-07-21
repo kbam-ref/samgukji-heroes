@@ -135,6 +135,48 @@ export function summon(run) {
   return unit;
 }
 
+// 지정 등급 유닛을 무료 지급(보스 처치 보상 등) — 비용/확률 없이 그 등급에서 랜덤 영웅 1명.
+function grantUnit(run, rarity) {
+  const slot = freeSlot(run);
+  if (slot < 0) return null;
+  const pool = SUMMON_POOL[rarity];
+  const heroId = pool[Math.floor(Math.random() * pool.length)];
+  const unit = makeUnit(heroId, slot);
+  const mate = run.units.find((x) => x.heroId === heroId);
+  if (mate) unit.upgradeLv = mate.upgradeLv;
+  run.units.push(unit);
+  return unit;
+}
+function pickGrantRarity() {
+  const g = DEFENSE.wave.boss.grant;
+  if (!g || !g.length) return 4;
+  const r = Math.random(); let acc = 0;
+  for (const [rar, p] of g) { acc += p; if (r < acc) return rar; }
+  return g[g.length - 1][0];
+}
+
+/** 승급 도박 — 골드 지불, chance 확률로 최고등급 미만 유닛 1명을 1등급 승급(위치 유지). */
+export function gambleUpgrade(run) {
+  const g = DEFENSE.gamble.up;
+  if (!g || run.gold < g.cost) return { ok: false };
+  const cands = run.units.filter((u) => u.rarity < 6);
+  if (!cands.length) return { ok: false, noTarget: true }; // 승급 대상 없으면 비용 차감 안 함
+  run.gold -= g.cost;
+  if (Math.random() >= g.chance) { run.fx.push({ type: 'gambleUp', success: false }); return { ok: true, success: false }; }
+  const u = cands[Math.floor(Math.random() * cands.length)];
+  const nr = u.rarity + 1;
+  const pool = SUMMON_POOL[nr];
+  const newHeroId = pool[Math.floor(Math.random() * pool.length)];
+  const nu = makeUnit(newHeroId, u.slot);
+  nu.x = u.x; nu.y = u.y; nu.tx = u.tx; nu.ty = u.ty; // 있던 자리에서 승급
+  const mate = run.units.find((x) => x.heroId === newHeroId && x.uid !== u.uid);
+  if (mate) nu.upgradeLv = mate.upgradeLv;
+  run.units = run.units.filter((x) => x.uid !== u.uid);
+  run.units.push(nu);
+  run.fx.push({ type: 'gambleUp', success: true, uid: nu.uid, rarity: nr });
+  return { ok: true, success: true, uid: nu.uid, rarity: nr };
+}
+
 /** 여러 번 소환(10연 등) — 빈 칸/자원이 다할 때까지. 생성된 유닛 배열을 돌려준다(리빌 연출용). */
 export function summonMany(run, n) {
   const made = [];
@@ -461,6 +503,10 @@ function registerKill(run, target) {
     const bg = DEFENSE.wave.boss.killGold ?? 0;
     run.gold += bg; // 보스 처치 보너스 골드
     run.freePulls += bossPulls(run.stage);
+    // 메운디밸런스: 보스 처치 시 고등급 유닛 무료 지급(파워 스파이크)
+    const gr = pickGrantRarity();
+    const gu = grantUnit(run, gr);
+    if (gu) run.fx.push({ type: 'bossGrant', uid: gu.uid, rarity: gr, heroId: gu.heroId });
     run.fx.push({ type: 'bossReward', pulls: bossPulls(run.stage), gold: bg });
   }
 }

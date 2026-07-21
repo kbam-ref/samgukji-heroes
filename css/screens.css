@@ -2400,6 +2400,16 @@
 .rd-dice-result[hidden] { display: none; }
 .rd-dice-result.pop { animation: rd-gm-pop 0.4s var(--ease-spring) forwards; }
 .rd-dice-result .rd-gm-face { font-size: 34px; }
+/* 승급 도박 버튼 — 단련 시트 하단(메운디밸런스) */
+.rd-gup-btn {
+  width: 100%; margin-top: 8px; min-height: 46px; justify-content: center; gap: 4px;
+  font-weight: 800; font-size: 13px; border-radius: 11px;
+  background: linear-gradient(180deg, rgba(120, 84, 180, 0.55), rgba(58, 40, 96, 0.7));
+  border: 1px solid rgba(184, 132, 242, 0.55); color: #e6ccff;
+  box-shadow: inset 0 1px 0 rgba(230, 204, 255, 0.18);
+}
+.rd-gup-btn em { font-style: normal; font-size: 10.5px; color: var(--paper-dim); font-weight: 600; }
+.rd-gup-btn:active { transform: translateY(1px) scale(0.98); }
 .rd-gm-go {
   width: 100%; min-height: 50px; font-weight: 800; font-size: 15px; justify-content: center;
   letter-spacing: 0.02em; border-radius: 13px;
