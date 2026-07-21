@@ -19,7 +19,7 @@ export function showTitle(onStart, opts = {}) {
       ${playsLine}
     </div>
     <span class="title-version">${APP_VERSION}</span>`;
-  document.body.appendChild(el);
+  (document.getElementById('viewport') || document.body).appendChild(el); // v121: 강제 가로 회전 대상 안으로
 
   const done = () => {
     el.classList.add('out');

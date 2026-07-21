@@ -1194,7 +1194,7 @@ function startReveal(units) {
     <p class="rd-reveal-title">천하의 장수를 불러들인다</p>
     <div class="rd-reveal-grid">${units.map(revealCardHtml).join('')}</div>
     <button class="btn rd-reveal-skip" id="rd-reveal-skip">모두 공개</button>`;
-  document.body.appendChild(stage);
+  (document.getElementById('viewport') || document.body).appendChild(stage); // v121: 강제 가로 회전 대상 안으로
   if (top >= 4) play('omen'); // 서광 — 큰 게 온다는 암시
 
   const cards = [...stage.querySelectorAll('.rd-rcard')];

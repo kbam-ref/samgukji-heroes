@@ -209,18 +209,7 @@ export function init(mount, w, h) {
   groundMesh = new THREE.Mesh(new THREE.PlaneGeometry(FIELD_W * 1.35, FIELD_D * 1.6), arenaMat);
   groundMesh.rotation.x = -Math.PI / 2; groundMesh.position.z = -FIELD_D * 0.12; scene.add(groundMesh);
 
-  // 배치 구역(점선 네모) — 바닥 위 얇은 외곽선
-  const b = DEFENSE.unit.bounds;
-  const boxW = (b.x2 - b.x1) / 100 * FIELD_W, boxD = (b.y2 - b.y1) / 100 * FIELD_D;
-  const cx = ((b.x1 + b.x2) / 2 / 100 - 0.5) * FIELD_W;
-  const cz = ((b.y1 + b.y2) / 2 / 100 - 0.5) * FIELD_D;
-  const edges = new THREE.LineSegments(
-    new THREE.EdgesGeometry(new THREE.PlaneGeometry(boxW, boxD)),
-    new THREE.LineBasicMaterial({ color: 0xf3e2b0, transparent: true, opacity: 0.5 })
-  );
-  edges.rotation.x = -Math.PI / 2; edges.position.set(cx, 0.02, cz);
-  scene.add(edges);
-
+  // 배치 경계는 스산한 선 대신 흙성벽·망루로 표현(buildBoundary, scatterRocks 뒤 호출)
   raycaster = new THREE.Raycaster();
   groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 
@@ -240,6 +229,32 @@ export function init(mount, w, h) {
   beamGeo = new THREE.PlaneGeometry(0.62, 1.5);             // 전설+ 몸에서 솟는 빛기둥
 
   scatterRocks(); // 실제 3D 바위로 전장 입체감(평면 회화 보완)
+  buildBoundary(); // 배치 경계 = 흙성벽 + 모서리 망루(스산한 선 대체, v121)
+}
+
+// 배치 경계를 판축 흙성으로 — 원경/좌우는 낮은 벽, 근경은 낮은 턱, 네 모서리 망루.
+// "성벽 안 = 내 배치 구역, 밖으로 몰려오는 적"이라는 공성 구도로 이동 한계를 직관 표현.
+function buildBoundary() {
+  const b = DEFENSE.unit.bounds;
+  const x1 = wx(b.x1), x2 = wx(b.x2), zF = wz(b.y1), zN = wz(b.y2);
+  const w = x2 - x1, depth = zN - zF, midX = (x1 + x2) / 2, midZ = (zF + zN) / 2;
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0x8f6f45, roughness: 1, metalness: 0, flatShading: true }); // 판축 흙(사암 램프 중간톤)
+  const towerMat = new THREE.MeshStandardMaterial({ color: 0x9c7c52, roughness: 1, metalness: 0, flatShading: true });
+  const capMat = new THREE.MeshStandardMaterial({ color: 0x5a4128, roughness: 1, metalness: 0, flatShading: true });
+  const blob = (x, z, sx, sz) => { const s = new THREE.Mesh(shadowGeo, shadowMat); s.rotation.x = -Math.PI / 2; s.position.set(x, 0.015, z); s.scale.set(sx, sz, 1); scene.add(s); };
+  // 원경 벽(낮게 — 뒤 적 발 안 가리게) + 좌/우 벽
+  const far = new THREE.Mesh(new THREE.BoxGeometry(w + 0.24, 0.26, 0.2), wallMat); far.position.set(midX, 0.13, zF); scene.add(far); blob(midX, zF, (w + 0.24) * 1.05, 0.55);
+  for (const sx of [x1, x2]) { const wl = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.34, depth), wallMat); wl.position.set(sx, 0.17, midZ); scene.add(wl); blob(sx, midZ, 0.5, depth * 1.02); }
+  // 근경 낮은 턱(앞줄 유닛 안 가리게)
+  const curb = new THREE.Mesh(new THREE.BoxGeometry(w + 0.24, 0.1, 0.16), wallMat); curb.position.set(midX, 0.05, zN); scene.add(curb);
+  // 네 모서리 망루(원기둥 + 원뿔 지붕). 근경 쪽은 낮게.
+  const capGeo = new THREE.ConeGeometry(0.34, 0.24, 8);
+  for (const [tx, tz] of [[x1, zF], [x2, zF], [x1, zN], [x2, zN]]) {
+    const th = tz === zN ? 0.42 : 0.6;
+    const t = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.28, th, 8), towerMat); t.position.set(tx, th / 2, tz); scene.add(t);
+    const cap = new THREE.Mesh(capGeo, capMat); cap.position.set(tx, th + 0.11, tz); scene.add(cap);
+    blob(tx, tz, 0.72, 0.72);
+  }
 }
 
 // 필드 가장자리(배치박스 밖)에 저폴리 3D 바위 산개 — 진짜 입체 지형감

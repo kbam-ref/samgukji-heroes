@@ -28,7 +28,7 @@ export function showLoading(done, ms = 2000) {
       <div class="load-bar"><i class="load-fill"></i></div>
       <p class="load-note">천하의 영웅을 불러 모으는 중…</p>
     </div>`;
-  document.body.appendChild(el);
+  (document.getElementById('viewport') || document.body).appendChild(el); // v121: 강제 가로 회전 대상 안으로
 
   setTimeout(() => {
     el.classList.add('out');

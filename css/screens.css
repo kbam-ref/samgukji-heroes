@@ -2565,7 +2565,7 @@
   padding: 20px; background: rgba(8, 6, 4, 0.72); animation: rd-sheet-up 0.18s var(--ease-out);
 }
 .so-panel {
-  position: relative; width: min(420px, 92vw); max-height: 80vh; overflow-y: auto;
+  position: relative; width: min(420px, 88%); max-height: 86%; overflow-y: auto; /* v121 가로 — vw/vh 대신 % */
   background: linear-gradient(180deg, #221b12, #16110b); border: 1px solid var(--ink-600);
   border-radius: 16px; padding: 14px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
 }
@@ -3017,10 +3017,9 @@
 
 /* ── 로딩 화면 (v75) — 24영웅이 모여들고 금빛 명조 타이틀이 뜬다 (실제 컷아웃 합성) ── */
 #loading-screen {
-  position: fixed; inset: 0; z-index: 200;
+  position: absolute; inset: 0; z-index: 200;
   display: flex; flex-direction: column; align-items: center;
-  padding: calc(46px + max(env(safe-area-inset-top), var(--safe-t, 0px))) 20px
-           calc(26px + max(env(safe-area-inset-bottom), var(--safe-b, 0px)));
+  padding: 20px 26px 16px; /* v121 가로 — dvh/safe-area 대신 고정 여백 */
   background:
     radial-gradient(ellipse at 50% 22%, rgba(96, 74, 42, 0.55), rgba(18, 16, 12, 0.98) 62%),
     linear-gradient(180deg, #1a150f, #0c0a07);
@@ -3036,11 +3035,11 @@
   background: linear-gradient(180deg, rgba(12,10,7,0.42) 0%, rgba(12,10,7,0.12) 30%, rgba(12,10,7,0.5) 68%, rgba(12,10,7,0.92) 100%); }
 @keyframes load-sky-drift { from { transform: scale(1.06); } to { transform: scale(1.12) translateY(-1.5%); } }
 
-.load-title { text-align: center; margin-top: 4vh; z-index: 1;
+.load-title { text-align: center; margin-top: 1%; z-index: 1;
   animation: load-title-in 0.8s cubic-bezier(0.2, 1.3, 0.4, 1) both; }
 .load-eyebrow { display: block; font-style: normal; font-weight: 600; font-size: 13px;
   letter-spacing: 0.5em; text-indent: 0.5em; color: var(--gold-bright); opacity: 0.85; margin-bottom: 9px; }
-.load-logo { display: block; font-family: var(--font-display); font-size: 66px; line-height: 0.95;
+.load-logo { display: block; font-family: var(--font-display); font-size: 52px; line-height: 0.95;
   font-weight: 800; letter-spacing: 0.06em;
   background: linear-gradient(180deg, #fbe6a8, #e4c55c 44%, #b8862c);
   -webkit-background-clip: text; background-clip: text; color: transparent;
@@ -3050,7 +3049,7 @@
 @keyframes load-title-in { from { opacity: 0; transform: translateY(-14px) scale(0.94); } to { opacity: 1; transform: none; } }
 
 .load-crowd { flex: 1; align-self: stretch; display: flex; flex-wrap: wrap;
-  align-content: center; justify-content: center; margin: 2vh -6px 0; }
+  align-content: center; justify-content: center; margin: 1% -6px 0; }
 .load-hero { width: 58px; height: 70px; object-fit: contain; object-position: bottom; margin: 1px -9px;
   filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.55)); opacity: 0; transform: translateY(22px) scale(0.7);
   /* 튀어 오른 뒤 계속 통통·좌우로 흔들려 '살아 움직이는 부대'로 보이게 (액티브) */

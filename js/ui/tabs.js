@@ -60,7 +60,7 @@ on('nav:settings', () => {
   ov.id = 'settings-overlay';
   ov.className = 'settings-overlay';
   ov.innerHTML = `<div class="so-panel"><button class="so-close" aria-label="닫기">✕</button><div class="so-body"></div></div>`;
-  document.body.appendChild(ov);
+  (document.getElementById('viewport') || document.body).appendChild(ov); // v121: 강제 가로 회전 대상 안으로
   settingsScreen.render(ov.querySelector('.so-body'));
   const close = () => ov.remove();
   ov.querySelector('.so-close').addEventListener('click', close);

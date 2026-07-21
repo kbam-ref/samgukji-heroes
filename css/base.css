@@ -410,7 +410,7 @@ body.force-rotate #viewport {
   inset: 0;
   z-index: 400; /* 설정 오버레이(120) 등 위로 — 확인 모달이 가려지지 않게(리셋 무반응 버그 수리) */
   display: flex;
-  align-items: flex-end;
+  align-items: center; /* v121 가로 — 하단 시트 대신 중앙 정렬 */
   justify-content: center;
   /* 검정 위 검정 방지 — 따뜻한 비네트로 시트에 시선을 모은다 */
   background: radial-gradient(120% 85% at 50% 100%, rgba(30, 21, 12, 0.55), rgba(6, 5, 4, 0.84));
@@ -421,15 +421,14 @@ body.force-rotate #viewport {
 
 .modal-panel {
   position: relative;
-  width: 100%;
-  max-width: 430px;
-  max-height: 82dvh;
+  width: 92%;
+  max-width: 460px;
+  max-height: 88%; /* v121 가로 — dvh 대신 % */
   overflow-y: auto;
   background: linear-gradient(180deg, #2a2318, #201b15);
   border: 1px solid var(--ink-600);
-  border-bottom: 0;
-  border-radius: 18px 18px 0 0;
-  padding: 26px 20px calc(18px + env(safe-area-inset-bottom));
+  border-radius: 18px;
+  padding: 24px 20px;
   animation: sheet-up 0.32s var(--ease-out);
 }
 .modal-panel::before {
@@ -577,12 +576,13 @@ body.modal-open #tab-bar { visibility: hidden; }
 
 /* ── 타이틀 화면 — 문이 열린다 ── */
 #title-screen {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 220;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center; /* v121 가로 — 세로 중앙 정렬(dvh 대신) */
   background:
     linear-gradient(180deg, rgba(11, 10, 8, 0.25), rgba(11, 10, 8, 0.05) 40%, rgba(11, 10, 8, 0.72) 88%),
     url('../assets/ui/title-art.png') center / cover no-repeat,
@@ -600,7 +600,7 @@ body.modal-open #tab-bar { visibility: hidden; }
   pointer-events: none;
 }
 .title-logo {
-  margin-top: 16dvh;
+  margin-top: 0; /* v121 가로 — justify-center가 세로 배치 담당 */
   text-align: center;
   font-family: var(--font-display);
   animation: logo-drop 0.8s var(--ease-out) both 0.15s;
@@ -629,8 +629,8 @@ body.modal-open #tab-bar { visibility: hidden; }
   filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.65));
 }
 .title-start {
-  margin-top: auto;
-  margin-bottom: calc(14dvh + env(safe-area-inset-bottom));
+  margin-top: 5%; /* v121 가로 */
+  margin-bottom: 0;
   min-width: 210px;
   min-height: 58px;
   font-size: 19px;
@@ -641,8 +641,8 @@ body.modal-open #tab-bar { visibility: hidden; }
 }
 /* 시작하기 + 이어하기 묶음 (v82) — 위치는 그룹이 담당, 개별 버튼 여백은 리셋 */
 .title-actions {
-  margin-top: auto;
-  margin-bottom: calc(14dvh + env(safe-area-inset-bottom));
+  margin-top: 5%; /* v121 가로 */
+  margin-bottom: 0;
   display: flex; flex-direction: column; align-items: center; gap: 12px;
 }
 .title-actions .title-start { margin: 0; }
