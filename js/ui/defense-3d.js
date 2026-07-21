@@ -9,7 +9,7 @@ import { DEFENSE, ELEMENT_COLOR } from '../data/defense.js';
 
 // ── 튜닝값 (라이브 조정) ──────────────────────────────
 const FIELD_W = 10;              // 월드 가로(=필드 100%). 세로는 화면 비율로 파생.
-const TILT = 0.74;               // 카메라 기울기(라디안, 수직 0=탑다운). 살짝 옆에서 봐 모델 얼굴이 보이게.
+let TILT = 0.74;                 // 카메라 기울기(라디안, 수직 0=탑다운). 가로에선 더 탑다운(RTS)으로 재설정.
 const CAM_FOV = 40;
 let CAM_DIST = 15.2;             // 바라보는 점에서 카메라까지 거리 (resize에서 아스펙트로 재계산)
 let CAM_LIFT = 0.7;              // 시선을 필드 중앙보다 살짝 위로 (가로에선 낮춰 필드 중앙 정렬)
@@ -181,7 +181,7 @@ export function init(mount, w, h) {
 
   scene = new THREE.Scene();
   scene.background = makeSkyTex();
-  scene.fog = new THREE.Fog(0x6b4c2c, FIELD_D * 0.9, FIELD_D * 2.4);
+  scene.fog = new THREE.Fog(0x6b4c2c, CAM_DIST * 0.95, CAM_DIST * 2.8); // 카메라 거리 기준 — 아레나는 선명, 먼 지형만 사라짐
 
   cam = new THREE.PerspectiveCamera(CAM_FOV, W / H, 0.1, 200);
   placeCamera();
@@ -413,9 +413,9 @@ function computeCam() {
   const aspect = W / H;
   if (aspect >= 1) {
     const hHalf = Math.atan(Math.tan((CAM_FOV * Math.PI / 180) / 2) * aspect); // 수평 반각
-    CAM_DIST = Math.max(8.5, (FIELD_W * 0.5) / Math.tan(hHalf * 0.86));         // 필드 폭 ~86% 채우기
-    CAM_LIFT = 0.15;
-  } else { CAM_DIST = 15.2; CAM_LIFT = 0.7; }
+    CAM_DIST = Math.max(8.5, (FIELD_W * 0.5) / Math.tan(hHalf * 0.9));          // 필드 폭 ~90% 채우기(빈 가장자리 축소)
+    CAM_LIFT = 0.1; TILT = 0.6;  // 더 탑다운(RTS) — 위쪽 하늘/빈 코너 제거, 바닥이 화면을 채움
+  } else { CAM_DIST = 15.2; CAM_LIFT = 0.7; TILT = 0.74; }
 }
 function placeCamera() {
   // 필드 중앙을 바라보되 살짝 위(원근 여유). 기울기 TILT(수직 기준).
