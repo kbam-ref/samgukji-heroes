@@ -33,15 +33,15 @@ let clock = 0;
 // 3D 이펙트(투사체·명중·광역·사망) — 공유 지오메트리 + 메시 풀로 드로우콜·GC 최소화
 const fx3d = [];
 const pool = { arrow: [], slash: [], lance: [], burst: [], ring: [] };
-let burstTex, ringGeo, arrowGeo, burstGeo, slashGeo, lanceGeo, auraGeo;
+let burstTex, ringGeo, arrowGeo, burstGeo, slashGeo, lanceGeo, auraGeo, beamGeo;
 
 // 등급 오라 — 별표 대신 "좋은 캐릭"임을 캐릭터 몸에서 뿜는 기운으로. 등급↑ = 색·크기·맥박·후광↑
 const AURA = {
-  2: { color: 0x86d992, base: 0.95, amp: 0.06, op: 0.16, halo: false },
-  3: { color: 0x5aa8f2, base: 1.15, amp: 0.10, op: 0.30, halo: false },
-  4: { color: 0xb884f2, base: 1.4, amp: 0.14, op: 0.42, halo: true },
-  5: { color: 0xf2c34a, base: 1.7, amp: 0.18, op: 0.55, halo: true },
-  6: { color: 0xffe486, base: 2.05, amp: 0.24, op: 0.72, halo: true },
+  2: { color: 0x86d992, base: 0.9, amp: 0.06, op: 0.15, halo: false, beam: false },
+  3: { color: 0x5aa8f2, base: 1.1, amp: 0.10, op: 0.28, halo: false, beam: false },
+  4: { color: 0xc79bff, base: 1.55, amp: 0.16, op: 0.55, halo: true, beam: true },  // 전설 — 강한 보라 오라 + 빛기둥
+  5: { color: 0xffd24a, base: 1.9, amp: 0.20, op: 0.72, halo: true, beam: true },   // 신화 — 금빛
+  6: { color: 0xfff0a0, base: 2.3, amp: 0.26, op: 0.92, halo: true, beam: true },   // 초월 — 찬란
 };
 
 function heroCut(id) { return `./assets/heroes-cut/${id}.png`; }
@@ -237,6 +237,7 @@ export function init(mount, w, h) {
   slashGeo = new THREE.TorusGeometry(0.42, 0.055, 6, 16, Math.PI * 1.15); // 베기 초승달 궤적
   lanceGeo = new THREE.BoxGeometry(0.05, 0.05, 1);          // 창 찌르기 — z로 늘여 씀
   auraGeo = new THREE.PlaneGeometry(1, 1);                  // 등급 오라 발밑 광채
+  beamGeo = new THREE.PlaneGeometry(0.62, 1.5);             // 전설+ 몸에서 솟는 빛기둥
 
   scatterRocks(); // 실제 3D 바위로 전장 입체감(평면 회화 보완)
 }
@@ -284,51 +285,52 @@ function takeFx(kind, colorHex) {
 function freeFx(kind, m) { m.visible = false; pool[kind].push(m); }
 function faceCam(m) { if (cam) m.quaternion.copy(cam.quaternion); }
 
-// 무기별 전용 공격 연출 — 활=포물선 화살, 창=찌르기, 칼=베기 궤적, 기마=돌격 흙먼지+충돌
-export function spawnShot3d(sx, sy, ex, ey, atkType, colorHex, reduce) {
+// 무기별 전용 공격 연출 — 활=포물선 화살, 창=찌르기, 칼=베기 궤적, 마법=파이어볼. rarity↑ = 큰 이펙트.
+export function spawnShot3d(sx, sy, ex, ey, atkType, colorHex, reduce, rarity = 1) {
   if (!renderer) return;
+  const pw = 1 + Math.max(0, rarity - 3) * 0.3; // 등급 배수(1~3:1, 4:1.3, 5:1.6, 6:1.9)
   const to = new THREE.Vector3(wx(ex), ENEMY_H * 0.42, wz(ey));
-  if (reduce) { spawnBurst(to, colorHex); return; }
+  if (reduce) { spawnBurst(to, colorHex, pw); return; }
   const from = new THREE.Vector3(wx(sx), UNIT_H * 0.55, wz(sy));
   if (atkType === 'bow') {
     // 활 — 화살이 포물선을 그리며 날아가 명중
-    const m = takeFx('arrow', colorHex); m.position.copy(from);
+    const m = takeFx('arrow', colorHex); m.position.copy(from); m.scale.setScalar(pw);
     const mid = from.clone().lerp(to, 0.5); mid.y += 0.55; // 포물선 정점
-    fx3d.push({ kind: 'arc', mk: 'arrow', mesh: m, from, mid, to, t: 0, dur: 0.26, color: colorHex });
+    fx3d.push({ kind: 'arc', mk: 'arrow', mesh: m, from, mid, to, t: 0, dur: 0.26, color: colorHex, pw });
   } else if (atkType === 'spear') {
     // 창 — 창대가 적을 향해 쭉 뻗었다 사라짐 + 촉 스파크
-    const m = takeFx('lance', colorHex);
+    const m = takeFx('lance', colorHex); m.scale.set(pw, pw, 0);
     const mid = from.clone().lerp(to, 0.5); m.position.copy(mid); m.lookAt(to);
-    fx3d.push({ kind: 'thrust', mk: 'lance', mesh: m, len: from.distanceTo(to), to, t: 0, dur: 0.17, color: colorHex });
+    fx3d.push({ kind: 'thrust', mk: 'lance', mesh: m, len: from.distanceTo(to), to, t: 0, dur: 0.17, color: colorHex, pw });
   } else if (atkType === 'sword') {
     // 칼 — 적 앞에서 초승달 궤적이 휘둘러짐
     const m = takeFx('slash', colorHex);
-    m.position.copy(to); m.position.y = ENEMY_H * 0.5; m.scale.setScalar(0.6);
-    fx3d.push({ kind: 'slash', mk: 'slash', mesh: m, t: 0, dur: 0.2, color: colorHex });
+    m.position.copy(to); m.position.y = ENEMY_H * 0.5; m.scale.setScalar(0.6 * pw);
+    fx3d.push({ kind: 'slash', mk: 'slash', mesh: m, t: 0, dur: 0.2, color: colorHex, pw });
   } else if (atkType === 'magic') {
     // 마법 — 빛나는 구체(파이어볼)가 포물선을 그리며 날아가 적에게서 폭발
-    const m = takeFx('burst', colorHex); m.position.copy(from); m.scale.setScalar(0.55);
+    const m = takeFx('burst', colorHex); m.position.copy(from); m.scale.setScalar(0.55 * pw);
     const mid = from.clone().lerp(to, 0.5); mid.y += 0.42; // 살짝 포물선
-    fx3d.push({ kind: 'orb', mk: 'burst', mesh: m, from, mid, to, t: 0, dur: 0.3, color: colorHex });
+    fx3d.push({ kind: 'orb', mk: 'burst', mesh: m, from, mid, to, t: 0, dur: 0.3, color: colorHex, pw });
   } else {
     // 기본 근접 — 명중 스파크가 적으로
-    const m = takeFx('burst', colorHex); m.scale.setScalar(0.5); m.position.copy(from);
-    fx3d.push({ kind: 'proj', mk: 'burst', mesh: m, from, to, t: 0, dur: 0.1, color: colorHex });
+    const m = takeFx('burst', colorHex); m.scale.setScalar(0.5 * pw); m.position.copy(from);
+    fx3d.push({ kind: 'proj', mk: 'burst', mesh: m, from, to, t: 0, dur: 0.1, color: colorHex, pw });
   }
 }
-function spawnBurst(pos, colorHex) {
+function spawnBurst(pos, colorHex, pw = 1) {
   const m = takeFx('burst', colorHex);
-  m.position.copy(pos); m.scale.setScalar(0.3);
-  fx3d.push({ kind: 'burst', mk: 'burst', mesh: m, t: 0, dur: 0.26 });
+  m.position.copy(pos); m.scale.setScalar(0.3 * pw);
+  fx3d.push({ kind: 'burst', mk: 'burst', mesh: m, t: 0, dur: 0.26, pw });
 }
 // 파이어볼 폭발 — 큰 섬광 + 지면 충격 링
-function spawnBoom(pos, colorHex) {
+function spawnBoom(pos, colorHex, pw = 1) {
   const m = takeFx('burst', colorHex);
-  m.position.copy(pos); m.scale.setScalar(0.5);
-  fx3d.push({ kind: 'boom', mk: 'burst', mesh: m, t: 0, dur: 0.34 });
+  m.position.copy(pos); m.scale.setScalar(0.5 * pw);
+  fx3d.push({ kind: 'boom', mk: 'burst', mesh: m, t: 0, dur: 0.34, pw });
   const r = takeFx('ring', colorHex);
-  r.position.set(pos.x, 0.07, pos.z); r.scale.setScalar(0.3); r.material.opacity = 0.6;
-  fx3d.push({ kind: 'shock', mk: 'ring', mesh: r, t: 0, dur: 0.4 });
+  r.position.set(pos.x, 0.07, pos.z); r.scale.setScalar(0.3 * pw); r.material.opacity = 0.6;
+  fx3d.push({ kind: 'shock', mk: 'ring', mesh: r, t: 0, dur: 0.4, pw });
 }
 // 초월 광역기 — 바닥에서 링이 전장으로 퍼진다
 export function spawnAoe3d(x, y, colorHex) {
@@ -344,7 +346,7 @@ function updateFx(dt) {
     if (f.kind === 'proj') {
       f.mesh.position.lerpVectors(f.from, f.to, Math.min(1, p));
       if (f.mk === 'arrow') f.mesh.lookAt(f.to); else faceCam(f.mesh);
-      if (p >= 1) { spawnBurst(f.to, f.color); freeFx(f.mk, f.mesh); fx3d.splice(i, 1); }
+      if (p >= 1) { spawnBurst(f.to, f.color, f.pw); freeFx(f.mk, f.mesh); fx3d.splice(i, 1); }
     } else if (f.kind === 'arc') {
       // 포물선 화살 — 2차 베지에(from→mid→to), 화살촉이 진행방향을 향함
       const u = Math.min(1, p), iu = 1 - u;
@@ -358,19 +360,19 @@ function updateFx(dt) {
         inu * inu * f.from.x + 2 * inu * nu * f.mid.x + nu * nu * f.to.x,
         inu * inu * f.from.y + 2 * inu * nu * f.mid.y + nu * nu * f.to.y,
         inu * inu * f.from.z + 2 * inu * nu * f.mid.z + nu * nu * f.to.z);
-      if (p >= 1) { spawnBurst(f.to, f.color); freeFx('arrow', f.mesh); fx3d.splice(i, 1); }
+      if (p >= 1) { spawnBurst(f.to, f.color, f.pw); freeFx('arrow', f.mesh); fx3d.splice(i, 1); }
     } else if (f.kind === 'thrust') {
       // 창 찌르기 — 0→길이로 쭉 뻗었다 짧게 유지 후 사라짐
       const ext = p < 0.4 ? p / 0.4 : 1;
       f.mesh.scale.z = f.len * ext;
       f.mesh.material.opacity = p < 0.6 ? 1 : 1 - (p - 0.6) / 0.4;
-      if (p >= 0.38 && !f.sparked) { f.sparked = true; spawnBurst(f.to, f.color); }
+      if (p >= 0.38 && !f.sparked) { f.sparked = true; spawnBurst(f.to, f.color, f.pw); }
       if (p >= 1) { freeFx('lance', f.mesh); fx3d.splice(i, 1); }
     } else if (f.kind === 'slash') {
       // 베기 — 초승달이 카메라를 향한 채 휘둘러지며(회전) 커졌다 사라짐
       f.mesh.quaternion.copy(cam.quaternion);
       f.mesh.rotateZ(-0.7 + p * 1.4); // 위→아래 스윕
-      f.mesh.scale.setScalar(0.6 + p * 0.7);
+      f.mesh.scale.setScalar((0.6 + p * 0.7) * (f.pw || 1));
       f.mesh.material.opacity = p < 0.4 ? 1 : 1 - (p - 0.4) / 0.6;
       if (p >= 1) { freeFx('slash', f.mesh); fx3d.splice(i, 1); }
     } else if (f.kind === 'dust') {
@@ -384,18 +386,18 @@ function updateFx(dt) {
         iu * iu * f.from.x + 2 * iu * u * f.mid.x + u * u * f.to.x,
         iu * iu * f.from.y + 2 * iu * u * f.mid.y + u * u * f.to.y,
         iu * iu * f.from.z + 2 * iu * u * f.mid.z + u * u * f.to.z);
-      faceCam(f.mesh); f.mesh.scale.setScalar(0.5 + Math.abs(Math.sin(u * 22)) * 0.08 + u * 0.18);
-      if (p >= 1) { spawnBoom(f.to, f.color); freeFx('burst', f.mesh); fx3d.splice(i, 1); }
+      faceCam(f.mesh); f.mesh.scale.setScalar((0.5 + Math.abs(Math.sin(u * 22)) * 0.08 + u * 0.18) * (f.pw || 1));
+      if (p >= 1) { spawnBoom(f.to, f.color, f.pw); freeFx('burst', f.mesh); fx3d.splice(i, 1); }
     } else if (f.kind === 'boom') {
       // 파이어볼 폭발 — 큰 섬광이 부풀며 사라짐
-      faceCam(f.mesh); f.mesh.scale.setScalar(0.5 + p * 2.1); f.mesh.material.opacity = 1 - p;
+      faceCam(f.mesh); f.mesh.scale.setScalar((0.5 + p * 2.1) * (f.pw || 1)); f.mesh.material.opacity = 1 - p;
       if (p >= 1) { freeFx('burst', f.mesh); fx3d.splice(i, 1); }
     } else if (f.kind === 'shock') {
       // 폭발 충격 링 — 지면을 훑는 작은 파문
-      f.mesh.scale.setScalar(0.3 + p * 2.0); f.mesh.material.opacity = 0.6 * (1 - p);
+      f.mesh.scale.setScalar((0.3 + p * 2.0) * (f.pw || 1)); f.mesh.material.opacity = 0.6 * (1 - p);
       if (p >= 1) { freeFx('ring', f.mesh); fx3d.splice(i, 1); }
     } else if (f.kind === 'burst') {
-      faceCam(f.mesh); f.mesh.scale.setScalar(0.3 + p * 1.0); f.mesh.material.opacity = 1 - p;
+      faceCam(f.mesh); f.mesh.scale.setScalar((0.3 + p * 1.0) * (f.pw || 1)); f.mesh.material.opacity = 1 - p;
       if (p >= 1) { freeFx('burst', f.mesh); fx3d.splice(i, 1); }
     } else if (f.kind === 'ring') {
       f.mesh.scale.setScalar(0.4 + p * (FIELD_W * 0.5)); f.mesh.material.opacity = 0.7 * (1 - p);
@@ -464,6 +466,7 @@ function disposeNode(n) {
   if (n.hpBar) { n.hpBar.children.forEach((c) => c.material.dispose()); }
   if (n.aura) n.aura.material.dispose();
   if (n.halo) n.halo.material.dispose();
+  if (n.beam) n.beam.material.dispose();
 }
 // 적 머리 위 HP바(3D, 카메라 향함). depthTest 꺼서 항상 위에.
 function ensureHpBar(n) {
@@ -520,6 +523,14 @@ function setAura(n, rarity) {
     }
     n.halo.visible = true; n.halo.material.color.set(t.color);
   } else if (n.halo) n.halo.visible = false;
+  if (t.beam) { // 전설+ — 몸에서 솟는 빛기둥(수직, 수평 빌보드)
+    if (!n.beam) {
+      const beam = new THREE.Mesh(beamGeo, new THREE.MeshBasicMaterial({ map: burstTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+      beam.position.y = 0.75; beam.renderOrder = 1;
+      n.group.add(beam); n.beam = beam;
+    }
+    n.beam.visible = true; n.beam.material.color.set(t.color);
+  } else if (n.beam) n.beam.visible = false;
 }
 
 export function syncUnits(list) {
@@ -612,6 +623,13 @@ export function frame(dt) {
         const hs = s * (1.2 + puls * 0.06);
         n.halo.scale.set(hs, hs, 1);
         n.halo.material.opacity = t.op * 0.6 * (0.7 + 0.3 * puls);
+      }
+      if (n.beam && n.beam.visible) { // 빛기둥 — 수평으로 카메라 향하고 세로 유지, 맥박
+        n.beam.rotation.y = Math.atan2(camX - g.position.x, camZ - g.position.z);
+        const bh = (n.baseH || 1) * (1.05 + puls * 0.1);
+        n.beam.scale.set((n.baseH || 1) * (0.9 + puls * 0.08), bh, 1);
+        n.beam.position.y = bh * 0.5;
+        n.beam.material.opacity = t.op * 0.5 * (0.7 + 0.3 * puls);
       }
     }
     if (n.hpBar) { // 적 HP바 — 머리 위, 카메라 향함, 체력 비율만큼 채움

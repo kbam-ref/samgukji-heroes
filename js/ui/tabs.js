@@ -30,9 +30,23 @@ export function renderTabs(navRoot, screenRoot) {
   navRoot.addEventListener('click', (e) => {
     const btn = e.target.closest('.tab');
     if (!btn) return;
+    if (btn.id === 'rd-nav-summon') return; // 소환은 아래 pointer-hold로 처리(원클릭+꾹 연속). 중복 방지
     vibrate(8);
     emit(btn.dataset.act);
   });
+
+  // 소환 — 누르면 바로 1회, 꾹 누르면 연속(시트 없이)
+  let holdT = null, holdInt = null;
+  const stopHold = () => { if (holdT) clearTimeout(holdT); if (holdInt) clearInterval(holdInt); holdT = holdInt = null; };
+  navRoot.addEventListener('pointerdown', (e) => {
+    const btn = e.target.closest('.tab');
+    if (!btn || btn.id !== 'rd-nav-summon') return;
+    vibrate(8); emit('rd:summon');
+    holdT = setTimeout(() => { holdInt = setInterval(() => emit('rd:summon'), 170); }, 380);
+  });
+  navRoot.addEventListener('pointerup', stopHold);
+  navRoot.addEventListener('pointerleave', stopHold);
+  navRoot.addEventListener('pointercancel', stopHold);
 
   // 방어(전투) 화면은 탭 전환 없이 항상 이 자리에 고정 마운트
   screenRoot.innerHTML = '';

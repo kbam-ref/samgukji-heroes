@@ -578,7 +578,7 @@ export function tick(run, dt) {
       // 투사체 연출용 — 쏜 자리(u)·맞는 자리(target)·병기 판별용 heroId·속성색
       run.fx.push({
         type: 'attack', uid: u.uid, eid: target.eid, face: u.face,
-        heroId: u.heroId, element: u.element,
+        heroId: u.heroId, element: u.element, rarity: u.rarity, // rarity → 등급 높을수록 큰 이펙트
         ux: u.x, uy: u.y, ex: target.x, ey: target.y,
       });
       if (target.hp <= 0 && !target.dead) registerKill(run, target);

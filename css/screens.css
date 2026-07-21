@@ -1968,20 +1968,20 @@
 .rd-name3d { position: absolute; left: 0; top: 0; white-space: nowrap; will-change: transform; font-style: normal; }
 .rd-name3d {
   display: inline-flex; align-items: center; gap: 3px;
-  font-size: 9px; font-weight: 700; line-height: 1; color: #f0e6cf;
+  font-size: 10px; font-weight: 800; line-height: 1; color: #f0e6cf;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
-  padding: 1.5px 4px 1.5px 2px; border-radius: 4px; background: rgba(12, 9, 6, 0.55);
+  padding: 1.5px 5px 1.5px 2px; border-radius: 4px; background: rgba(12, 9, 6, 0.6);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
-/* 등급 테두리색 — 3D 몸 오라와 짝. 등급↑ = 밝고 강한 테두리/글로우(별표 대체) */
-.rd-name3d.tier-2 { box-shadow: inset 0 0 0 1px rgba(134, 217, 146, 0.55); }
-.rd-name3d.tier-3 { box-shadow: inset 0 0 0 1px rgba(90, 168, 242, 0.75); }
-.rd-name3d.tier-4 { box-shadow: inset 0 0 0 1px rgba(184, 132, 242, 0.85), 0 0 5px rgba(184, 132, 242, 0.4); }
-.rd-name3d.tier-5 { box-shadow: inset 0 0 0 1px rgba(242, 195, 74, 0.95), 0 0 7px rgba(242, 195, 74, 0.5); }
-.rd-name3d.tier-6 { animation: rd-tier6-glow 1.4s ease-in-out infinite; }
+/* 등급색 — 이름 글자색 + 테두리/글로우를 등급 색으로(3D 몸 오라와 짝). 등급↑ = 밝고 강함 */
+.rd-name3d.tier-2 { color: #a6e6b0; box-shadow: inset 0 0 0 1px rgba(134, 217, 146, 0.6); }
+.rd-name3d.tier-3 { color: #8ecbff; box-shadow: inset 0 0 0 1px rgba(90, 168, 242, 0.8); }
+.rd-name3d.tier-4 { color: #d9b6ff; box-shadow: inset 0 0 0 1.2px rgba(184, 132, 242, 0.9), 0 0 6px rgba(184, 132, 242, 0.5); }
+.rd-name3d.tier-5 { color: #ffdd7a; box-shadow: inset 0 0 0 1.2px rgba(242, 195, 74, 1), 0 0 9px rgba(242, 195, 74, 0.6); }
+.rd-name3d.tier-6 { color: #ffe486; animation: rd-tier6-glow 1.4s ease-in-out infinite; }
 @keyframes rd-tier6-glow {
-  0%, 100% { box-shadow: inset 0 0 0 1.2px rgba(255, 228, 134, 1), 0 0 8px rgba(255, 228, 134, 0.5); }
-  50% { box-shadow: inset 0 0 0 1.2px #fff, 0 0 14px rgba(255, 228, 134, 0.85); }
+  0%, 100% { box-shadow: inset 0 0 0 1.4px rgba(255, 228, 134, 1), 0 0 10px rgba(255, 228, 134, 0.6); }
+  50% { box-shadow: inset 0 0 0 1.4px #fff, 0 0 16px rgba(255, 228, 134, 0.95); }
 }
 /* 공격 형태 아이콘 — 이름 앞 작은 네모(창·칼·활·기마) */
 .rd-wpn { display: inline-flex; width: 13px; height: 13px; flex: none; padding: 1.5px; border-radius: 3px; background: rgba(0, 0, 0, 0.55); color: #ffd76a; box-shadow: inset 0 0 0 1px rgba(232, 196, 99, 0.35); }
@@ -2396,6 +2396,40 @@
 .rd-gm-go::before { content: '🎲'; margin-right: 7px; font-size: 16px; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.4)); }
 .rd-gm-go:disabled { opacity: 0.55; }
 .rd-gm-go:disabled::before { content: '⏳'; }
+
+/* ── 전설+ 소환 획득 연출 (v118) — 화면 가운데 빛살+등급명+영웅명. 운빨 디펜스식 희열 ── */
+.rd-grade-reveal {
+  position: absolute; inset: 0; z-index: 60; pointer-events: none;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  animation: rd-gr-container 1.7s ease-out forwards;
+}
+.rd-grade-reveal.tier-6 { animation-duration: 2.1s; }
+@keyframes rd-gr-container { 0% { opacity: 0; } 7% { opacity: 1; } 78% { opacity: 1; } 100% { opacity: 0; } }
+.rd-gr-rays {
+  position: absolute; width: 130%; aspect-ratio: 1; border-radius: 50%; pointer-events: none;
+  background: conic-gradient(from 0deg, transparent 0 7deg, rgba(255, 246, 214, 0.16) 7deg 11deg, transparent 11deg 22deg);
+  animation: rd-gr-spin 6s linear infinite;
+}
+.rd-gr-burst {
+  position: absolute; width: 60%; aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 240, 200, 0.55), transparent 60%);
+  animation: rd-gr-burst 0.8s ease-out;
+}
+.rd-gr-grade {
+  position: relative; font-family: var(--font-display); font-size: 44px; font-weight: 900; letter-spacing: 0.05em;
+  animation: rd-gr-pop 0.5s var(--ease-spring);
+}
+.rd-gr-name {
+  position: relative; font-family: var(--font-display); font-size: 21px; font-weight: 800; color: #fff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.85); animation: rd-gr-pop 0.5s 0.07s var(--ease-spring) both;
+}
+.rd-grade-reveal.tier-4 .rd-gr-grade { color: #e2c4ff; text-shadow: 0 0 20px rgba(184, 132, 242, 0.95), 0 3px 8px rgba(0, 0, 0, 0.7); }
+.rd-grade-reveal.tier-5 .rd-gr-grade { color: #ffe488; text-shadow: 0 0 24px rgba(242, 195, 74, 1), 0 3px 8px rgba(0, 0, 0, 0.7); }
+.rd-grade-reveal.tier-6 .rd-gr-grade { color: #fff7d4; font-size: 50px; text-shadow: 0 0 30px rgba(255, 240, 160, 1), 0 0 12px #fff; animation: rd-gr-pop 0.5s var(--ease-spring), rd-gr-glow 1s ease-in-out infinite; }
+@keyframes rd-gr-spin { to { transform: rotate(360deg); } }
+@keyframes rd-gr-burst { 0% { transform: scale(0.2); opacity: 1; } 100% { transform: scale(1.6); opacity: 0; } }
+@keyframes rd-gr-pop { 0% { transform: scale(0.3); opacity: 0; } 60% { transform: scale(1.18); } 100% { transform: scale(1); opacity: 1; } }
+@keyframes rd-gr-glow { 0%, 100% { filter: drop-shadow(0 0 6px rgba(255, 240, 160, 0.7)); } 50% { filter: drop-shadow(0 0 16px #fff); } }
 
 /* 라운드 제한 타이머 (v93) — 필드 상단 중앙, 10초 이하 빨강 */
 .rd-timer {

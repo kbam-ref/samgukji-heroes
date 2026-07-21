@@ -88,7 +88,7 @@ function actGuard(fn) {
   if (!fieldEl) emit('nav:battle');
   if (fieldEl) fn();
 }
-on('rd:summon', () => actGuard(() => toggleSheet('summon')));
+on('rd:summon', () => actGuard(() => { closeSheet(); doSummon1(); })); // 원클릭 소환(시트 없이 바로 1회). 꾹 누르면 tabs.js가 반복 발행
 on('rd:upgrade', () => actGuard(() => toggleSheet('upgrade')));
 on('rd:merge', () => actGuard(() => { closeSheet(); play('tap'); openMergePicker(); }));
 on('rd:refund', () => actGuard(() => toggleSheet('refund')));
@@ -133,9 +133,10 @@ function renderHeroInfo() {
       <span class="rd-hi-wpn wpn-${atype}">${WNAME[atype] || '칼'}</span>
     </div>
     <ul class="rd-hi-stats">
+      <li><span>무력</span><b>${fmt(h.base || 0)}</b></li>
       <li><span>공격력</span><b>${fmt(atk)}</b></li>
       <li><span>사거리</span><b>${info.range || '—'}</b></li>
-      <li><span>공속</span><b>${rate}/초</b></li>
+      <li><span>공격속도</span><b>${rate}/초</b></li>
       <li><span>동시타격</span><b>${info.multi || 1}명</b></li>
       ${info.aoe ? `<li><span>광역기</span><b>${info.aoe.interval}초</b></li>` : ''}
     </ul>
@@ -556,6 +557,18 @@ function summonFanfare(rarity) {
   else if (rarity >= 3) { play('claim'); vibrate(10); }
   else play('tap');
 }
+// 전설(4)·신화(5)·초월(6) 소환 — 전투화면 가운데에 등급 획득 연출(빛살+등급명+영웅명). 메이플 운빨 디펜스식 희열.
+const GRADE_NAME = { 4: '전설', 5: '신화', 6: '초월' };
+function gradeReveal(rarity, heroName) {
+  if (rarity < 4) return;
+  const layer = document.getElementById('fx-layer');
+  if (!layer) return;
+  const el = document.createElement('div');
+  el.className = `rd-grade-reveal tier-${rarity}`;
+  el.innerHTML = `<i class="rd-gr-rays"></i><i class="rd-gr-burst"></i><b class="rd-gr-grade">${GRADE_NAME[rarity]} 획득!</b><span class="rd-gr-name">${heroName || ''}</span>`;
+  layer.appendChild(el);
+  setTimeout(() => el.remove(), rarity >= 5 ? 2100 : 1700);
+}
 
 // ── 하단 컨텍스트 시트 — 소환/반환/도박 옵션을 도크 빈 공간에 펼친다 ──
 function toggleSheet(mode) {
@@ -701,6 +714,7 @@ function doSummon1() {
   const u = engine.summon(run);
   if (!u) { summonFail(); return; }
   summonFanfare(u.rarity);
+  gradeReveal(u.rarity, HERO_NAME.get(u.heroId)); // 전설+ 중앙 획득 연출
   syncUnits();
   updateHud();
   autoMergeIfPinned();
@@ -952,7 +966,7 @@ function consumeFx() {
     if (fx.type === 'attack') {
       r3d.playAttack(fx.uid); // 영웅 스켈레탈 공격 애니 1회(창찌르기/휘두르기)
       r3d.lunge(fx.uid, fx.ex, fx.ey); // 그 적을 향해 살짝 돌진
-      r3d.spawnShot3d(fx.ux, fx.uy, fx.ex, fx.ey, HERO_ATTACK_TYPE[fx.heroId] || 'sword', ELEMENT_COLOR[fx.element] || '#e9d6a0', reduceMotion); // 무기별 3D 공격 연출(활/창/칼/기마)
+      r3d.spawnShot3d(fx.ux, fx.uy, fx.ex, fx.ey, HERO_ATTACK_TYPE[fx.heroId] || 'sword', ELEMENT_COLOR[fx.element] || '#e9d6a0', reduceMotion, fx.rarity || 1); // 무기별 3D 공격(활/창/칼/마법), 등급↑=큰 이펙트
     } else if (fx.type === 'kill') {
       play('foehit');
     } else if (fx.type === 'stageClear') {
