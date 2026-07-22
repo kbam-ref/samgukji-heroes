@@ -749,8 +749,8 @@ function strikePose(u, type) {
   const st = u < 0.2 ? 0 : (u - 0.2) / 0.8;             // 타격 진행
   const hit = Math.sin(Math.min(1, st) * Math.PI);      // 0→1→0 빠른 타격 아크(치고 복귀)
   let jab, dip, pitch;
-  if (type === 'bow') {          // 활 — 뒤로 당겼다(윈드업) 놓으며 반동. 활만 뒤로 당긴다.
-    jab = -wind * 0.07 + hit * 0.05; dip = 0; pitch = -wind * 0.12 + hit * 0.06;
+  if (type === 'bow') {          // 활 — 상체를 확실히 뒤로 젖혀 시위를 당겼다(조준) 놓는다(반동). 활만 크게 당긴다.
+    jab = -wind * 0.12 + hit * 0.06; dip = 0; pitch = -wind * 0.22 + hit * 0.10;
   } else if (type === 'magic') { // 마법 — 손/지팡이 앞으로 내지름
     jab = hit * 0.16; dip = -hit * 0.05; pitch = hit * 0.13;
   } else if (type === 'spear') { // 창 — 뒤로 당김 없이 곧장 앞으로 강하게 찌른다(총 반동 느낌 제거)
@@ -800,7 +800,8 @@ export function frame(dt) {
           // 전 영웅 통일(2026-07-22 재설계) — 그라운디드 절차 타격. 리깅 영웅도 같은 몸동작을 얹어
           //   '머리만 흔듦'을 없앤다. 단 리깅은 클립이 회전을 보태므로 절차 피치를 축소해 '눕기'를 막는다.
           const s = strikePose(1 - n.strikeT / 0.34, n.atkType);
-          const pMul = n.isAttacker ? 0.45 : 1; // 리깅=클립+절차 → 피치 축소 / 정적=절차만 → 그대로
+          // 리깅 근접/마법=클립이 회전을 보태므로 절차 피치 축소(눕기 방지). 활은 클립이 약해 절차가 주도(전량).
+          const pMul = !n.isAttacker || n.atkType === 'bow' ? 1 : 0.5;
           mo.position.set(Math.sin(ay) * s.jab, hy + s.dip, Math.cos(ay) * s.jab);
           mo.rotation.x = s.pitch * pMul; mo.rotation.z = 0;
           mo.scale.set(s.sqXZ, s.sqY, s.sqXZ);
