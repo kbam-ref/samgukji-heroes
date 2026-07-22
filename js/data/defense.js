@@ -40,6 +40,9 @@ export const DEFENSE = {
     // 2026-07-21: 1.22→1.19 (난이도 과하다 — 후반 램프 완화).
     hpPerStage: 1.19,
     hpPerIndex: 0.01,
+    // 2026-07-22 수석: "1단계는 1성 5마리로도 깰 수 있게". 초반 3단계 HP 온램프(×배수) — 4단계부터 정상 곡선.
+    //   절대 HP: 35 → 71 → 116 → 168(정상). 스프레드 배치(트랙 근처)면 1성 5마리로 1단계 여유 클리어.
+    hpOnramp: [0.35, 0.6, 0.82],
     speed: 8,
     // 재화 — 개체당 골드에 스테이지 스케일(검증 C1: flat 수입 vs 기하 HP → 경제 붕괴).
     // 개체 골드 = goldPerKill × size.gold × (보스면 boss.goldMult) × goldPerStage^(stage-1)

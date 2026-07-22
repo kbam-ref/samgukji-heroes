@@ -363,7 +363,9 @@ function damage(unit, enemy) {
 // ── 적 체력·보상 ──
 function enemyHp(stage, index, size, isBoss) {
   const w = DEFENSE.wave;
-  const base = w.hpBase * Math.pow(w.hpPerStage, stage - 1) * (1 + w.hpPerIndex * index);
+  // 초반 온램프(2026-07-22 수석) — 1~3단계 HP를 배수로 낮춰 약한 로스터도 진입 가능. 4단계부터 1.0.
+  const ramp = (w.hpOnramp && w.hpOnramp[stage - 1] != null) ? w.hpOnramp[stage - 1] : 1;
+  const base = w.hpBase * Math.pow(w.hpPerStage, stage - 1) * (1 + w.hpPerIndex * index) * ramp;
   if (isBoss) return base * w.sizes.medium.hp * w.boss.hpMult;
   return base * w.sizes[size].hp;
 }
