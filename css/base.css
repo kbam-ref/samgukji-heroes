@@ -592,10 +592,11 @@ body.modal-open #tab-bar { visibility: hidden; }
   position: absolute; inset: 0; z-index: 220; overflow: hidden;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   font-family: var(--font);
+  /* 2026-07-22 수석: 톤 살짝 밝게 — 아트를 덜 눌러 기병 씬이 더 보이게(상/하만 어둡게 유지해 가독성 확보). */
   background:
-    linear-gradient(180deg, rgba(8, 6, 4, 0.86) 0%, rgba(8, 6, 4, 0.56) 38%, rgba(8, 6, 4, 0.7) 68%, rgba(8, 6, 4, 0.94) 100%),
+    linear-gradient(180deg, rgba(10, 7, 5, 0.68) 0%, rgba(10, 7, 5, 0.26) 40%, rgba(10, 7, 5, 0.44) 70%, rgba(10, 7, 5, 0.86) 100%),
     url('../assets/ui/title-art.png') center / cover no-repeat,
-    #080604;
+    #0d0906;
   animation: title-in 0.6s ease-out;
 }
 #title-screen.out { animation: title-out 0.55s ease-in forwards; }
@@ -631,7 +632,7 @@ body.modal-open #tab-bar { visibility: hidden; }
   -webkit-background-clip: text; background-clip: text; color: transparent;
   filter: drop-shadow(0 3px 18px rgba(255, 150, 60, 0.3));
 }
-.title-tag { margin-top: 11px; font-family: var(--font); font-size: 13px; font-weight: 500; line-height: 1.5; color: #cbb488; opacity: 0.86; max-width: 420px; }
+.title-tag { margin-top: 11px; font-family: var(--font); font-size: 13px; font-weight: 500; line-height: 1.5; color: #e0cfa8; opacity: 0.92; max-width: 420px; text-shadow: 0 1px 5px rgba(0, 0, 0, 0.85); }
 /* 그라디언트 필 CTA */
 .title-actions { position: relative; z-index: 3; display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: 20px; }
 .title-start {
@@ -649,7 +650,7 @@ body.modal-open #tab-bar { visibility: hidden; }
   animation: title-sweep 3.6s ease-in-out 0.8s infinite;
 }
 @keyframes title-sweep { 0% { left: -70%; } 55%, 100% { left: 130%; } }
-.title-plays { margin: 0; font-family: var(--font); font-size: 13px; font-weight: 500; letter-spacing: 0.08em; color: #9c8a68; }
+.title-plays { margin: 0; font-family: var(--font); font-size: 13px; font-weight: 500; letter-spacing: 0.08em; color: #cbb488; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85); }
 .title-plays b { color: #f0c070; font-weight: 700; }
 /* 이어하기(있을 때) — 아웃라인 필 */
 .title-continue {

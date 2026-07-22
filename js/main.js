@@ -14,7 +14,7 @@ import { renderTabs } from './ui/tabs.js';
 import { showModal } from './ui/modal.js';
 import { maybeShowAttendance } from './ui/attendance-modal.js';
 import { showTitle } from './ui/title-screen.js';
-import { showLoading } from './ui/loading-screen.js';
+// 로딩 화면은 메인(타이틀)과 통합(수석 2026-07-22) — showLoading 미사용.
 import { hasSavedRun, saveActiveRun, clearSavedRun } from './ui/defense-screen.js';
 import { playsLeft, playsInfo, grantPaid } from './systems/rd-meta.js';
 import { fmt, formatDuration } from './ui/format.js';
@@ -167,7 +167,8 @@ function boot() {
   //   강제종료로 죽음을 회피하는 이어하기가 생기지 않는다(세션 중 백그라운드 복귀는 그대로 이어감).
   on('plays:empty', showNoPlays); // 도전 소진 시 결제 화면
   clearSavedRun();
-  showLoading(openTitle);
+  // 2026-07-22 수석: 로딩 화면과 메인(타이틀)을 하나로 — 별도 로딩 없이 타이틀을 바로 띄운다(에셋은 SW 캐시라 즉시).
+  openTitle();
 
   // 랜덤 디펜스(아케이드)로 전환한 뒤 구 방치 전투엔진(battle.tick)은 쓰지 않는다.
   // 계속 돌리면 마이그레이션 세이브(파티 보유)에서 유령 처치음·진동이 나고 배터리만 축낸다.
