@@ -1,7 +1,7 @@
 // 삼국지 랜덤 디펜스 — 화면(DOM·연출). 엔진(systems/defense.js)을 rAF로 돌리고 상태를 그린다.
 // 성능: 적/유닛 DOM을 id로 재사용하고 transform(translate3d)만 매 프레임 갱신(레이아웃 회피).
 
-import { DEFENSE, ELEMENT_COLOR, ELEMENT_LABEL, SIZE_LABEL, HERO_WEAPON, HERO_ATTACK_TYPE } from '../data/defense.js';
+import { DEFENSE, ELEMENT_COLOR, ELEMENT_LABEL, SIZE_LABEL, HERO_WEAPON, HERO_ATTACK_TYPE, HERO_SIZE_ROLE } from '../data/defense.js';
 import { HEROES, RARITY, FACTIONS, PERK_LABELS } from '../data/heroes.js';
 import * as engine from '../systems/defense.js';
 import * as r3d from './defense-3d.js'; // 3D 필드 렌더러(Three.js 빌보드)
@@ -135,21 +135,26 @@ function renderHeroInfo() {
   const tier = Math.min(6, u.rarity);
   const atk = Math.round((u.base || h.base || 0) * (info.dmg || 1));
   const rate = info.cooldown ? (1 / info.cooldown).toFixed(2) : '—';
+  const roleKey = { 'anti-small': 'small', 'anti-medium': 'medium', 'anti-large': 'large' }[HERO_SIZE_ROLE[u.heroId]];
+  const roleLabel = roleKey ? `${SIZE_LABEL[roleKey]} 특화` : '';
   box.innerHTML = `
-    <div class="rd-hi-name tier-${tier}">${weaponIcon(u.heroId)}<b>${h.name || ''}</b></div>
-    <div class="rd-hi-stars tier-${tier}" aria-label="성급 ${u.rarity}성">${'★'.repeat(u.rarity)}${'☆'.repeat(6 - u.rarity)}<em>${RARITY[u.rarity]?.name || ''}</em></div>
-    <div class="rd-hi-sub">${FACTIONS[h.faction]?.name || '군웅'}${u.upgradeLv ? ` · 단련 +${u.upgradeLv}` : ''}</div>
-    ${h.title ? `<div class="rd-hi-title">「${h.title}」</div>` : ''}
-    <div class="rd-hi-badges">
-      <span class="rd-hi-elem" style="color:${ELEMENT_COLOR[u.element]}">${ELEM_GLYPH[u.element] || ''} ${ELEMENT_LABEL[u.element] || ''}</span>
-      <span class="rd-hi-wpn wpn-${atype}">${WNAME[atype] || '칼'}</span>
+    <div class="rd-hi-head">
+      <div class="rd-hi-name tier-${tier}">${weaponIcon(u.heroId)}<b>${h.name || ''}</b></div>
+      <div class="rd-hi-stars tier-${tier}" aria-label="성급 ${u.rarity}성">${'★'.repeat(u.rarity)}${'☆'.repeat(6 - u.rarity)}<em>${RARITY[u.rarity]?.name || ''}</em></div>
+      <div class="rd-hi-sub">${FACTIONS[h.faction]?.name || '군웅'}${h.title ? ` · 「${h.title}」` : ''}</div>
+    </div>
+    <div class="rd-hi-tags">
+      <span class="rd-hi-tag" style="color:${ELEMENT_COLOR[u.element]}">${ELEM_GLYPH[u.element] || ''} ${ELEMENT_LABEL[u.element] || ''}</span>
+      <span class="rd-hi-tag wpn-${atype}">${WNAME[atype] || '칼'}</span>
+      ${roleLabel ? `<span class="rd-hi-tag">${roleLabel}</span>` : ''}
     </div>
     <ul class="rd-hi-stats">
       <li><span>공격력</span><b>${fmt(atk)}</b></li>
       <li><span>사거리</span><b>${info.range || '—'}</b></li>
-      <li><span>공격속도</span><b>${rate}/초</b></li>
+      <li><span>공속</span><b>${rate}/초</b></li>
       <li><span>동시타격</span><b>${info.multi || 1}마리</b></li>
       ${info.aoe ? `<li><span>광역기</span><b>${info.aoe.interval}초</b></li>` : ''}
+      ${u.upgradeLv ? `<li><span>단련</span><b>+${u.upgradeLv}</b></li>` : ''}
     </ul>
     ${h.perk ? `<div class="rd-hi-perk">특성 · ${PERK_LABELS[h.perk.kind] || ''} +${h.perk.value}%</div>` : ''}`;
 }
@@ -1155,11 +1160,17 @@ function showOver(won) {
   if (!over) return;
   over.hidden = false;
   over.innerHTML = `
-    <div class="rd-over-card">
-      <b>${won ? `${engine.stageCap()}라운드 클리어!` : '패배'}</b>
-      <span>${won ? '천하를 지켜냈다' : `${reachedStage}라운드에서 무너졌다`} · 최고 ${b.stage}라운드${newBest ? ' · 신기록!' : ''}</span>
-      <span class="rd-over-stat">처치 <b>${fmt(run.kills || 0)}</b> · <b>${formatSec(sec)}</b> 생존</span>
-      <button class="btn primary" id="rd-retry">다시 시작 <em>도전 ${meta.playsLeft()}회</em></button>
+    <div class="rd-over-card ${won ? 'win' : 'lose'}">
+      <span class="rd-over-eyebrow">${won ? '천 하 통 일' : '전 투 종 료'}</span>
+      <b class="rd-over-title">${won ? '천하 통일!' : '패배'}</b>
+      <p class="rd-over-msg">${won ? '천하를 지켜냈다' : `${reachedStage}라운드에서 무너졌다`}</p>
+      <div class="rd-over-stats">
+        <div class="rd-over-cell"><b>${fmt(run.kills || 0)}</b><span>처치</span></div>
+        <div class="rd-over-cell"><b>${formatSec(sec)}</b><span>생존</span></div>
+        <div class="rd-over-cell"><b>${b.stage}</b><span>최고 라운드</span></div>
+      </div>
+      ${newBest ? '<div class="rd-over-best">신기록 달성!</div>' : ''}
+      <button class="rd-over-retry" id="rd-retry">다시 시작 <em>도전 ${meta.playsLeft()}회</em></button>
     </div>`;
   document.getElementById('rd-retry').addEventListener('click', () => startNewPlay());
 }

@@ -1910,16 +1910,18 @@
 .rd-hi-stars.tier-4 { color: #c99bff; } .rd-hi-stars.tier-4 em { color: #d9b6ff; }
 .rd-hi-stars.tier-5 { color: #ffcf5a; } .rd-hi-stars.tier-5 em { color: #ffe08a; }
 .rd-hi-stars.tier-6 { color: #ffe486; text-shadow: 0 0 8px rgba(255, 228, 134, 0.7); } .rd-hi-stars.tier-6 em { color: #ffe486; }
-.rd-hi-sub { font-size: 11px; font-weight: 700; color: var(--gold-bright); letter-spacing: 0.02em; }
-.rd-hi-title { font-size: 10px; color: var(--paper-faint); font-style: italic; margin-bottom: 2px; }
-.rd-hi-badges { display: flex; gap: 5px; flex-wrap: wrap; margin: 1px 0 3px; }
-.rd-hi-elem, .rd-hi-wpn { font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 6px; background: rgba(0, 0, 0, 0.4); }
-.rd-hi-wpn { color: #ffd76a; } .rd-hi-wpn.wpn-bow { color: #8fe0b0; } .rd-hi-wpn.wpn-magic { color: #ff9a5a; } .rd-hi-wpn.wpn-spear { color: #f0b48a; }
-.rd-hi-stats { list-style: none; display: flex; flex-direction: column; gap: 3px; margin: 2px 0; }
-.rd-hi-stats li { display: flex; justify-content: space-between; align-items: baseline; font-size: 11px; padding: 3px 2px; border-bottom: 1px solid rgba(239, 230, 210, 0.06); }
+/* 2026-07-22 수석 "정보 정리": 헤더(이름·성급·세력)·태그(속성/무기/체급)·스탯·특성으로 그룹화 */
+.rd-hi-head { padding-bottom: 7px; margin-bottom: 7px; border-bottom: 1px solid rgba(247, 215, 131, 0.14); }
+.rd-hi-sub { font-size: 10.5px; font-weight: 600; color: var(--gold-bright); letter-spacing: 0.01em; margin-top: 2px; line-height: 1.35; }
+.rd-hi-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
+.rd-hi-tag { font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 999px; color: #ffd76a;
+  background: rgba(255, 220, 150, 0.06); border: 1px solid rgba(247, 215, 131, 0.16); }
+.rd-hi-tag.wpn-bow { color: #8fe0b0; } .rd-hi-tag.wpn-magic { color: #ff9a5a; } .rd-hi-tag.wpn-spear { color: #f0b48a; }
+.rd-hi-stats { list-style: none; display: flex; flex-direction: column; gap: 2px; margin: 0; }
+.rd-hi-stats li { display: flex; justify-content: space-between; align-items: baseline; font-size: 11.5px; padding: 4px 2px; border-bottom: 1px solid rgba(239, 230, 210, 0.06); }
 .rd-hi-stats span { color: var(--paper-faint); }
-.rd-hi-stats b { color: #f0e6cf; font-weight: 800; font-variant-numeric: tabular-nums; }
-.rd-hi-perk { margin-top: 3px; font-size: 10.5px; font-weight: 700; color: #b6d9a0; padding: 4px 7px; border-radius: 7px; background: rgba(90, 140, 70, 0.14); }
+.rd-hi-stats b { color: #ffe6a2; font-weight: 800; font-variant-numeric: tabular-nums; }
+.rd-hi-perk { margin-top: 8px; font-size: 10.5px; font-weight: 700; color: #b6d9a0; padding: 5px 9px; border-radius: 8px; background: rgba(90, 140, 70, 0.14); }
 @keyframes rd-pulse { 50% { opacity: 0.5; } }
 
 /* 이번 라운드 출현 진행 바 (v87) — 총 몇 중 몇이 나왔나 */
@@ -2654,18 +2656,55 @@
 .rd-perm:not(:disabled):active { transform: scale(0.98); }
 .rd-over-card .btn { min-width: 180px; }
 
-/* 게임오버·승리 */
+/* 게임오버·승리 — 2026-07-22 모던 프리미엄 리디자인(시안 B 톤: 앰버 그라디언트·필 CTA·다크 카드) */
 .rd-over {
   display: flex; align-items: center; justify-content: center; z-index: 20;
-  background: radial-gradient(ellipse at center, rgba(12, 9, 6, 0.82), rgba(6, 5, 4, 0.94));
+  background: radial-gradient(ellipse at center, rgba(9, 6, 4, 0.86), rgba(5, 4, 3, 0.96));
   animation: rd-veil 0.3s ease-out;
 }
 .rd-over[hidden] { display: none; } /* display:flex가 [hidden] 기본값을 덮어 늘 필드를 가리던 버그 수리 */
 @keyframes rd-veil { from { opacity: 0; } }
-.rd-over-card { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; padding: 24px; }
-.rd-over-card b { font-family: var(--font-display); font-size: 30px; color: var(--gold-bright); letter-spacing: 0.06em; }
-.rd-over-card span { font-size: 13px; color: var(--paper-dim); }
-.rd-over-card .btn { margin-top: 8px; min-width: 160px; }
+.rd-over-card {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 11px; text-align: center;
+  width: 86%; max-width: 380px; padding: 26px 30px 24px; border-radius: 18px;
+  background: linear-gradient(180deg, #1c140b, #100b06);
+  border: 1px solid rgba(247, 215, 131, 0.28);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 220, 150, 0.12);
+  animation: rd-over-pop 0.5s cubic-bezier(0.2, 1.1, 0.3, 1) both;
+}
+@keyframes rd-over-pop { from { opacity: 0; transform: translateY(16px) scale(0.96); } }
+.rd-over-card::before {
+  content: ''; position: absolute; top: 0; left: 24px; right: 24px; height: 2px; border-radius: 0 0 2px 2px;
+  background: linear-gradient(90deg, transparent, rgba(255, 178, 80, 0.85), transparent);
+}
+.rd-over-eyebrow { font-family: var(--font); font-size: 11px; font-weight: 700; letter-spacing: 0.16em; color: #cba15a; }
+.rd-over-title { font-family: 'Noto Serif KR', 'AppleMyungjo', 'Batang', serif; font-size: 38px; font-weight: 800; letter-spacing: 0.03em; line-height: 1; margin-top: 1px; }
+.rd-over-card.lose .rd-over-title { color: #e8ddc9; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6); }
+.rd-over-card.win .rd-over-title {
+  background: linear-gradient(92deg, #ffd47a, #ffae4d 50%, #ff8f3a);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 3px 16px rgba(255, 150, 60, 0.35));
+}
+.rd-over-msg { font-family: var(--font); font-size: 13px; color: #b7a586; margin-top: -3px; }
+.rd-over-stats { display: flex; gap: 9px; margin-top: 6px; width: 100%; justify-content: center; }
+.rd-over-cell {
+  flex: 1; max-width: 110px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 10px 6px; border-radius: 12px; background: rgba(255, 220, 150, 0.05); border: 1px solid rgba(247, 215, 131, 0.14);
+}
+.rd-over-cell b { font-family: var(--font); font-size: 18px; font-weight: 800; color: #ffd77f; }
+.rd-over-cell span { font-size: 11px; color: #9c8a68; }
+.rd-over-best {
+  margin-top: 2px; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: #3a1e08;
+  padding: 4px 14px; border-radius: 999px; background: linear-gradient(96deg, #ffdf8e, #ffb14e);
+}
+.rd-over-retry {
+  position: relative; margin-top: 8px; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-width: 200px; min-height: 52px; padding: 0 36px; border: none; border-radius: 999px; cursor: pointer;
+  font-family: var(--font); font-weight: 800; font-size: 17px; letter-spacing: 0.04em; color: #3a1e08;
+  background: linear-gradient(96deg, #ffdf8e 0%, #ffb14e 46%, #ff8f3a 100%);
+  box-shadow: 0 10px 26px rgba(255, 140, 50, 0.32), inset 0 2px 0 rgba(255, 255, 255, 0.5), inset 0 -6px 14px rgba(140, 60, 10, 0.25);
+}
+.rd-over-retry em { font-style: normal; font-weight: 600; font-size: 0.78em; opacity: 0.72; }
 
 /* ── 전장 대형·크기 (v46) — 캐릭터를 줄이고 V자 웨지로 세워 전장을 넓게 쓴다 ── */
 
