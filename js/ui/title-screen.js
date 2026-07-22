@@ -11,18 +11,16 @@ export function showTitle(onStart, opts = {}) {
   const playsLine = opts.plays != null ? `<div class="title-plays">남은 도전 <b>${opts.plays}</b>회</div>` : '';
   el.innerHTML = `
     <canvas class="title-embers" aria-hidden="true"></canvas>
-    <div class="title-scrim" aria-hidden="true"></div>
+    <div class="title-glow" aria-hidden="true"></div>
     <div class="title-vign" aria-hidden="true"></div>
-    <span class="title-corner tl" aria-hidden="true"></span><span class="title-corner tr" aria-hidden="true"></span>
-    <span class="title-corner bl" aria-hidden="true"></span><span class="title-corner br" aria-hidden="true"></span>
-    <div class="title-logo">
+    <div class="title-body">
       <em class="title-eyebrow">운빨로 <b>천하통일</b></em>
-      <b class="title-brand">삼국지<span class="l2">랜덤 디펜스</span><i class="title-sheen" aria-hidden="true"></i></b>
-      <span class="title-seal" aria-hidden="true">天下</span>
-    </div>
-    <div class="title-actions">
-      <button class="btn primary title-start">전투 시작 <span class="title-chev" aria-hidden="true">▶</span></button>
-      ${playsLine}
+      <b class="title-brand"><span class="l1">삼국지</span><span class="l2">랜덤 디펜스</span></b>
+      <p class="title-tag">운이 곧 전략이다. 뽑고 · 합치고 · 천하를 지켜라.</p>
+      <div class="title-actions">
+        <button class="title-start">전투 시작 <span class="title-chev" aria-hidden="true">▶</span></button>
+        ${playsLine}
+      </div>
     </div>
     <span class="title-version">${APP_VERSION}</span>`;
   (document.getElementById('viewport') || document.body).appendChild(el); // v121: 강제 가로 회전 대상 안으로

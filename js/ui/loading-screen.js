@@ -6,12 +6,12 @@ export function showLoading(done, ms = 2000) {
   el.id = 'loading-screen';
   el.innerHTML = `
     <div class="load-sky" aria-hidden="true" style="background-image:url('./assets/ui/title-art.png')"></div>
+    <div class="title-glow" aria-hidden="true"></div>
     <div class="load-scrim" aria-hidden="true"></div>
     <canvas class="title-embers" aria-hidden="true"></canvas>
     <div class="load-title">
       <em class="load-eyebrow">운빨로 <b>천하통일</b></em>
-      <b class="load-logo">삼국지<span class="l2">랜덤 디펜스</span><i class="title-sheen" aria-hidden="true"></i></b>
-      <span class="title-seal" aria-hidden="true">天下</span>
+      <b class="load-logo"><span class="l1">삼국지</span><span class="l2">랜덤 디펜스</span></b>
     </div>
     <div class="load-foot">
       <div class="load-bar"><i class="load-fill"></i></div>

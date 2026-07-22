@@ -586,21 +586,16 @@ body.force-rotate #viewport {
 /* 모달이 떠 있는 동안 — 하단 탭 완전 차단 (첫 프레임 UI 충돌 방지, 심사 #1) */
 body.modal-open #tab-bar { visibility: hidden; }
 
-/* ── 타이틀 화면 — v135 프리미엄 리디자인(불티·회전 빛살·천하 인장·금 각인 로고) ── */
+/* ── 타이틀 화면 — '모던 프리미엄'(시안 B, 수석 선택): 앰버 그라디언트 강조 + 그라디언트 필 CTA + 태그라인 ── */
 /* ※ #viewport(강제 가로) 내부라 vh/vw/safe-area 금지 → px·em·%만 사용 */
 #title-screen {
-  position: absolute;
-  inset: 0;
-  z-index: 220;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-between; /* 로고=상단, 버튼=하단 → 가운데 기병 아트가 안 가림 */
-  padding: 4% 0 6%;
+  position: absolute; inset: 0; z-index: 220; overflow: hidden;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  font-family: var(--font);
   background:
+    linear-gradient(180deg, rgba(8, 6, 4, 0.86) 0%, rgba(8, 6, 4, 0.56) 38%, rgba(8, 6, 4, 0.7) 68%, rgba(8, 6, 4, 0.94) 100%),
     url('../assets/ui/title-art.png') center / cover no-repeat,
-    radial-gradient(120% 80% at 50% 20%, #2a2213, #0b0a08 75%);
+    #080604;
   animation: title-in 0.6s ease-out;
 }
 #title-screen.out { animation: title-out 0.55s ease-in forwards; }
@@ -608,129 +603,63 @@ body.modal-open #tab-bar { visibility: hidden; }
 @keyframes title-out { to { opacity: 0; transform: scale(1.04); } }
 
 .title-embers { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
-.title-scrim {
+.title-glow {
   position: absolute; inset: 0; z-index: 1; pointer-events: none;
-  background: linear-gradient(180deg, rgba(6, 4, 2, 0.72) 0%, rgba(6, 4, 2, 0.08) 30%, rgba(6, 4, 2, 0.14) 60%, rgba(6, 4, 2, 0.86) 100%);
+  background: radial-gradient(70% 48% at 50% 22%, rgba(224, 150, 60, 0.3) 0%, rgba(120, 70, 26, 0.12) 34%, transparent 62%);
 }
-.title-vign { position: absolute; inset: 0; z-index: 1; pointer-events: none; box-shadow: inset 0 0 120px 44px rgba(0, 0, 0, 0.62); }
-.title-corner { position: absolute; width: 34px; height: 34px; border: 2px solid rgba(247, 215, 131, 0.42); z-index: 2; }
-.title-corner.tl { top: 14px; left: 14px; border-right: none; border-bottom: none; }
-.title-corner.tr { top: 14px; right: 14px; border-left: none; border-bottom: none; }
-.title-corner.bl { bottom: 14px; left: 14px; border-right: none; border-top: none; }
-.title-corner.br { bottom: 14px; right: 14px; border-left: none; border-top: none; }
+.title-vign { position: absolute; inset: 0; z-index: 1; pointer-events: none; box-shadow: inset 0 0 150px 55px rgba(0, 0, 0, 0.7); }
 
-.title-logo {
-  position: relative; z-index: 3; text-align: center; margin-top: 1.5%;
-  padding: 10px 44px 14px;
-  /* 은은한 후광(아트 위 가독) */
-  background: radial-gradient(120% 130% at 50% 44%, rgba(6, 5, 3, 0.6), rgba(6, 5, 3, 0.2) 62%, transparent 82%);
-  animation: logo-drop 0.8s var(--ease-out) both 0.15s;
+.title-body {
+  position: relative; z-index: 3; text-align: center; padding: 0 40px;
+  display: flex; flex-direction: column; align-items: center;
+  animation: title-rise 0.8s cubic-bezier(0.2, 1, 0.3, 1) both 0.1s;
 }
-/* 로고 뒤 회전 빛살 */
-.title-logo::before {
-  content: ''; position: absolute; left: 50%; top: 46%; width: 620px; height: 620px;
-  transform: translate(-50%, -50%); z-index: -1; pointer-events: none; opacity: 0.42;
-  background: repeating-conic-gradient(from 0deg, rgba(255, 214, 120, 0.15) 0deg 4deg, transparent 4deg 14deg);
-  -webkit-mask: radial-gradient(closest-side, #000 0%, transparent 62%); mask: radial-gradient(closest-side, #000 0%, transparent 62%);
-  animation: title-rays 46s linear infinite;
-}
-@keyframes title-rays { to { transform: translate(-50%, -50%) rotate(360deg); } }
-/* 타이틀/로딩 로고 전용 서체 — 인게임 맑은 고딕과 구분되는 묵직한 명조 */
+@keyframes title-rise { from { opacity: 0; transform: translateY(14px); } }
+/* 타이틀/로딩 로고 서체 — 묵직한 명조 */
 .title-brand, .load-logo { font-family: 'Noto Serif KR', 'AppleMyungjo', 'Nanum Myeongjo', 'Batang', 'Times New Roman', serif; }
-@keyframes logo-drop { from { opacity: 0; transform: translateY(-18px) scale(0.96); } }
 .title-eyebrow {
-  display: block; font-style: normal; font-size: 13px; font-weight: 600; letter-spacing: 0.5em;
-  text-indent: 0.5em; color: #ffe6a6; opacity: 0.96; margin-bottom: 8px;
-  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.95);
+  display: block; font-style: normal; font-family: var(--font); font-size: 12px; font-weight: 700;
+  letter-spacing: 0.5em; text-indent: 0.5em; color: #f0c070; opacity: 0.92; margin-bottom: 11px;
 }
-.title-eyebrow b { color: #ffbf5a; font-weight: 700; }
-/* 삼국지 랜덤 디펜스 — 금빛 각인 로고 */
-.title-brand {
-  position: relative; display: inline-block; font-size: 54px; font-weight: 900; line-height: 1.06; letter-spacing: 0.01em;
-  background: linear-gradient(178deg, #fff7db 4%, #f4d074 44%, #e0ad3e 60%, #a9741d 100%);
+.title-eyebrow b { color: #ffcf7a; }
+.title-brand { font-weight: 800; line-height: 1.05; letter-spacing: 0.01em; }
+.title-brand .l1 { display: block; font-size: 34px; color: #f4ecd8; text-shadow: 0 2px 14px rgba(0, 0, 0, 0.7); }
+/* 강조 구절 — 밝은 앰버 그라디언트(cosmic '내면 풍경'처럼) */
+.title-brand .l2 {
+  display: block; font-size: 48px; margin-top: 2px;
+  background: linear-gradient(92deg, #ffd47a 0%, #ffae4d 40%, #ff8a3c 72%, #e9721f 100%);
   -webkit-background-clip: text; background-clip: text; color: transparent;
-  filter:
-    drop-shadow(1.5px 1.5px 0 rgba(28, 14, 3, 0.96)) drop-shadow(-1.5px 1.5px 0 rgba(28, 14, 3, 0.96))
-    drop-shadow(1.5px -1.5px 0 rgba(28, 14, 3, 0.96)) drop-shadow(-1.5px -1.5px 0 rgba(28, 14, 3, 0.96))
-    drop-shadow(0 5px 14px rgba(0, 0, 0, 0.9)) drop-shadow(0 0 28px rgba(228, 173, 62, 0.42));
+  filter: drop-shadow(0 3px 18px rgba(255, 150, 60, 0.3));
 }
-.title-brand .l2 { display: block; }
-.title-sheen { position: absolute; inset: 0; z-index: 2; pointer-events: none; overflow: hidden; mix-blend-mode: screen; }
-.title-sheen::after {
-  content: ''; position: absolute; top: -30%; left: -60%; width: 40%; height: 160%; transform: skewX(-18deg);
-  background: linear-gradient(90deg, transparent, rgba(255, 252, 235, 0.85), transparent);
-  animation: title-sweep 4.6s ease-in-out 1.1s infinite;
-}
-@keyframes title-sweep { 0% { left: -70%; } 55%, 100% { left: 130%; } }
-/* 붉은 천하 인장 — 시그니처 */
-.title-seal {
-  position: absolute; right: -8px; top: -14px; width: 48px; height: 48px; z-index: 3;
-  display: flex; align-items: center; justify-content: center; transform: rotate(-8deg);
-  background: linear-gradient(145deg, #e05a3f, #b5321f 60%, #7d1e10);
-  border: 3px solid rgba(255, 238, 220, 0.9); border-radius: 5px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6), inset 0 0 6px rgba(0, 0, 0, 0.35);
-  font-weight: 900; font-size: 18px; line-height: 1; color: #fff2ec; letter-spacing: -0.04em;
-  writing-mode: vertical-rl; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-  animation: title-stamp 0.5s cubic-bezier(0.2, 1.6, 0.4, 1) both 0.5s;
-}
-@keyframes title-stamp { from { opacity: 0; transform: rotate(-8deg) scale(1.8); } to { opacity: 1; } }
-.title-actions {
-  position: relative; z-index: 3; margin-top: 4%; margin-bottom: 0;
-  display: flex; flex-direction: column; align-items: center; gap: 12px;
-}
+.title-tag { margin-top: 11px; font-family: var(--font); font-size: 13px; font-weight: 500; line-height: 1.5; color: #cbb488; opacity: 0.86; max-width: 420px; }
+/* 그라디언트 필 CTA */
+.title-actions { position: relative; z-index: 3; display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: 20px; }
 .title-start {
-  position: relative; margin: 0; overflow: hidden;
-  min-width: 210px; min-height: 56px; font-size: 20px; letter-spacing: 0.16em;
-  padding-left: calc(16px + 0.16em);
-  font-family: 'Noto Serif KR', 'AppleMyungjo', 'Batang', serif; font-weight: 800;
-  animation: cta-breathe 2.2s ease-in-out infinite;
+  position: relative; margin: 0; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  min-width: 200px; min-height: 50px; padding: 0 44px; border: none; border-radius: 999px; cursor: pointer;
+  font-family: var(--font); font-weight: 800; font-size: 18px; letter-spacing: 0.06em; color: #3a1e08;
+  background: linear-gradient(96deg, #ffdf8e 0%, #ffb14e 46%, #ff8f3a 100%);
+  box-shadow: 0 10px 28px rgba(255, 140, 50, 0.34), inset 0 2px 0 rgba(255, 255, 255, 0.5), inset 0 -6px 14px rgba(140, 60, 10, 0.25);
+  animation: cta-breathe 2.4s ease-in-out infinite;
 }
-.title-chev { font-size: 0.9em; margin-left: 2px; }
+.title-chev { font-size: 0.82em; }
 .title-start::after {
   content: ''; position: absolute; top: 0; left: -70%; width: 45%; height: 100%; transform: skewX(-20deg);
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
-  animation: title-sweep 3.4s ease-in-out 0.6s infinite;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  animation: title-sweep 3.6s ease-in-out 0.8s infinite;
 }
-.title-plays {
-  display: inline-flex; align-items: center; gap: 0.6em; margin: 0;
-  font-size: 14px; color: #f0dcae; letter-spacing: 0.06em; font-family: var(--font);
-  padding: 5px 16px; border: 1px solid rgba(247, 215, 131, 0.4); border-radius: 999px;
-  background: rgba(10, 7, 4, 0.5); text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
-}
-.title-plays b { color: #ffd873; font-weight: 800; }
-/* 이어하기 묶음(있을 때) — 위치는 그룹이 담당 */
+@keyframes title-sweep { 0% { left: -70%; } 55%, 100% { left: 130%; } }
+.title-plays { margin: 0; font-family: var(--font); font-size: 13px; font-weight: 500; letter-spacing: 0.08em; color: #9c8a68; }
+.title-plays b { color: #f0c070; font-weight: 700; }
+/* 이어하기(있을 때) — 아웃라인 필 */
 .title-continue {
-  margin: 0; min-width: 210px; min-height: 56px; font-size: 19px; letter-spacing: 0.18em;
-  padding-left: calc(16px + 0.18em); font-family: 'Noto Serif KR', 'AppleMyungjo', 'Batang', serif;
-  animation: cta-breathe 2.2s ease-in-out infinite;
+  margin: 0; min-width: 200px; min-height: 50px; border-radius: 999px; font-family: var(--font);
+  font-size: 16px; font-weight: 700; letter-spacing: 0.06em; color: #f0c070;
+  background: rgba(20, 14, 8, 0.5); border: 1px solid rgba(240, 192, 112, 0.5);
 }
-.title-actions.has-continue .title-start {
-  min-width: 170px; min-height: 46px; font-size: 15px; animation: none;
-}
+.title-actions.has-continue .title-start { min-width: 170px; min-height: 46px; font-size: 15px; animation: none; }
 /* 버전 표시 */
-.title-version {
-  position: absolute; bottom: 8px; right: 14px; z-index: 3;
-  font-size: 11px; letter-spacing: 0.12em; color: var(--paper-faint); opacity: 0.6;
-}
-.title-continue {
-  margin: 0; min-width: 210px; min-height: 58px; font-size: 19px; letter-spacing: 0.18em;
-  padding-left: calc(16px + 0.18em); font-family: var(--font-display);
-  animation: cta-breathe 2.2s ease-in-out infinite;
-}
-/* 저장이 있을 때 '새로 시작'은 보조 버튼으로 (이어하기가 주) */
-.title-actions.has-continue .title-start {
-  min-width: 170px; min-height: 46px; font-size: 15px; animation: none;
-}
-/* 버전 표시 — 최신인지 한눈에 (배포 확인용) */
-.title-version {
-  position: absolute;
-  bottom: calc(8px + env(safe-area-inset-bottom));
-  right: 14px;
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  color: var(--paper-faint);
-  opacity: 0.7;
-}
+.title-version { position: absolute; bottom: 8px; right: 14px; z-index: 3; font-size: 11px; letter-spacing: 0.12em; color: var(--paper-faint); opacity: 0.55; }
 
 /* 작은 버튼 변형 */
 .btn.small { min-height: 34px; padding: 5px 12px; font-size: 12px; font-weight: 600; }
