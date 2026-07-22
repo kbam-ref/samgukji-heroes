@@ -555,8 +555,13 @@ function updateFx(dt) {
       f.mesh.scale.setScalar(0.55 * (1 - p * 0.5)); f.mesh.material.opacity = 1 - p;
       if (p >= 1) { freeFx('burst', f.mesh); fx3d.splice(i, 1); }
     } else if (f.kind === 'die') {
-      const s = Math.max(0.001, 1 - p * p); f.node.group.scale.setScalar(s);
-      f.node.group.position.y = p * 0.6; f.node.group.rotation.y += dt * 6;
+      // 3D 쓰러짐(2026-07-22 수석: 사망이 2D로 보이던 회전Y '카드 뒤집힘' 폐지) —
+      //   발밑을 축으로 옆으로 넘어가며 땅속으로 가라앉고, 마지막에 사그라든다.
+      const g2 = f.node.group;
+      const tip = Math.min(1, p / 0.55);
+      g2.rotation.z = (f.dir || 1) * tip * 1.4;                       // 옆으로 쓰러짐(~80°) — Y회전은 건드리지 않음(카드 뒤집힘 방지)
+      g2.position.y = -(p * p) * 0.34;                                // 서서히 땅속으로
+      g2.scale.setScalar(p < 0.7 ? 1 : Math.max(0.001, 1 - (p - 0.7) / 0.3)); // 후반 사그라듦
       if (p >= 1) { disposeNode(f.node); fx3d.splice(i, 1); }
     }
   }
@@ -725,8 +730,8 @@ export function syncEnemies(list) {
   }
   for (const [eid, n] of enemies) if (!seen.has(eid)) {
     enemies.delete(eid);
-    if (n.sized) { // 사망 연출: 오그라들며 회전+상승, 자리에 스파크
-      fx3d.push({ kind: 'die', node: n, t: 0, dur: 0.3 });
+    if (n.sized) { // 사망 연출: 발밑축 3D 쓰러짐 + 땅속 침강, 자리에 흙먼지
+      fx3d.push({ kind: 'die', node: n, t: 0, dur: 0.36, dir: (n.face || 1) });
       spawnBurst(new THREE.Vector3(n.group.position.x, (n.baseH || 1) * 0.4, n.group.position.z), '#e6b678');
     } else disposeNode(n);
   }
@@ -785,7 +790,17 @@ export function frame(dt) {
       if (n.strikeT > 0) {
         n.strikeT -= dt;
         const ay = n.atkYaw ?? faceY;
-        if (n.isAttacker) { // 리깅됨 — 공격 클립이 전신을 애니. 절차는 타깃 향한 작은 전진만(피치·롤·스쿼시 없음 → '오바·눕기' 방지)
+        if (n.isAttacker && n.atkType === 'bow') {
+          // 활잡이(리깅됨) — Meshy 공격 클립이 궁수 체형엔 미약해 '머리만 흔드는' 느낌. 절차적 '당김→발사 반동'을 얹어
+          //   몸통이 뒤로 당겼다 앞으로 튀는 사격 동작을 확실히 보이게 한다.
+          const prog = Math.min(1, 1 - n.strikeT / 0.34);
+          const wind = prog < 0.4 ? prog / 0.4 : 1;            // 시위 당김
+          const rel = prog < 0.4 ? 0 : (prog - 0.4) / 0.6;     // 놓음(반동)
+          const off = -(wind - rel) * 0.12 + rel * 0.05;       // 뒤로 당겼다 앞으로
+          mo.position.set(Math.sin(ay) * off, hy, Math.cos(ay) * off);
+          mo.rotation.x = -wind * 0.15 + rel * 0.2;            // 상체 뒤로 젖혔다 앞으로 스냅
+          mo.rotation.z = 0; mo.scale.set(1, 1, 1);
+        } else if (n.isAttacker) { // 리깅됨 — 공격 클립이 전신을 애니. 절차는 타깃 향한 작은 전진만(피치·롤·스쿼시 없음 → '오바·눕기' 방지)
           const se = Math.sin(Math.min(1, 1 - n.strikeT / 0.34) * Math.PI);
           mo.position.set(Math.sin(ay) * se * 0.07, hy, Math.cos(ay) * se * 0.07);
           mo.rotation.x = 0; mo.rotation.z = 0; mo.scale.set(1, 1, 1);
