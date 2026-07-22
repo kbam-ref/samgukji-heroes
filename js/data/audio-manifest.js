@@ -66,6 +66,11 @@ export const SFX = [
   { id: 'boss-voice-zhangjiao',   kind: 'tts', text: '창천은 이미 죽었다! 황천의 시대가 열리리라!' },
   { id: 'boss-voice-boss-general', kind: 'tts', text: '감히 내 앞을 막아서다니, 무모하구나!' },
   { id: 'boss-voice-boss-warlock', kind: 'tts', text: '크하하하! 너희에게 죽음을 선사하마!' },
+  // 신화·초월 영웅 등장 멘트(연의 명대사, TTS). id: hero-voice-<heroId>. 신화(5)·초월(6) 획득 연출 때 재생.
+  { id: 'hero-voice-lvbu',        kind: 'tts', text: '인중여포 마중적토라! 하늘 아래 나를 당할 자 없다!' },
+  { id: 'hero-voice-zhugeliang',  kind: 'tts', text: '동남풍은 이미 불었으니, 천하의 대세가 이 손 안에 있느니라.' },
+  { id: 'hero-voice-guanyu',      kind: 'tts', text: '적장의 목을 베어 오리니, 이 술이 식기도 전이라!' },
+  { id: 'hero-voice-caocao',      kind: 'tts', text: '차라리 내가 천하를 저버릴지언정, 천하가 나를 저버리게 두진 않으리!' },
 ];
 
 /** 모든 항목 (도구·플레이어 공용) */

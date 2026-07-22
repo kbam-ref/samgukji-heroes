@@ -233,47 +233,111 @@ export function init(mount, w, h) {
   buildBoundary(); // 배치 경계 = 흙성벽 + 모서리 망루(스산한 선 대체, v121)
 }
 
-// 배치 경계를 판축 흙성으로 — 원경/좌우는 낮은 벽, 근경은 낮은 턱, 네 모서리 망루.
-// "성벽 안 = 내 배치 구역, 밖으로 몰려오는 적"이라는 공성 구도로 이동 한계를 직관 표현.
+// 배치 경계 — 2026-07-22 수석 "네모 우리 같다": 연속 성벽/망루 폐지. 둘레에 끊긴 흙둔덕·바위·모래주머니·
+// 풀·진영 깃발을 불규칙하게(갭 포함) 흩어 '자연스러운 진영 가장자리'로. 낮은 것 위주(적 시야 안 가림), 깃발은 모서리만.
 function buildBoundary() {
   const b = DEFENSE.unit.bounds;
   const x1 = wx(b.x1), x2 = wx(b.x2), zF = wz(b.y1), zN = wz(b.y2);
-  const w = x2 - x1, depth = zN - zF, midX = (x1 + x2) / 2, midZ = (zF + zN) / 2;
-  const wallMat = new THREE.MeshStandardMaterial({ color: 0x8f6f45, roughness: 1, metalness: 0, flatShading: true }); // 판축 흙(사암 램프 중간톤)
-  const towerMat = new THREE.MeshStandardMaterial({ color: 0x9c7c52, roughness: 1, metalness: 0, flatShading: true });
-  const capMat = new THREE.MeshStandardMaterial({ color: 0x5a4128, roughness: 1, metalness: 0, flatShading: true });
-  const blob = (x, z, sx, sz) => { const s = new THREE.Mesh(shadowGeo, shadowMat); s.rotation.x = -Math.PI / 2; s.position.set(x, 0.015, z); s.scale.set(sx, sz, 1); scene.add(s); };
-  // 원경 벽(낮게 — 뒤 적 발 안 가리게) + 좌/우 벽
-  const far = new THREE.Mesh(new THREE.BoxGeometry(w + 0.24, 0.26, 0.2), wallMat); far.position.set(midX, 0.13, zF); scene.add(far); blob(midX, zF, (w + 0.24) * 1.05, 0.55);
-  for (const sx of [x1, x2]) { const wl = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.34, depth), wallMat); wl.position.set(sx, 0.17, midZ); scene.add(wl); blob(sx, midZ, 0.5, depth * 1.02); }
-  // 근경 낮은 턱(앞줄 유닛 안 가리게)
-  const curb = new THREE.Mesh(new THREE.BoxGeometry(w + 0.24, 0.1, 0.16), wallMat); curb.position.set(midX, 0.05, zN); scene.add(curb);
-  // 네 모서리 망루(원기둥 + 원뿔 지붕). 근경 쪽은 낮게.
-  const capGeo = new THREE.ConeGeometry(0.34, 0.24, 8);
-  for (const [tx, tz] of [[x1, zF], [x2, zF], [x1, zN], [x2, zN]]) {
-    const th = tz === zN ? 0.42 : 0.6;
-    const t = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.28, th, 8), towerMat); t.position.set(tx, th / 2, tz); scene.add(t);
-    const cap = new THREE.Mesh(capGeo, capMat); cap.position.set(tx, th + 0.11, tz); scene.add(cap);
-    blob(tx, tz, 0.72, 0.72);
+  let seed = 21; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+
+  const stoneMat = new THREE.MeshStandardMaterial({ color: 0x8f8b81, roughness: 1, metalness: 0, flatShading: true }); // 회색 돌(따뜻한 흙과 대비)
+  const earthMat = new THREE.MeshStandardMaterial({ color: 0x745730, roughness: 1, metalness: 0, flatShading: true });
+  const bagMat = new THREE.MeshStandardMaterial({ color: 0xb39457, roughness: 1, metalness: 0, flatShading: true });
+  const grassMat = new THREE.MeshStandardMaterial({ color: 0x82913e, roughness: 1, metalness: 0, flatShading: true });
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0x4f371e, roughness: 1, metalness: 0, flatShading: true });
+  const clothMat = new THREE.MeshStandardMaterial({ color: 0xb23a2c, roughness: 0.85, metalness: 0, side: THREE.DoubleSide });
+  const tentMat = new THREE.MeshStandardMaterial({ color: 0xcdb488, roughness: 1, metalness: 0, flatShading: true });
+  const lumpGeo = new THREE.IcosahedronGeometry(1, 0); // 저폴리 흙더미/바위
+  const blob = (x, z, s) => { const m = new THREE.Mesh(shadowGeo, shadowMat); m.rotation.x = -Math.PI / 2; m.position.set(x, 0.015, z); m.scale.set(s, s * 0.72, 1); scene.add(m); };
+
+  const grass = (x, z) => { // 풀 포기(선명한 초록 — 색 대비로 '살아있는' 진영)
+    for (let i = 0; i < 5; i++) { const h = 0.1 + rnd() * 0.13; const m = new THREE.Mesh(new THREE.ConeGeometry(0.03, h, 4), grassMat); m.position.set(x + (rnd() - 0.5) * 0.3, h / 2, z + (rnd() - 0.5) * 0.3); m.rotation.z = (rnd() - 0.5) * 0.4; scene.add(m); }
+  };
+  const rocks = (x, z) => { // 회색 바위 무리
+    const n = 2 + (rnd() < 0.5 ? 1 : 0);
+    for (let i = 0; i < n; i++) { const s = 0.1 + rnd() * 0.13; const m = new THREE.Mesh(lumpGeo, stoneMat); m.scale.set(s, s * 0.7, s); m.position.set(x + (rnd() - 0.5) * 0.34, s * 0.34, z + (rnd() - 0.5) * 0.34); m.rotation.y = rnd() * 6.28; scene.add(m); }
+    blob(x, z, 0.55);
+  };
+  const sandbags = (x, z) => { // 모래주머니 더미(낮게 쌓임)
+    for (let i = 0; i < 3; i++) { const m = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.1, 0.12), bagMat); m.position.set(x + (i - 1) * 0.13, 0.05, z + (rnd() - 0.5) * 0.05); m.rotation.y = (rnd() - 0.5) * 0.4; scene.add(m); }
+    for (let i = 0; i < 2; i++) { const m = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.1, 0.11), bagMat); m.position.set(x + (i - 0.5) * 0.13, 0.14, z); scene.add(m); }
+    blob(x, z, 0.5);
+  };
+  const berm = (x, z) => { // 낮은 흙둔덕(끊긴 조각) + 풀
+    const w = 0.45 + rnd() * 0.5, h = 0.09 + rnd() * 0.07, d = 0.24 + rnd() * 0.16;
+    const m = new THREE.Mesh(lumpGeo, earthMat); m.scale.set(w, h, d); m.position.set(x, h * 0.42, z); m.rotation.y = rnd() * 6.28;
+    scene.add(m); blob(x, z, w * 1.3); grass(x, z);
+  };
+  const banner = (x, z, h0 = 0.58) => { // 전장 깃발(장대+붉은 깃천) — 색 포인트
+    const h = h0 + rnd() * 0.12;
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.024, h, 6), woodMat); pole.position.set(x, h / 2, z); scene.add(pole);
+    const flag = new THREE.Mesh(new THREE.PlaneGeometry(0.26, 0.16), clothMat); flag.position.set(x + 0.14, h - 0.14, z); flag.rotation.y = -0.2; scene.add(flag);
+    blob(x, z, 0.34);
+  };
+  const brazier = (x, z) => { // 화톳불 — 따뜻한 점광원으로 진영 분위기
+    const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.05, 0.14, 8), woodMat); pot.position.set(x, 0.07, z); scene.add(pot);
+    const fire = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.17, 7), new THREE.MeshBasicMaterial({ color: 0xff9a3c })); fire.position.set(x, 0.21, z); scene.add(fire);
+    const light = new THREE.PointLight(0xffa040, 0.55, 2.4); light.position.set(x, 0.32, z); scene.add(light);
+    blob(x, z, 0.34);
+  };
+  const tent = (x, z) => { // 막사(피라미드 텐트+깃발) — '진영' 완성도
+    const body = new THREE.Mesh(new THREE.ConeGeometry(0.36, 0.52, 4), tentMat); body.position.set(x, 0.26, z); body.rotation.y = Math.PI / 4; scene.add(body);
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.68, 6), woodMat); pole.position.set(x, 0.34, z); scene.add(pole);
+    const flag = new THREE.Mesh(new THREE.PlaneGeometry(0.18, 0.11), clothMat); flag.position.set(x + 0.08, 0.62, z); flag.rotation.y = -0.2; scene.add(flag);
+    blob(x, z, 0.72);
+  };
+
+  // 둘레를 불규칙하게 훑으며 낮은 프롭 배치(간격·종류 랜덤, 16% 갭). 앞(near)은 성기게 → 시야 확보.
+  const edges = [
+    { ax: x1, az: zF, bx: x2, bz: zF, nx: 0, nz: -1, n: 6 }, // far(뒤)
+    { ax: x2, az: zF, bx: x2, bz: zN, nx: 1, nz: 0, n: 5 },  // right
+    { ax: x2, az: zN, bx: x1, bz: zN, nx: 0, nz: 1, n: 3 },  // near(앞) — 성기게
+    { ax: x1, az: zN, bx: x1, bz: zF, nx: -1, nz: 0, n: 5 }, // left
+  ];
+  for (const e of edges) {
+    for (let i = 0; i < e.n; i++) {
+      if (rnd() < 0.16) continue; // 자연스러운 끊김
+      const t = (i + 0.5) / e.n + (rnd() - 0.5) * 0.14, off = 0.14 + rnd() * 0.12;
+      const x = e.ax + (e.bx - e.ax) * t + e.nx * off, z = e.az + (e.bz - e.az) * t + e.nz * off;
+      const k = rnd();
+      if (k < 0.28) rocks(x, z); else if (k < 0.5) sandbags(x, z); else if (k < 0.85) grass(x, z); else berm(x, z);
+    }
   }
+  // 뒤 두 모서리엔 막사, 네 모서리 깃발, 좌우 중앙 화톳불 — '진영' 완성도(우리(cage) 느낌 없이)
+  tent(x1 - 0.3, zF - 0.3); tent(x2 + 0.3, zF - 0.3);
+  for (const [cx, cz, ox, oz] of [[x1, zF, -0.16, -0.16], [x2, zF, 0.16, -0.16], [x1, zN, -0.16, 0.16], [x2, zN, 0.16, 0.16]]) banner(cx + ox, cz + oz);
+  brazier(x1 - 0.22, (zF + zN) / 2); brazier(x2 + 0.22, (zF + zN) / 2);
 }
 
-// 필드 가장자리(배치박스 밖)에 저폴리 3D 바위 산개 — 진짜 입체 지형감
+// 필드 가장자리(배치박스 밖)에 저폴리 3D 바위 산개 — 진짜 입체 지형감.
+// 2026-07-22 수석 "배경 완성도": 창백한 사암(골프공 느낌) → 어둑한 회갈색 풍화 바위·개체별 변주 + 곁바위·밑동 풀.
 function scatterRocks() {
   const geo = new THREE.IcosahedronGeometry(1, 1); // 청크 보울더(각지지 않게 저디테일)
   const p = geo.attributes.position;
   for (let i = 0; i < p.count; i++) { const f = 0.86 + Math.abs(Math.sin(i * 12.9898) * 43758.5453 % 1) * 0.22; p.setXYZ(i, p.getX(i) * f, p.getY(i) * f * 0.66, p.getZ(i) * f); }
   geo.computeVertexNormals();
-  const mat = new THREE.MeshStandardMaterial({ color: 0xc2a878, roughness: 1, metalness: 0, flatShading: true }); // 사막 사암 보울더
-  const spots = [[6, 13, 1.4], [94, 16, 1.5], [4, 44, 1.1], [96, 50, 1.2], [7, 87, 1.4], [93, 85, 1.3]];
+  const grassMat = new THREE.MeshStandardMaterial({ color: 0x63702f, roughness: 1, metalness: 0, flatShading: true });
+  const spots = [[6, 13, 1.2], [94, 16, 1.3], [4, 44, 0.95], [96, 50, 1.05], [7, 87, 1.2], [93, 85, 1.1]];
   let seed = 7;
   const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
   for (const [x, y, sc] of spots) {
-    const s = sc * (0.42 + rnd() * 0.3);
+    const s = sc * (0.34 + rnd() * 0.22);
+    const col = new THREE.Color().setHSL(0.09 + rnd() * 0.03, 0.06 + rnd() * 0.05, 0.30 + rnd() * 0.08); // 회색 화강암(따뜻한 흙과 대비)
+    const mat = new THREE.MeshStandardMaterial({ color: col, roughness: 1, metalness: 0, flatShading: true });
     const r = new THREE.Mesh(geo, mat);
-    r.scale.set(s * (0.9 + rnd() * 0.4), s * (0.6 + rnd() * 0.3), s * (0.9 + rnd() * 0.4));
-    r.position.set(wx(x), s * 0.28, wz(y)); r.rotation.y = rnd() * 6.28;
+    r.scale.set(s * (0.9 + rnd() * 0.4), s * (0.55 + rnd() * 0.3), s * (0.9 + rnd() * 0.4));
+    r.position.set(wx(x), s * 0.22, wz(y)); r.rotation.y = rnd() * 6.28;
     scene.add(r);
+    if (rnd() < 0.75) { // 곁바위(무리 짓기)
+      const s2 = s * (0.3 + rnd() * 0.3), r2 = new THREE.Mesh(geo, mat);
+      r2.scale.set(s2, s2 * 0.6, s2); r2.position.set(wx(x) + (rnd() - 0.5) * s * 1.7, s2 * 0.18, wz(y) + (rnd() - 0.5) * s * 1.7); r2.rotation.y = rnd() * 6.28;
+      scene.add(r2);
+    }
+    for (let g = 0; g < 3; g++) { // 밑동 풀
+      const h = 0.09 + rnd() * 0.1, gm = new THREE.Mesh(new THREE.ConeGeometry(0.03, h, 4), grassMat);
+      gm.position.set(wx(x) + (rnd() - 0.5) * s * 2.2, h / 2, wz(y) + (rnd() - 0.5) * s * 2.2); gm.rotation.z = (rnd() - 0.5) * 0.4;
+      scene.add(gm);
+    }
     const sh = new THREE.Mesh(shadowGeo, shadowMat);
     sh.rotation.x = -Math.PI / 2; sh.position.set(wx(x), 0.02, wz(y)); sh.scale.set(s * 1.7, s * 1.2, 1);
     scene.add(sh);

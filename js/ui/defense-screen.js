@@ -576,7 +576,7 @@ function summonFanfare(rarity) {
 }
 // 전설(4)·신화(5)·초월(6) 소환 — 전투화면 가운데에 등급 획득 연출(빛살+등급명+영웅명). 메이플 운빨 디펜스식 희열.
 const GRADE_NAME = { 4: '전설', 5: '신화', 6: '초월' };
-function gradeReveal(rarity, heroName) {
+function gradeReveal(rarity, heroName, heroId) {
   if (rarity < 4) return;
   const layer = document.getElementById('fx-layer');
   if (!layer) return;
@@ -584,6 +584,8 @@ function gradeReveal(rarity, heroName) {
   el.className = `rd-grade-reveal tier-${rarity}`;
   el.innerHTML = `<i class="rd-gr-rays"></i><i class="rd-gr-burst"></i><b class="rd-gr-grade">${GRADE_NAME[rarity]} 획득!</b><span class="rd-gr-name">${heroName || ''}</span>`;
   layer.appendChild(el);
+  // 신화·초월(5·6) 영웅은 연의 명대사를 외치며 등장(수석 2026-07-22) — 리빌 연출 직후 재생
+  if (rarity >= 5 && heroId) setTimeout(() => play('hero-voice-' + heroId), 430);
   setTimeout(() => el.remove(), rarity >= 5 ? 2100 : 1700);
 }
 
@@ -758,7 +760,7 @@ function doSummon1() {
   const u = engine.summon(run);
   if (!u) { summonFail(); return; }
   summonFanfare(u.rarity);
-  gradeReveal(u.rarity, HERO_NAME.get(u.heroId)); // 전설+ 중앙 획득 연출
+  gradeReveal(u.rarity, HERO_NAME.get(u.heroId), u.heroId); // 전설+ 중앙 획득 연출(신화+ 멘트)
   syncUnits();
   updateHud();
   autoMergeIfPinned();
@@ -1066,10 +1068,10 @@ function consumeFx() {
     } else if (fx.type === 'bossGrant') {
       // 메운디밸런스: 보스 처치 무료 고등급 유닛 — 획득 연출 + 로스터 갱신
       syncUnits();
-      gradeReveal(fx.rarity, HERO_NAME.get(fx.heroId));
+      gradeReveal(fx.rarity, HERO_NAME.get(fx.heroId), fx.heroId);
       if (fx.rarity < 4) floatText(window.innerWidth / 2, window.innerHeight * 0.42, `${RARITY[fx.rarity]?.name || ''} ${HERO_NAME.get(fx.heroId)} 무료 획득!`, 'gold');
     } else if (fx.type === 'gambleUp') {
-      if (fx.success) { play('legend'); vibrate(30); syncUnits(); gradeReveal(fx.rarity, null); floatText(window.innerWidth / 2, window.innerHeight * 0.42, `승급 성공! ${RARITY[fx.rarity]?.name || ''}`, 'gold'); }
+      if (fx.success) { play('legend'); vibrate(30); syncUnits(); gradeReveal(fx.rarity, HERO_NAME.get(fx.heroId), fx.heroId); floatText(window.innerWidth / 2, window.innerHeight * 0.42, `승급 성공! ${RARITY[fx.rarity]?.name || ''}`, 'gold'); }
       else { play('foehit'); vibrate(10); floatText(window.innerWidth / 2, window.innerHeight * 0.42, '승급 실패…', 'warn'); }
       updateHud();
     } else if (fx.type === 'aoe') {

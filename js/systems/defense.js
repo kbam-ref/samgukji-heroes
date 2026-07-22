@@ -173,7 +173,7 @@ export function gambleUpgrade(run) {
   if (mate) nu.upgradeLv = mate.upgradeLv;
   run.units = run.units.filter((x) => x.uid !== u.uid);
   run.units.push(nu);
-  run.fx.push({ type: 'gambleUp', success: true, uid: nu.uid, rarity: nr });
+  run.fx.push({ type: 'gambleUp', success: true, uid: nu.uid, rarity: nr, heroId: newHeroId });
   return { ok: true, success: true, uid: nu.uid, rarity: nr };
 }
 

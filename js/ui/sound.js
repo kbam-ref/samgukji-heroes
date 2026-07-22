@@ -473,8 +473,12 @@ export function play(kind) {
   if (!ctx || !soundOn()) return;
   if (ctx.state === 'suspended') ctx.resume(); // 백그라운드 복귀 후 첫 소리에서 안전하게 재개
 
-  // 파일 효과음이 있으면 그걸 우선 (manifest에 있는 kind만 — clear/legend/epic/claim/chapter/rival/wipe)
-  if (assetsReady && playSample(kind)) return;
+  // 파일 효과음이 있으면 그걸 우선. 2026-07-22 수석: 보스/영웅 멘트는 크게, 사망음은 살짝 줄여 멘트가 묻히지 않게.
+  if (assetsReady) {
+    if (kind.startsWith('boss-voice-') || kind.startsWith('hero-voice-')) { if (playSample(kind, { gain: 2.8 })) return; }
+    else if (kind.startsWith('death-')) { if (playSample(kind, { gain: 0.6 })) return; }
+    else if (playSample(kind)) return;
+  }
   const t = ctx.currentTime;
   switch (kind) {
     case 'tap':    pluck(SCALE[4 + Math.floor(Math.random() * 3)] * 2, t, 0.06, sfxGain); break;
