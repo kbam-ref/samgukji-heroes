@@ -32,13 +32,13 @@ export const HEROES = [
   { id: 'caocao',        name: '조조',   title: '난세의 영웅',            faction: 'wei',  rarity: 5, base: 100, perk: { kind: 'coin', value: 20 } },
 
   // 전설 (4) — 3인 동시타격
-  { id: 'zhangfei',      name: '장비',   title: '혼자서 만 명을 막는 장사', faction: 'shu',  rarity: 4, base: 66, perk: { kind: 'boss', value: 15 } },
-  { id: 'zhaoyun',       name: '조운',   title: '상산의 호랑이',          faction: 'shu',  rarity: 4, base: 64, perk: { kind: 'guard', value: 15 } },
+  { id: 'zhangfei',      name: '장비',   title: '혼자서 만 명을 막는 장사', faction: 'shu',  rarity: 5, base: 102, perk: { kind: 'boss', value: 15 } },
+  { id: 'zhaoyun',       name: '조운',   title: '상산의 호랑이',          faction: 'shu',  rarity: 5, base: 99, perk: { kind: 'guard', value: 15 } },
   { id: 'zhouyu',        name: '주유',   title: '붉은 강의 지휘관',       faction: 'wu',   rarity: 4, base: 63, perk: { kind: 'combo', value: 15 } },
   { id: 'xiahoudun',     name: '하후돈', title: '외눈의 맹장',            faction: 'wei',  rarity: 4, base: 62, perk: { kind: 'guard', value: 15 } },
 
   // 영웅 (3)
-  { id: 'sunce',         name: '손책',   title: '강동의 작은 패왕',       faction: 'wu',   rarity: 3, base: 61, perk: { kind: 'coin', value: 15 } },
+  { id: 'sunce',         name: '손책',   title: '강동의 작은 패왕',       faction: 'wu',   rarity: 4, base: 65, perk: { kind: 'coin', value: 15 } },
   { id: 'dongzhuo',      name: '동탁',   title: '낙양을 태운 폭군',       faction: 'free', rarity: 3, base: 60, perk: { kind: 'coin', value: 15 } },
   { id: 'zhangliao',     name: '장료',   title: '합비의 수문장',          faction: 'wei',  rarity: 3, base: 42, perk: { kind: 'boss', value: 10 } },
   { id: 'ganning',       name: '감녕',   title: '방울 소리 해적',         faction: 'wu',   rarity: 3, base: 41, perk: { kind: 'coin', value: 10 } },
@@ -46,15 +46,15 @@ export const HEROES = [
   // 희귀 (2)
   { id: 'liubei',        name: '유비',   title: '돗자리 팔던 황손',       faction: 'shu',  rarity: 2, base: 40, perk: { kind: 'guard', value: 10 } },
   { id: 'sunshangxiang', name: '손상향', title: '활 잘 쏘는 아가씨',      faction: 'wu',   rarity: 2, base: 39, perk: { kind: 'combo', value: 10 } },
-  { id: 'yuanshao',      name: '원소',   title: '명문가의 자존심',        faction: 'free', rarity: 2, base: 38, perk: { kind: 'coin', value: 10 } },
-  { id: 'xunyu',         name: '순욱',   title: '왕을 만드는 지혜',       faction: 'wei',  rarity: 2, base: 37, perk: { kind: 'combo', value: 10 } },
-  { id: 'huaxiong',      name: '화웅',   title: '사수관의 문지기',        faction: 'free', rarity: 2, base: 28, perk: { kind: 'boss', value: 7 } },
+  { id: 'yuanshao',      name: '원소',   title: '명문가의 자존심',        faction: 'free', rarity: 3, base: 52, perk: { kind: 'coin', value: 10 } },
+  { id: 'xunyu',         name: '순욱',   title: '왕을 만드는 지혜',       faction: 'wei',  rarity: 4, base: 61, perk: { kind: 'combo', value: 10 } },
+  { id: 'huaxiong',      name: '화웅',   title: '사수관의 문지기',        faction: 'free', rarity: 3, base: 44, perk: { kind: 'boss', value: 7 } },
   { id: 'zhoucang',      name: '주창',   title: '청룡도를 메고 다니는 사내', faction: 'shu',  rarity: 2, base: 27, perk: { kind: 'guard', value: 7 } },
 
   // 일반 (1)
-  { id: 'caohong',       name: '조홍',   title: '몸을 던지는 사촌',       faction: 'wei',  rarity: 1, base: 26, perk: { kind: 'guard', value: 7 } },
+  { id: 'caohong',       name: '조홍',   title: '몸을 던지는 사촌',       faction: 'wei',  rarity: 2, base: 31, perk: { kind: 'guard', value: 7 } },
   { id: 'handang',       name: '한당',   title: '강동의 노장',            faction: 'wu',   rarity: 1, base: 26, perk: { kind: 'guard', value: 7 } },
-  { id: 'jiling',        name: '기령',   title: '세 갈래 창의 명수',      faction: 'free', rarity: 1, base: 21, perk: { kind: 'boss', value: 5 } },
+  { id: 'jiling',        name: '기령',   title: '세 갈래 창의 명수',      faction: 'free', rarity: 2, base: 28, perk: { kind: 'boss', value: 5 } },
   { id: 'liaohua',       name: '요화',   title: '선봉에 서는 노병',       faction: 'shu',  rarity: 1, base: 20, perk: { kind: 'guard', value: 5 } },
   { id: 'yujin',         name: '우금',   title: '엄격한 군율',            faction: 'wei',  rarity: 1, base: 19, perk: { kind: 'coin', value: 5 } },
   { id: 'chengpu',       name: '정보',   title: '세 임금을 모신 장수',    faction: 'wu',   rarity: 1, base: 19, perk: { kind: 'combo', value: 5 } },
