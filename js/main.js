@@ -38,8 +38,20 @@ applyForceRotate();
 window.addEventListener('resize', applyForceRotate);
 window.addEventListener('orientationchange', applyForceRotate);
 
-// 2026-07-22 수석: 브라우저 풀스크린 API 자동 요청 제거 — 진입할 때마다 "…github.io이(가) 전체 화면입니다"
-//   알림이 자꾸 떠 거슬림. 진짜 몰입(시스템 바 숨김)은 설치형 PWA(manifest display:fullscreen)로만 — 알림 없음.
+// 몰입 풀스크린(시스템 바 숨김) — 브라우저에선 '첫 터치'에 딱 한 번만 요청(전투 시작마다 재요청하던 '자꾸 뜸' 폐지).
+// (브라우저 풀스크린 알림은 정책상 최초 1회 불가피. 알림 없이 완전 몰입은 설치형 PWA=manifest display:fullscreen.)
+let fsAsked = false;
+const goFullscreenOnce = () => {
+  if (fsAsked) return; fsAsked = true;
+  try {
+    const de = document.documentElement;
+    if (document.fullscreenElement || window.matchMedia('(display-mode: fullscreen)').matches) return; // 이미 몰입(설치형 PWA)이면 요청 안 함
+    const rfs = de.requestFullscreen || de.webkitRequestFullscreen || de.mozRequestFullScreen || de.msRequestFullscreen;
+    const r = rfs && rfs.call(de, { navigationUI: 'hide' });
+    if (r && typeof r.catch === 'function') r.catch(() => {});
+  } catch { /* 지원/권한 없으면 무시 */ }
+};
+document.addEventListener('pointerdown', goFullscreenOnce, { once: true });
 
 const AUTOSAVE_MS = 10000;
 
