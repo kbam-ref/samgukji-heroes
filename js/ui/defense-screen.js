@@ -821,18 +821,24 @@ function rollGambleCenter() {
   if (!stage || !cv || !resEl) { gambleRolling = false; return; }
   resEl.hidden = true; resEl.classList.remove('pop');
   stage.hidden = false;
+  // 결과 표기 + 정리 — 3D가 실패해도(둘째 WebGL 컨텍스트 생성 실패 등) 반드시 실행돼 '흰 화면 멈춤'을 막는다.
+  const showResult = () => {
+    if (res.jackpot) { resEl.innerHTML = `<b class="rd-gm-won lucky">럭키! +${fmt(res.won)}골드</b>`; try { dice3d.lucky(true); } catch {} play('legend'); flash('gold'); vibrate(50); }
+    else { resEl.innerHTML = `<b class="rd-gm-won">+${fmt(res.won)}골드 획득!</b>`; play('claim'); vibrate(12); }
+    resEl.hidden = false; void resEl.offsetWidth; resEl.classList.add('pop');
+    updateHud();
+  };
+  const cleanup = () => { stage.hidden = true; try { if (dice3d.ready()) dice3d.dispose(); } catch {} gambleRolling = false; };
+  let done = false; // 결과/정리 1회 보장
+  const finish = () => { if (done) return; done = true; showResult(); setTimeout(cleanup, 1500); };
+  const fail = () => { if (done) return; done = true; showResult(); cleanup(); }; // 3D 실패 시 즉시 결과만
+  const guard = setTimeout(fail, 4000); // 3D가 콜백을 못 주면(멈춤) 안전망
   requestAnimationFrame(() => {
-    const w = Math.round(cv.clientWidth) || 300, h = Math.round(cv.clientHeight) || 260;
-    dice3d.dispose(); dice3d.init(cv, w, h); dice3d.lucky(false);
-    dice3d.roll(res.d1, res.d2, () => { // 주사위가 멈춘 뒤
-      setTimeout(() => { // 눈을 ~1초 보여준 뒤 — 합계/공식 없이 '획득 골드'만 크게(수석)
-        if (res.jackpot) { resEl.innerHTML = `<b class="rd-gm-won lucky">럭키! +${fmt(res.won)}골드</b>`; dice3d.lucky(true); play('legend'); flash('gold'); vibrate(50); }
-        else { resEl.innerHTML = `<b class="rd-gm-won">+${fmt(res.won)}골드 획득!</b>`; play('claim'); vibrate(12); }
-        resEl.hidden = false; void resEl.offsetWidth; resEl.classList.add('pop');
-        updateHud();
-      }, 1000);
-      setTimeout(() => { stage.hidden = true; if (dice3d.ready()) dice3d.dispose(); gambleRolling = false; }, 2800); // 정리
-    });
+    try {
+      const w = Math.round(cv.clientWidth) || 300, h = Math.round(cv.clientHeight) || 260;
+      dice3d.dispose(); dice3d.init(cv, w, h); dice3d.lucky(false);
+      dice3d.roll(res.d1, res.d2, () => { clearTimeout(guard); setTimeout(finish, 1000); });
+    } catch (e) { clearTimeout(guard); fail(); } // 컨텍스트 생성 실패 등 — 흰 화면·멈춤 방지
   });
 }
 function doGamble() {

@@ -509,11 +509,17 @@ function spawnEnemy(run) {
 
 // 광역 시전 중심 — 반경 안에 가장 많은 적이 드는 '적 밀집점'(살아있는 적 기준). 시전자 발밑이 아니라 적 무리에 깔린다.
 function densestEnemyPoint(run, radius) {
+  // 렉 완화(2026-07-22) — 적이 많을 때 O(n²) 스파이크 방지: 후보 중심을 최대 ~40개만 평가(O(40n)),
+  //   거리비교는 제곱거리(sqrt 제거). 밀집점 근사 정확도는 충분.
+  const alive = run.enemies.filter((e) => !e.dead);
+  if (!alive.length) return null;
+  const r2 = radius * radius;
+  const step = Math.max(1, Math.floor(alive.length / 40));
   let best = null, bestCount = -1;
-  for (const e of run.enemies) {
-    if (e.dead) continue;
+  for (let i = 0; i < alive.length; i += step) {
+    const e = alive[i];
     let cnt = 0;
-    for (const o of run.enemies) { if (!o.dead && Math.hypot(o.x - e.x, o.y - e.y) <= radius) cnt++; }
+    for (const o of alive) { const dx = o.x - e.x, dy = o.y - e.y; if (dx * dx + dy * dy <= r2) cnt++; }
     if (cnt > bestCount) { bestCount = cnt; best = { x: e.x, y: e.y }; }
   }
   return best;
@@ -625,7 +631,11 @@ export function tick(run, dt) {
       if (u.aoeCd <= 0 && run.enemies.length) {
         u.aoeCd = info.aoe.interval;
         const aoeDmg = u.base * info.dmg * info.aoe.dmgMult * (run.dmgMult || 1) * atkBoost;
-        run.fx.push({ type: 'aoe', uid: u.uid, x: u.x, y: u.y, element: u.element });
+        // 2026-07-22 수석: 광역기 연출은 시전자 발밑이 아니라 '적 무리' 위에 터지게(자기가 얻어맞는 듯 보이던 문제).
+        let cx = 0, cy = 0, na = 0;
+        for (const e of run.enemies) { if (!e.dead) { cx += e.x; cy += e.y; na++; } }
+        const ax = na ? cx / na : u.x, ay = na ? cy / na : u.y;
+        run.fx.push({ type: 'aoe', uid: u.uid, x: ax, y: ay, element: u.element });
         for (const e of run.enemies) {
           e.hp -= aoeDmg; e.hit = 0.18;
           if (e.hp <= 0 && !e.dead) registerKill(run, e);

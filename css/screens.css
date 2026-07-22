@@ -2279,10 +2279,20 @@
 .rd-sheet::-webkit-scrollbar { display: none; }
 .rd-sheet[hidden] { display: none; }
 @keyframes rd-sheet-in { from { transform: translate(14px, -50%); opacity: 0; } }
-.rd-sheet-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.rd-sheet-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding-right: 30px; }
 .rd-sheet-head b { font-size: 12.5px; font-weight: 700; color: var(--paper); }
 .rd-sheet-hint { font-size: 10px; color: var(--paper-faint); margin-left: auto; }
-.rd-sheet-x { appearance: none; background: none; border: 0; color: var(--paper-faint); font-size: 15px; line-height: 1; padding: 4px 6px; cursor: pointer; margin-left: 6px; }
+/* 2026-07-22 수석: 모든 닫기 ✕를 우상단 원형으로 통일(modal-x와 동일 규격) */
+.rd-sheet-x {
+  position: absolute; top: 7px; right: 7px; z-index: 3; margin: 0;
+  width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+  appearance: none; border: 1px solid var(--ink-600); border-radius: 50%;
+  background: rgba(20, 16, 10, 0.6); color: var(--paper-dim);
+  font-size: 14px; line-height: 1; padding: 0; cursor: pointer;
+  transition: background 0.15s, color 0.15s, transform 0.1s;
+}
+.rd-sheet-x:hover { background: rgba(201, 162, 39, 0.25); color: var(--paper); }
+.rd-sheet-x:active { transform: scale(0.9); }
 
 /* 소환 옵션 — 큼직한 금빛 CTA */
 .rd-summon-opts { display: flex; gap: 8px; }
@@ -2602,10 +2612,16 @@
   background: linear-gradient(180deg, #221b12, #16110b); border: 1px solid var(--ink-600);
   border-radius: 16px; padding: 14px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
 }
-.so-close {
-  position: absolute; top: 8px; right: 10px; z-index: 2; appearance: none; background: none; border: 0;
-  color: var(--paper-faint); font-size: 18px; line-height: 1; padding: 4px 6px; cursor: pointer;
+.so-close { /* 우상단 원형 닫기 통일(2026-07-22 수석) */
+  position: absolute; top: 8px; right: 8px; z-index: 2; margin: 0; padding: 0;
+  width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+  appearance: none; border: 1px solid var(--ink-600); border-radius: 50%;
+  background: rgba(20, 16, 10, 0.6); color: var(--paper-dim);
+  font-size: 14px; line-height: 1; cursor: pointer;
+  transition: background 0.15s, color 0.15s, transform 0.1s;
 }
+.so-close:hover { background: rgba(201, 162, 39, 0.25); color: var(--paper); }
+.so-close:active { transform: scale(0.9); }
 
 .rd-speed {
   position: absolute; top: 8px; right: 8px; z-index: 4;

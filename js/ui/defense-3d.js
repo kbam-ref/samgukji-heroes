@@ -156,6 +156,8 @@ function buildModel(n) {
     n.action = n.mixer.clipAction(clip);
     if (/attack/i.test(clip.name)) {
       n.action.setLoop(THREE.LoopOnce, 1); n.action.clampWhenFinished = true;
+      // Meshy 공격 클립은 모델마다 편차가 커(측면 흔들림·눕기 등) — 가중치를 낮춰 절차 타격이 주도하게 한다.
+      n.action.setEffectiveWeight(0.65);
       n.action.play(); n.action.paused = true; // frame0 대기 포즈
       n.isAttacker = true;
     } else { n.action.play(); } // 걷기 루프(적 행군)
@@ -173,7 +175,9 @@ export function init(mount, w, h) {
 
   renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
   renderer.setSize(W, H, false);
-  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  // 2026-07-22 수석 '몹 쌓이면 렉': 적 100마리 풀필드 렌더는 프래그먼트(픽셀채움) 부하가 커 — 고DPI 폰에서
+  //   픽셀비를 1.5로 낮춰 채움부하를 크게 줄인다(체감 선명도 차이는 작고 프레임은 확실히 회복).
+  renderer.setPixelRatio(Math.min(1.5, window.devicePixelRatio || 1));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   const cv = renderer.domElement;
   cv.className = 'rd-3d';
@@ -737,22 +741,24 @@ export function syncEnemies(list) {
   }
 }
 
-// 공격 포즈 — 2026-07-22 수석 "콩콩 뛰는 느낌": 위로 튀는 hop 폐지, '체중 실린 그라운디드' 동작 + 무기별 개성.
-//   윈드업(준비) → 타격. 활=당겼다 놓는 반동, 마법=지팡이/손 앞으로 시전, 칼/창=앞으로 체중 실어 내려치기.
-//   u:0→1. jab=타깃방향 전진(월드, 활은 음수=반동), dip=상하(음수=눌림), pitch=앞숙임, lean=사선 스윙(z).
+// 공격 포즈(2026-07-22 재설계) — 수석 피드백: '앞으로 미끄러져 뜨는 느낌'(주유)·'머리만 흔듦'을 잡는다.
+//   핵심: 타격 순간 체중을 '아래로 눌러 밟는'(dip<0) 그라운딩으로 부양감 제거 + 빠른 타격 아크(hit)로 손맛.
+//   3구간: 윈드업(당김) → 빠른 타격 → 복귀. u:0→1. jab=타깃방향 전진(월드, 활은 반동), dip=상하(음수=눌림), pitch=앞숙임.
 function strikePose(u, type) {
-  const wind = u < 0.28 ? u / 0.28 : 1;          // 윈드업 진행
-  const st = u < 0.28 ? 0 : (u - 0.28) / 0.72;   // 타격 진행
-  const se = Math.sin(st * Math.PI * 0.5);       // ease-out
-  let jab, dip, pitch, lean;
-  if (type === 'bow') {          // 활 — 뒤로 당겼다 놓는 반동(앞으로 안 나감)
-    jab = -se * 0.05; dip = 0; pitch = -wind * 0.12 + se * 0.04; lean = 0;
-  } else if (type === 'magic') { // 마법 — 지팡이/손을 앞으로 내지르며 시전
-    jab = se * 0.18; dip = -se * 0.02; pitch = se * 0.09; lean = -se * 0.08;
-  } else {                        // 칼/창 — 앞으로 체중 실어 내려치기/찌르기
-    jab = se * 0.26; dip = -se * 0.05; pitch = wind * 0.06 + se * 0.14; lean = se * 0.14;
+  const wind = u < 0.24 ? u / 0.24 : 1;                 // 윈드업(당김) 진행
+  const st = u < 0.24 ? 0 : (u - 0.24) / 0.76;          // 타격 진행
+  const hit = Math.sin(Math.min(1, st) * Math.PI);      // 0→1→0 빠른 타격 아크(치고 복귀)
+  let jab, dip, pitch;
+  if (type === 'bow') {          // 활 — 뒤로 당겼다(윈드업) 놓으며 상체 스냅(반동)
+    jab = -wind * 0.07 + hit * 0.05; dip = 0; pitch = -wind * 0.13 + hit * 0.07;
+  } else if (type === 'magic') { // 마법 — 손/지팡이 앞으로 내지르며 살짝 눌러 밟음
+    jab = hit * 0.15; dip = -hit * 0.05; pitch = hit * 0.13;
+  } else if (type === 'spear') { // 창 — 당겼다 낮게 밟으며 강하게 찌른다
+    jab = -wind * 0.06 + hit * 0.26; dip = -hit * 0.07; pitch = hit * 0.10;
+  } else {                        // 칼 — 무게 실어 내려베기(크게 숙이고 눌러 밟음)
+    jab = -wind * 0.05 + hit * 0.13; dip = -hit * 0.11; pitch = wind * 0.05 + hit * 0.24;
   }
-  return { jab, dip, pitch, lean, sqY: 1 - se * 0.08, sqXZ: 1 + se * 0.05 };
+  return { jab, dip, pitch, lean: 0, sqY: 1 - hit * 0.07, sqXZ: 1 + hit * 0.045 };
 }
 
 // 매 프레임 — 빌보드가 카메라를 바라보게(수직 유지) + idle bob + 좌우 뒤집기, 그리고 렌더.
@@ -790,24 +796,13 @@ export function frame(dt) {
       if (n.strikeT > 0) {
         n.strikeT -= dt;
         const ay = n.atkYaw ?? faceY;
-        if (n.isAttacker && n.atkType === 'bow') {
-          // 활잡이(리깅됨) — Meshy 공격 클립이 궁수 체형엔 미약해 '머리만 흔드는' 느낌. 절차적 '당김→발사 반동'을 얹어
-          //   몸통이 뒤로 당겼다 앞으로 튀는 사격 동작을 확실히 보이게 한다.
-          const prog = Math.min(1, 1 - n.strikeT / 0.34);
-          const wind = prog < 0.4 ? prog / 0.4 : 1;            // 시위 당김
-          const rel = prog < 0.4 ? 0 : (prog - 0.4) / 0.6;     // 놓음(반동)
-          const off = -(wind - rel) * 0.12 + rel * 0.05;       // 뒤로 당겼다 앞으로
-          mo.position.set(Math.sin(ay) * off, hy, Math.cos(ay) * off);
-          mo.rotation.x = -wind * 0.15 + rel * 0.2;            // 상체 뒤로 젖혔다 앞으로 스냅
-          mo.rotation.z = 0; mo.scale.set(1, 1, 1);
-        } else if (n.isAttacker) { // 리깅됨 — 공격 클립이 전신을 애니. 절차는 타깃 향한 작은 전진만(피치·롤·스쿼시 없음 → '오바·눕기' 방지)
-          const se = Math.sin(Math.min(1, 1 - n.strikeT / 0.34) * Math.PI);
-          mo.position.set(Math.sin(ay) * se * 0.07, hy, Math.cos(ay) * se * 0.07);
-          mo.rotation.x = 0; mo.rotation.z = 0; mo.scale.set(1, 1, 1);
-        } else { // 정적 모델 — 무기별 그라운디드 절차 공격(활=반동·마법=시전·근접=내려치기)
+        {
+          // 전 영웅 통일(2026-07-22 재설계) — 그라운디드 절차 타격. 리깅 영웅도 같은 몸동작을 얹어
+          //   '머리만 흔듦'을 없앤다. 단 리깅은 클립이 회전을 보태므로 절차 피치를 축소해 '눕기'를 막는다.
           const s = strikePose(1 - n.strikeT / 0.34, n.atkType);
+          const pMul = n.isAttacker ? 0.45 : 1; // 리깅=클립+절차 → 피치 축소 / 정적=절차만 → 그대로
           mo.position.set(Math.sin(ay) * s.jab, hy + s.dip, Math.cos(ay) * s.jab);
-          mo.rotation.x = s.pitch; mo.rotation.z = s.lean;
+          mo.rotation.x = s.pitch * pMul; mo.rotation.z = 0;
           mo.scale.set(s.sqXZ, s.sqY, s.sqXZ);
         }
       } else if (moving && n.mixer && !n.isAttacker) { // 적 걷기 클립 — 다리는 클립이, 몸통은 정면
