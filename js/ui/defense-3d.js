@@ -5,7 +5,7 @@
 import * as THREE from '../vendor/three.module.js';
 import { GLTFLoader } from '../vendor/GLTFLoader.js';
 import { clone as skeletonClone } from '../vendor/SkeletonUtils.js';
-import { DEFENSE, ELEMENT_COLOR, ENEMY_SPRITES, BOSS_SPRITES } from '../data/defense.js';
+import { DEFENSE, ELEMENT_COLOR, ENEMY_SPRITES, BOSS_SPRITES, HERO_ATTACK_TYPE } from '../data/defense.js';
 
 // ── 튜닝값 (라이브 조정) ──────────────────────────────
 const FIELD_W = 10;              // 월드 가로(=필드 100%). 세로는 화면 비율로 파생.
@@ -693,6 +693,7 @@ export function syncUnits(list) {
     if (!n) { n = makeBillboard(); units.set(u.uid, n); }
     applyTex(n, heroCut(u.heroId), UNIT_H);
     if (!n.modelTried) { n.model = loadModel(u.heroId); n.modelTried = true; } // GLB 있으면 3D 모델로 승격
+    n.atkType = HERO_ATTACK_TYPE[u.heroId] || 'sword'; // 무기별 공격 개성(활/마법/근접)
     n.group.position.x = wx(u.x); n.group.position.z = wz(u.y);
     n.face = u.face || 1; n.moving = !!u.moving;
     n.lunge = 0;
@@ -731,18 +732,22 @@ export function syncEnemies(list) {
   }
 }
 
-// 공격 포즈 — 2026-07-22 수석 "누워서 쏘는 듯 과함": 몸통 대회전(넘어짐처럼 보임) 폐지.
-//   대신 '짧게 앞으로 찌르는 런지 + 임팩트 스쿼시 + 아주 작은 앞숙임'만. 진짜 '공격'은 투사체·참격 fx가 판다.
-//   u: 0→1. jab=타깃 방향 전진량(월드), hop=상하, pitch=앞숙임(작게), sqY/sqXZ=임팩트 눌림.
-function strikePose(u) {
-  const swing = Math.sin(Math.min(1, u) * Math.PI); // 0→1→0
-  return {
-    jab: swing * 0.24,           // 타깃 쪽으로 찌르고 복귀
-    hop: swing * 0.045,
-    pitch: -swing * 0.1,         // ~6°만 (누워보이지 않게)
-    sqY: 1 - swing * 0.09,       // 임팩트 순간 살짝 눌림(펀치감)
-    sqXZ: 1 + swing * 0.06,
-  };
+// 공격 포즈 — 2026-07-22 수석 "콩콩 뛰는 느낌": 위로 튀는 hop 폐지, '체중 실린 그라운디드' 동작 + 무기별 개성.
+//   윈드업(준비) → 타격. 활=당겼다 놓는 반동, 마법=지팡이/손 앞으로 시전, 칼/창=앞으로 체중 실어 내려치기.
+//   u:0→1. jab=타깃방향 전진(월드, 활은 음수=반동), dip=상하(음수=눌림), pitch=앞숙임, lean=사선 스윙(z).
+function strikePose(u, type) {
+  const wind = u < 0.28 ? u / 0.28 : 1;          // 윈드업 진행
+  const st = u < 0.28 ? 0 : (u - 0.28) / 0.72;   // 타격 진행
+  const se = Math.sin(st * Math.PI * 0.5);       // ease-out
+  let jab, dip, pitch, lean;
+  if (type === 'bow') {          // 활 — 뒤로 당겼다 놓는 반동(앞으로 안 나감)
+    jab = -se * 0.05; dip = 0; pitch = -wind * 0.12 + se * 0.04; lean = 0;
+  } else if (type === 'magic') { // 마법 — 지팡이/손을 앞으로 내지르며 시전
+    jab = se * 0.18; dip = -se * 0.02; pitch = se * 0.09; lean = -se * 0.08;
+  } else {                        // 칼/창 — 앞으로 체중 실어 내려치기/찌르기
+    jab = se * 0.26; dip = -se * 0.05; pitch = wind * 0.06 + se * 0.14; lean = se * 0.14;
+  }
+  return { jab, dip, pitch, lean, sqY: 1 - se * 0.08, sqXZ: 1 + se * 0.05 };
 }
 
 // 매 프레임 — 빌보드가 카메라를 바라보게(수직 유지) + idle bob + 좌우 뒤집기, 그리고 렌더.
@@ -768,43 +773,32 @@ export function frame(dt) {
       g.rotation.y = 0;
       let cur = n.modelObj.rotation.y, diff = yaw - cur;
       while (diff > Math.PI) diff -= 6.28318; while (diff < -Math.PI) diff += 6.28318;
-      n.modelObj.rotation.y = cur + diff * Math.min(1, dt * 12); // 이동/공격 방향으로 몸 회전
+      const faceY = cur + diff * Math.min(1, dt * 12); // 이동/공격 방향으로 몸 회전(부드럽게)
+      n.modelObj.rotation.y = faceY;
       if (n.mixer) { n.mixer.update(dt); }
-      if (n.isAttacker) {
-        // 영웅 — 공격 클립이 끝나면 중립 프레임으로 되돌려(고정 방지), 절차적 내려치기로 타격을 확실히.
-        if (n.mixer && n.attacking && n.action) {
-          const dur = n._clipDur || (n._clipDur = (n.action.getClip && n.action.getClip() ? n.action.getClip().duration : 0.5));
-          if (n.action.time >= dur - 0.02) { n.action.time = 0; n.action.paused = true; n.attacking = false; }
-        }
-        if (n.strikeT > 0) { // 공격 — 타깃 쪽으로 짧게 찌르는 런지 + 임팩트 스쿼시(몸 대회전 없음: 누워보임 방지)
-          n.strikeT -= dt;
-          const s = strikePose(1 - n.strikeT / 0.32), ay = n.atkYaw ?? n.headYaw ?? 0;
-          n.modelObj.position.set(Math.sin(ay) * s.jab, (n.hit ? -0.06 : 0) + s.hop, Math.cos(ay) * s.jab);
-          n.modelObj.rotation.x = s.pitch; n.modelObj.rotation.z = 0;
-          n.modelObj.scale.set(s.sqXZ, s.sqY, s.sqXZ);
-        } else { // 대기 — 아주 은은한 호흡만(고개 흔드는 느낌 제거)
-          n.modelObj.position.x = 0; n.modelObj.position.z = 0;
-          n.modelObj.rotation.x = 0;
-          n.modelObj.rotation.z = Math.sin(clock * 1.3 + n.phase) * 0.014;
-          n.modelObj.position.y = (n.hit ? -0.06 : 0) + Math.sin(clock * 1.9 + n.phase) * 0.02;
-          n.modelObj.scale.set(1, 1, 1);
-        }
-      } else if (n.mixer) { // 적(걷기 루프)
-        n.modelObj.position.y = n.hit ? -0.06 : 0; n.modelObj.rotation.z = 0;
-      } else { // 절차적(정적 모델, 무믹서) — 걸음 튐 + 찌르기 런지
-        const t = clock * (moving ? 8.5 : 2.4) + n.phase;
-        if (n.strikeT > 0) { // 공격 — 타깃 쪽 찌르기 + 스쿼시(대회전 없음)
-          n.strikeT -= dt;
-          const s = strikePose(1 - n.strikeT / 0.32), ay = n.atkYaw ?? n.headYaw ?? 0;
-          n.modelObj.position.set(Math.sin(ay) * s.jab, (n.hit ? -0.06 : 0) + s.hop, Math.cos(ay) * s.jab);
-          n.modelObj.rotation.x = s.pitch; n.modelObj.rotation.z = 0;
-          n.modelObj.scale.set(s.sqXZ, s.sqY, s.sqXZ);
-        } else {
-          n.modelObj.position.x = 0; n.modelObj.position.z = 0;
-          n.modelObj.position.y = (n.hit ? -0.06 : 0) + (moving ? Math.abs(Math.sin(t)) * 0.07 : Math.sin(t) * BOB_AMP * 0.6);
-          n.modelObj.rotation.x = 0; n.modelObj.rotation.z = moving ? Math.sin(t) * 0.05 : 0;
-          n.modelObj.scale.set(1, 1, 1);
-        }
+      // 스켈레탈 공격 클립이 끝나면 중립 프레임으로 되돌려(고정 방지)
+      if (n.isAttacker && n.mixer && n.attacking && n.action) {
+        const dur = n._clipDur || (n._clipDur = (n.action.getClip && n.action.getClip() ? n.action.getClip().duration : 0.5));
+        if (n.action.time >= dur - 0.02) { n.action.time = 0; n.action.paused = true; n.attacking = false; }
+      }
+      const mo = n.modelObj, hy = (n.hit ? -0.06 : 0);
+      if (n.strikeT > 0) { // 공격 — 무기별 개성(활=반동·마법=시전·근접=내려치기), 위로 안 튀는 그라운디드
+        n.strikeT -= dt;
+        const s = strikePose(1 - n.strikeT / 0.34, n.atkType), ay = n.atkYaw ?? faceY;
+        mo.position.set(Math.sin(ay) * s.jab, hy + s.dip, Math.cos(ay) * s.jab);
+        mo.rotation.x = s.pitch; mo.rotation.z = s.lean;
+        mo.scale.set(s.sqXZ, s.sqY, s.sqXZ);
+      } else if (moving && n.mixer && !n.isAttacker) { // 적 걷기 클립 — 다리는 클립이, 몸통은 정면
+        mo.position.set(0, hy, 0); mo.rotation.x = 0; mo.rotation.z = 0; mo.scale.set(1, 1, 1);
+      } else if (moving) { // 정적/공격 모델 걷기 — 좌우 무게이동 스웨이 + 앞 기울임(성큼성큼, '콩콩' 폐지)
+        const ph = (n.walkPh = (n.walkPh || 0) + dt * 7);
+        mo.position.set(0, hy + Math.abs(Math.sin(ph)) * 0.026, 0);
+        mo.rotation.x = -0.09; mo.rotation.z = Math.sin(ph) * 0.08;
+        mo.scale.set(1, 1, 1);
+      } else { // 대기 — 은은한 호흡 + 미세 좌우 무게이동
+        mo.position.set(0, hy + Math.sin(clock * 1.5 + n.phase) * 0.016, 0);
+        mo.rotation.x = 0; mo.rotation.z = Math.sin(clock * 0.9 + n.phase) * 0.018;
+        mo.scale.set(1, 1, 1);
       }
     } else {
       g.rotation.y = Math.atan2(camX - g.position.x, camZ - g.position.z);
@@ -869,7 +863,7 @@ export function playAttack(uid) {
   const n = units.get(uid);
   if (!n) return;
   if (n.action && n.isAttacker) { n.action.reset(); n.action.timeScale = 2.4; n.action.paused = false; n.action.play(); n.attacking = true; }
-  n.strikeT = 0.32; // 모든 영웅 — 절차적 '윈드업→내려치기'(클립이 미묘해도 '친다'가 확실히 읽히게)
+  n.strikeT = 0.34; // 모든 영웅 — 절차적 '윈드업→타격'(무기별 개성, strikePose와 길이 일치)
 }
 
 // 공격 순간 그 적(tx,ty%) 쪽으로 잠깐 돌진하는 연출

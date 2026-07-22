@@ -38,6 +38,19 @@ applyForceRotate();
 window.addEventListener('resize', applyForceRotate);
 window.addEventListener('orientationchange', applyForceRotate);
 
+// 첫 화면부터 몰입 풀스크린(시스템 바 숨김, 수석 2026-07-22): 로딩/타이틀 어디든 '첫 터치'에 즉시 전체화면.
+// (브라우저 정책상 풀스크린은 사용자 제스처 필요 → 최초 터치를 잡는다. 설치형 PWA는 manifest display:fullscreen로 실행부터 몰입.)
+const goFullscreen = () => {
+  try {
+    const de = document.documentElement;
+    if (document.fullscreenElement) return;
+    const rfs = de.requestFullscreen || de.webkitRequestFullscreen || de.mozRequestFullScreen || de.msRequestFullscreen;
+    const r = rfs && rfs.call(de, { navigationUI: 'hide' });
+    if (r && typeof r.catch === 'function') r.catch(() => {});
+  } catch { /* 지원/권한 없으면 무시 */ }
+};
+document.addEventListener('pointerdown', goFullscreen, { once: true });
+
 const AUTOSAVE_MS = 10000;
 
 // 아직 거두지 않은 복귀 보상 — 새 보상이 오면 합산해 다시 보여준다.
