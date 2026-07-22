@@ -415,7 +415,7 @@ export function render(root) {
         </div>
         <div class="rd-over" id="rd-over" hidden></div>
       </div>
-        <p class="rd-tip" id="rd-tip"><b>소환</b>한 장수를 <b>끌어</b> 적 길목에 배치하세요</p>
+        <p class="rd-tip" id="rd-tip"><b>소환</b>한 장수를 <b>끌어</b> 적 길목에 배치하세요 · 영웅마다 <b>사거리</b>가 달라요(등급↑ = 사거리↑, 안 닿으면 적 가까이)</p>
       </div>
       <div class="rd-sheet" id="rd-sheet" hidden></div>
     </section>`

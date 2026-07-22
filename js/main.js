@@ -38,18 +38,8 @@ applyForceRotate();
 window.addEventListener('resize', applyForceRotate);
 window.addEventListener('orientationchange', applyForceRotate);
 
-// 첫 화면부터 몰입 풀스크린(시스템 바 숨김, 수석 2026-07-22): 로딩/타이틀 어디든 '첫 터치'에 즉시 전체화면.
-// (브라우저 정책상 풀스크린은 사용자 제스처 필요 → 최초 터치를 잡는다. 설치형 PWA는 manifest display:fullscreen로 실행부터 몰입.)
-const goFullscreen = () => {
-  try {
-    const de = document.documentElement;
-    if (document.fullscreenElement) return;
-    const rfs = de.requestFullscreen || de.webkitRequestFullscreen || de.mozRequestFullScreen || de.msRequestFullscreen;
-    const r = rfs && rfs.call(de, { navigationUI: 'hide' });
-    if (r && typeof r.catch === 'function') r.catch(() => {});
-  } catch { /* 지원/권한 없으면 무시 */ }
-};
-document.addEventListener('pointerdown', goFullscreen, { once: true });
+// 2026-07-22 수석: 브라우저 풀스크린 API 자동 요청 제거 — 진입할 때마다 "…github.io이(가) 전체 화면입니다"
+//   알림이 자꾸 떠 거슬림. 진짜 몰입(시스템 바 숨김)은 설치형 PWA(manifest display:fullscreen)로만 — 알림 없음.
 
 const AUTOSAVE_MS = 10000;
 

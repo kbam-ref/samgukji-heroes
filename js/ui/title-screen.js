@@ -28,13 +28,7 @@ export function showTitle(onStart, opts = {}) {
   const stopEmbers = startEmbers(el.querySelector('.title-embers'));
 
   const done = () => {
-    // 2026-07-22 수석: 게임 시작 = 몰입 풀스크린(폰 상/하단 시스템 바 숨김). 첫 탭이 사용자 제스처라 여기서 요청.
-    try {
-      const de = document.documentElement;
-      const rfs = de.requestFullscreen || de.webkitRequestFullscreen || de.mozRequestFullScreen || de.msRequestFullscreen;
-      const r = rfs && rfs.call(de, { navigationUI: 'hide' });
-      if (r && typeof r.catch === 'function') r.catch(() => {}); // 권한/제스처 불가 시 조용히 무시
-    } catch { /* 지원 안 하면 무시(설치형 PWA는 manifest display:fullscreen로 커버) */ }
+    // 2026-07-22 수석: 브라우저 풀스크린 API 자동 요청 제거(전체화면 알림이 자꾸 떠 거슬림). 몰입은 설치형 PWA로.
     stopEmbers();
     el.classList.add('out');
     setTimeout(() => el.remove(), 600);
