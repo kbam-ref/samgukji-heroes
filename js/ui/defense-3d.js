@@ -745,18 +745,18 @@ export function syncEnemies(list) {
 //   핵심: 타격 순간 체중을 '아래로 눌러 밟는'(dip<0) 그라운딩으로 부양감 제거 + 빠른 타격 아크(hit)로 손맛.
 //   3구간: 윈드업(당김) → 빠른 타격 → 복귀. u:0→1. jab=타깃방향 전진(월드, 활은 반동), dip=상하(음수=눌림), pitch=앞숙임.
 function strikePose(u, type) {
-  const wind = u < 0.24 ? u / 0.24 : 1;                 // 윈드업(당김) 진행
-  const st = u < 0.24 ? 0 : (u - 0.24) / 0.76;          // 타격 진행
+  const wind = u < 0.2 ? u / 0.2 : 1;                   // 윈드업(활 당김 전용)
+  const st = u < 0.2 ? 0 : (u - 0.2) / 0.8;             // 타격 진행
   const hit = Math.sin(Math.min(1, st) * Math.PI);      // 0→1→0 빠른 타격 아크(치고 복귀)
   let jab, dip, pitch;
-  if (type === 'bow') {          // 활 — 뒤로 당겼다(윈드업) 놓으며 상체 스냅(반동)
-    jab = -wind * 0.07 + hit * 0.05; dip = 0; pitch = -wind * 0.13 + hit * 0.07;
-  } else if (type === 'magic') { // 마법 — 손/지팡이 앞으로 내지르며 살짝 눌러 밟음
-    jab = hit * 0.15; dip = -hit * 0.05; pitch = hit * 0.13;
-  } else if (type === 'spear') { // 창 — 당겼다 낮게 밟으며 강하게 찌른다
-    jab = -wind * 0.06 + hit * 0.26; dip = -hit * 0.07; pitch = hit * 0.10;
-  } else {                        // 칼 — 무게 실어 내려베기(크게 숙이고 눌러 밟음)
-    jab = -wind * 0.05 + hit * 0.13; dip = -hit * 0.11; pitch = wind * 0.05 + hit * 0.24;
+  if (type === 'bow') {          // 활 — 뒤로 당겼다(윈드업) 놓으며 반동. 활만 뒤로 당긴다.
+    jab = -wind * 0.07 + hit * 0.05; dip = 0; pitch = -wind * 0.12 + hit * 0.06;
+  } else if (type === 'magic') { // 마법 — 손/지팡이 앞으로 내지름
+    jab = hit * 0.16; dip = -hit * 0.05; pitch = hit * 0.13;
+  } else if (type === 'spear') { // 창 — 뒤로 당김 없이 곧장 앞으로 강하게 찌른다(총 반동 느낌 제거)
+    jab = hit * 0.30; dip = -hit * 0.05; pitch = hit * 0.07;
+  } else {                        // 칼 — 뒤로 안 젖히고 앞·아래로 무게 실어 내려벤다
+    jab = hit * 0.14; dip = -hit * 0.12; pitch = hit * 0.26;
   }
   return { jab, dip, pitch, lean: 0, sqY: 1 - hit * 0.07, sqXZ: 1 + hit * 0.045 };
 }

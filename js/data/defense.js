@@ -50,10 +50,11 @@ export const DEFENSE = {
     goldPerStage: 1.0, // 2026-07-20 수석: 1.15→1.0 (스테이지 스케일 제거 — 킬 골드는 크기 배수만, 라운드로 안 커짐)
     // 적 체급 — 소/중/대. 대형=단단·느림·보상↑ (검증: 소형 편중 완화 60→50, 대형 10→20)
     // 2026-07-22 수석: gold 배수 제거(전부 1) — 체급 무관 0.5/킬 균일(10킬=5골드). hp/속도 체급차는 유지.
+    // 2026-07-22 수석: 적 겉보기 크기는 균일하게(scale 전부 1.0). hp/speed 체급차·크기상성은 유지(내부 로직).
     sizes: {
-      small: { weight: 50, hp: 1.0, speed: 1.0, gold: 1, scale: 0.82 },
+      small: { weight: 50, hp: 1.0, speed: 1.0, gold: 1, scale: 1.0 },
       medium: { weight: 30, hp: 1.8, speed: 0.85, gold: 1, scale: 1.0 },
-      large: { weight: 20, hp: 3.2, speed: 0.68, gold: 1, scale: 1.28 },
+      large: { weight: 20, hp: 3.2, speed: 0.68, gold: 1, scale: 1.0 },
     },
     // 보스 — 매 5스테이지(5,10,…)에 2마리(그 스테이지 100 중 98일반+2보스). 2마리 다 잡아야 클리어.
     boss: {

@@ -1907,10 +1907,10 @@
 .rd-stat.rd-alive.danger b { color: var(--alert); animation: rd-pulse 0.7s ease-in-out infinite; }
 .rd-stat.rd-kills b { color: var(--paper); }
 /* 선택 영웅 상세 */
-.rd-hero-info { flex: 1; display: flex; flex-direction: column; gap: 5px; padding: 9px 10px; border-radius: 11px; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--ink-600); }
+.rd-hero-info { flex: 1; display: flex; flex-direction: column; gap: 4px; padding: 8px 9px; border-radius: 11px; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--ink-600); }
 .rd-hi-empty { margin: auto 0; text-align: center; font-size: 11px; color: var(--paper-faint); line-height: 1.5; }
 .rd-hi-name { display: flex; align-items: center; gap: 5px; }
-.rd-hi-name b { font-family: var(--font-display); font-size: 19px; font-weight: 800; color: #f4ecd8; }
+.rd-hi-name b { font-family: var(--font-display); font-size: 17px; font-weight: 800; color: #f4ecd8; }
 .rd-hi-name.tier-4 b { color: #d9b6ff; } .rd-hi-name.tier-5 b { color: #ffe08a; } .rd-hi-name.tier-6 b { color: #ffe486; text-shadow: 0 0 9px rgba(255, 228, 134, 0.6); }
 /* 성급(별 등급) — 정보 패널에서 한눈에. 등급색으로 채운 별 + 등급명 */
 .rd-hi-stars { display: flex; align-items: center; gap: 5px; margin: 3px 0 2px; font-size: 13px; letter-spacing: 1px; color: #6b5a3a; }
@@ -1922,17 +1922,18 @@
 .rd-hi-stars.tier-5 { color: #ffcf5a; } .rd-hi-stars.tier-5 em { color: #ffe08a; }
 .rd-hi-stars.tier-6 { color: #ffe486; text-shadow: 0 0 8px rgba(255, 228, 134, 0.7); } .rd-hi-stars.tier-6 em { color: #ffe486; }
 /* 2026-07-22 수석 "정보 정리": 헤더(이름·성급·세력)·태그(속성/무기/체급)·스탯·특성으로 그룹화 */
-.rd-hi-head { padding-bottom: 7px; margin-bottom: 7px; border-bottom: 1px solid rgba(247, 215, 131, 0.14); }
+.rd-hi-head { padding-bottom: 5px; margin-bottom: 5px; border-bottom: 1px solid rgba(247, 215, 131, 0.14); }
 .rd-hi-sub { font-size: 10.5px; font-weight: 600; color: var(--gold-bright); letter-spacing: 0.01em; margin-top: 2px; line-height: 1.35; }
-.rd-hi-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
+.rd-hi-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 6px; }
 .rd-hi-tag { font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 999px; color: #ffd76a;
   background: rgba(255, 220, 150, 0.06); border: 1px solid rgba(247, 215, 131, 0.16); }
 .rd-hi-tag.wpn-bow { color: #8fe0b0; } .rd-hi-tag.wpn-magic { color: #ff9a5a; } .rd-hi-tag.wpn-spear { color: #f0b48a; }
-.rd-hi-stats { list-style: none; display: flex; flex-direction: column; gap: 2px; margin: 0; }
-.rd-hi-stats li { display: flex; justify-content: space-between; align-items: baseline; font-size: 11.5px; padding: 4px 2px; border-bottom: 1px solid rgba(239, 230, 210, 0.06); }
+/* 2026-07-22 수석: 스크롤 없이 한 화면에 — 스탯을 2열 그리드로 눕혀 높이를 절반으로 */
+.rd-hi-stats { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 1px 9px; margin: 0; }
+.rd-hi-stats li { display: flex; justify-content: space-between; align-items: baseline; font-size: 11px; padding: 3px 2px; border-bottom: 1px solid rgba(239, 230, 210, 0.06); }
 .rd-hi-stats span { color: var(--paper-faint); }
 .rd-hi-stats b { color: #ffe6a2; font-weight: 800; font-variant-numeric: tabular-nums; }
-.rd-hi-perk { margin-top: 8px; font-size: 10.5px; font-weight: 700; color: #b6d9a0; padding: 5px 9px; border-radius: 8px; background: rgba(90, 140, 70, 0.14); }
+.rd-hi-perk { margin-top: 5px; font-size: 10.5px; font-weight: 700; color: #b6d9a0; padding: 4px 8px; border-radius: 8px; background: rgba(90, 140, 70, 0.14); }
 @keyframes rd-pulse { 50% { opacity: 0.5; } }
 
 /* 이번 라운드 출현 진행 바 (v87) — 총 몇 중 몇이 나왔나 */
