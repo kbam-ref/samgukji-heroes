@@ -770,10 +770,12 @@ function doSummon1() {
   if (!u) { summonFail(); return; }
   summonFanfare(u.rarity);
   gradeReveal(u.rarity, HERO_NAME.get(u.heroId), u.heroId); // 전설+ 중앙 획득 연출(신화+ 멘트)
+  selectedUid = u.uid; // 2026-07-22 수석: 소환한 장수 정보를 왼쪽 패널에 바로 표시
   syncUnits();
   updateHud();
   autoMergeIfPinned();
   autoRefundIfOn();
+  renderHeroInfo(); // 자동합성/반환 반영된 최종 상태로 갱신(소모됐으면 비움)
 }
 function doSummon10() {
   const made = engine.summonMany(run, 10);
@@ -1011,7 +1013,7 @@ function updatePrep() {
     const nb = el.querySelector('.rd-prep-n');
     if (nb && nb.textContent !== n) nb.textContent = n;
     const sub = el.querySelector('.rd-prep-sub');
-    const txt = need ? "아래 '소환'을 꾹 눌러 병력을 모으세요!" : '전투 시작까지 · 장수를 배치하세요';
+    const txt = need ? "오른쪽 '장수소환'을 눌러 병력을 모으세요!" : '전투 시작까지 · 장수를 배치하세요';
     if (sub && sub.textContent !== txt) sub.textContent = txt;
   }
 }
