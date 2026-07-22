@@ -21,11 +21,11 @@ const ICONS = {
 };
 
 const ACTIONS = [
-  { id: 'summon', label: '소환', event: 'rd:summon' },
-  { id: 'upgrade', label: '단련', event: 'rd:upgrade' },
-  { id: 'merge', label: '합성', event: 'rd:merge' },
-  { id: 'refund', label: '반환', event: 'rd:refund' },
-  { id: 'gamble', label: '행운', event: 'rd:gamble' },
+  { id: 'summon', label: '장수소환', event: 'rd:summon' },
+  { id: 'upgrade', label: '장수단련', event: 'rd:upgrade' },
+  { id: 'merge', label: '장수합성', event: 'rd:merge' },
+  { id: 'refund', label: '장수반환', event: 'rd:refund' },
+  { id: 'gamble', label: '주사위', event: 'rd:gamble' },
 ];
 
 export function renderTabs(navRoot, screenRoot) {

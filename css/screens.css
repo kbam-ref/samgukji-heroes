@@ -2985,7 +2985,8 @@
 
 /* ── 준비 카운트다운 (v75) — 시작 후 적이 나오기 전, 유닛 배치 시간 ── */
 .rd-prep {
-  position: absolute; top: 16%; left: 50%; transform: translateX(-50%);
+  /* 2026-07-22 수석: 처음 소환한 영웅 이름표와 겹치지 않게 상단으로(16%→6%). */
+  position: absolute; top: 6%; left: 50%; transform: translateX(-50%);
   z-index: 5; display: flex; flex-direction: column; align-items: center; gap: 4px;
   pointer-events: none; text-align: center;
 }

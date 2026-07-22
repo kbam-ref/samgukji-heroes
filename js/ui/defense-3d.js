@@ -782,12 +782,19 @@ export function frame(dt) {
         if (n.action.time >= dur - 0.02) { n.action.time = 0; n.action.paused = true; n.attacking = false; }
       }
       const mo = n.modelObj, hy = (n.hit ? -0.06 : 0);
-      if (n.strikeT > 0) { // 공격 — 무기별 개성(활=반동·마법=시전·근접=내려치기), 위로 안 튀는 그라운디드
+      if (n.strikeT > 0) {
         n.strikeT -= dt;
-        const s = strikePose(1 - n.strikeT / 0.34, n.atkType), ay = n.atkYaw ?? faceY;
-        mo.position.set(Math.sin(ay) * s.jab, hy + s.dip, Math.cos(ay) * s.jab);
-        mo.rotation.x = s.pitch; mo.rotation.z = s.lean;
-        mo.scale.set(s.sqXZ, s.sqY, s.sqXZ);
+        const ay = n.atkYaw ?? faceY;
+        if (n.isAttacker) { // 리깅됨 — 공격 클립이 전신을 애니. 절차는 타깃 향한 작은 전진만(피치·롤·스쿼시 없음 → '오바·눕기' 방지)
+          const se = Math.sin(Math.min(1, 1 - n.strikeT / 0.34) * Math.PI);
+          mo.position.set(Math.sin(ay) * se * 0.07, hy, Math.cos(ay) * se * 0.07);
+          mo.rotation.x = 0; mo.rotation.z = 0; mo.scale.set(1, 1, 1);
+        } else { // 정적 모델 — 무기별 그라운디드 절차 공격(활=반동·마법=시전·근접=내려치기)
+          const s = strikePose(1 - n.strikeT / 0.34, n.atkType);
+          mo.position.set(Math.sin(ay) * s.jab, hy + s.dip, Math.cos(ay) * s.jab);
+          mo.rotation.x = s.pitch; mo.rotation.z = s.lean;
+          mo.scale.set(s.sqXZ, s.sqY, s.sqXZ);
+        }
       } else if (moving && n.mixer && !n.isAttacker) { // 적 걷기 클립 — 다리는 클립이, 몸통은 정면
         mo.position.set(0, hy, 0); mo.rotation.x = 0; mo.rotation.z = 0; mo.scale.set(1, 1, 1);
       } else if (moving) { // 정적/공격 모델 걷기 — 좌우 무게이동 스웨이 + 앞 기울임(성큼성큼, '콩콩' 폐지)
@@ -862,7 +869,7 @@ export function fieldFromPx(px, py) {
 export function playAttack(uid) {
   const n = units.get(uid);
   if (!n) return;
-  if (n.action && n.isAttacker) { n.action.reset(); n.action.timeScale = 2.4; n.action.paused = false; n.action.play(); n.attacking = true; }
+  if (n.action && n.isAttacker) { n.action.reset(); n.action.timeScale = 1.7; n.action.paused = false; n.action.play(); n.attacking = true; }
   n.strikeT = 0.34; // 모든 영웅 — 절차적 '윈드업→타격'(무기별 개성, strikePose와 길이 일치)
 }
 
