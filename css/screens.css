@@ -3058,20 +3058,29 @@
 .load-scrim { position: absolute; inset: 0; pointer-events: none;
   background: linear-gradient(180deg, rgba(10,8,5,0.78) 0%, rgba(10,8,5,0.2) 24%, rgba(10,8,5,0) 44%, rgba(10,8,5,0) 60%, rgba(10,8,5,0.85) 100%); }
 
-.load-title { position: relative; text-align: center; margin-top: 2%; z-index: 1;
+.load-title { position: relative; text-align: center; margin-top: 2%; z-index: 3;
   padding: 12px 34px 14px; border-radius: 16px;
-  background: radial-gradient(115% 130% at 50% 42%, rgba(6, 5, 3, 0.8), rgba(6, 5, 3, 0.45) 60%, transparent 82%);
+  background: radial-gradient(115% 130% at 50% 42%, rgba(6, 5, 3, 0.68), rgba(6, 5, 3, 0.28) 60%, transparent 82%);
   animation: load-title-in 0.8s cubic-bezier(0.2, 1.3, 0.4, 1) both; }
+/* 로고 뒤 회전 빛살 — 타이틀과 동일 */
+.load-title::before {
+  content: ''; position: absolute; left: 50%; top: 48%; width: 560px; height: 560px;
+  transform: translate(-50%, -50%); z-index: -1; pointer-events: none; opacity: 0.4;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 214, 120, 0.15) 0deg 4deg, transparent 4deg 14deg);
+  -webkit-mask: radial-gradient(closest-side, #000 0%, transparent 62%); mask: radial-gradient(closest-side, #000 0%, transparent 62%);
+  animation: title-rays 46s linear infinite; }
 .load-eyebrow { display: block; font-style: normal; font-weight: 600; font-size: 13px;
-  letter-spacing: 0.5em; text-indent: 0.5em; color: #ffe6a6; opacity: 0.95; margin-bottom: 9px;
+  letter-spacing: 0.5em; text-indent: 0.5em; color: #ffe6a6; opacity: 0.96; margin-bottom: 9px;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9); }
-.load-logo { display: block; font-size: 42px; line-height: 1.08; font-weight: 900; letter-spacing: 0.02em;
-  background: linear-gradient(180deg, #fff6cf, #eccb58 46%, #b8862c);
+.load-eyebrow b { color: #ffbf5a; font-weight: 700; }
+.load-logo { position: relative; display: inline-block; font-size: 42px; line-height: 1.08; font-weight: 900; letter-spacing: 0.02em;
+  background: linear-gradient(178deg, #fff7db 4%, #f4d074 44%, #e0ad3e 60%, #a9741d 100%);
   -webkit-background-clip: text; background-clip: text; color: transparent;
   filter:
-    drop-shadow(1.4px 1.4px 0 rgba(24, 12, 4, 0.95)) drop-shadow(-1.4px 1.4px 0 rgba(24, 12, 4, 0.95))
-    drop-shadow(1.4px -1.4px 0 rgba(24, 12, 4, 0.95)) drop-shadow(-1.4px -1.4px 0 rgba(24, 12, 4, 0.95))
-    drop-shadow(0 4px 12px rgba(0, 0, 0, 0.8)) drop-shadow(0 0 20px rgba(228, 197, 92, 0.28)); }
+    drop-shadow(1.4px 1.4px 0 rgba(28, 14, 3, 0.96)) drop-shadow(-1.4px 1.4px 0 rgba(28, 14, 3, 0.96))
+    drop-shadow(1.4px -1.4px 0 rgba(28, 14, 3, 0.96)) drop-shadow(-1.4px -1.4px 0 rgba(28, 14, 3, 0.96))
+    drop-shadow(0 4px 12px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 22px rgba(228, 173, 62, 0.32)); }
+.load-logo .l2 { display: block; }
 .load-sub { display: block; margin-top: 11px; font-size: 16px; font-weight: 600;
   letter-spacing: 0.42em; text-indent: 0.42em; color: var(--paper); opacity: 0.92; }
 @keyframes load-title-in { from { opacity: 0; transform: translateY(-14px) scale(0.94); } to { opacity: 1; transform: none; } }
@@ -3095,7 +3104,7 @@
   0%, 100% { transform: translateY(0) rotate(-2deg) scale(1.02, 0.98); }
   50%      { transform: translateY(-7px) rotate(2deg) scale(0.98, 1.02); }
 }
-.load-foot { position: absolute; left: 26px; right: 26px; bottom: 16px; z-index: 1; }
+.load-foot { position: absolute; left: 26px; right: 26px; bottom: 16px; z-index: 3; }
 .load-bar { height: 6px; border-radius: 999px; background: rgba(255, 255, 255, 0.08);
   overflow: hidden; border: 1px solid rgba(228, 197, 92, 0.22); }
 .load-fill { display: block; height: 100%; width: 0; border-radius: inherit;
