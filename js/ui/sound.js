@@ -21,7 +21,11 @@ export function initSound() {
         ctx = new (window.AudioContext || window.webkitAudioContext)();
         sfxGain = ctx.createGain();
         sfxGain.gain.value = 0.9;
-        sfxGain.connect(ctx.destination);
+        // 감사 2026-07-22: SFX 버스에 리미터 — 보스/영웅 멘트의 큰 게인(>1)에도 하드클립(찢어짐) 없이 또렷하게.
+        const sfxLimiter = ctx.createDynamicsCompressor();
+        sfxLimiter.threshold.value = -4; sfxLimiter.knee.value = 6; sfxLimiter.ratio.value = 10;
+        sfxLimiter.attack.value = 0.003; sfxLimiter.release.value = 0.15;
+        sfxGain.connect(sfxLimiter); sfxLimiter.connect(ctx.destination);
         musicGain = ctx.createGain();
         musicGain.gain.value = 0.55;
         musicGain.connect(ctx.destination);
@@ -475,7 +479,7 @@ export function play(kind) {
 
   // 파일 효과음이 있으면 그걸 우선. 2026-07-22 수석: 보스/영웅 멘트는 크게, 사망음은 살짝 줄여 멘트가 묻히지 않게.
   if (assetsReady) {
-    if (kind.startsWith('boss-voice-') || kind.startsWith('hero-voice-')) { if (playSample(kind, { gain: 2.8 })) return; }
+    if (kind.startsWith('boss-voice-') || kind.startsWith('hero-voice-')) { if (playSample(kind, { gain: 2.4 })) return; }
     else if (kind.startsWith('death-')) { if (playSample(kind, { gain: 0.6 })) return; }
     else if (playSample(kind)) return;
   }

@@ -148,7 +148,15 @@ function loop() {
 export function resize(w, h) { if (renderer) { renderer.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); } }
 export function dispose() {
   if (raf) cancelAnimationFrame(raf); raf = 0;
-  if (renderer) renderer.dispose();
+  // 감사 2026-07-22: 굴릴 때마다(도박) dispose+init 하므로 지오/머티리얼/핍 텍스처를 반드시 해제(누수 방지).
+  if (scene) {
+    scene.traverse((o) => {
+      o.geometry?.dispose();
+      const mats = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : [];
+      for (const m of mats) { if (m) { m.map?.dispose?.(); m.dispose(); } }
+    });
+  }
+  if (renderer) { renderer.dispose(); renderer.forceContextLoss?.(); }
   dice.length = 0; renderer = scene = cam = bodyMat = null; rolling = false; onDone = null; idleSpin = true;
 }
 export function ready() { return !!renderer; }

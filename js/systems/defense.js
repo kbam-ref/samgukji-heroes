@@ -124,7 +124,11 @@ export function summon(run) {
   if (!useFree && run.gold < DEFENSE.summon.cost) return null;
   if (useFree) run.freePulls -= 1;
   else run.gold -= DEFENSE.summon.cost;
-  const rarity = rollRarity();
+  let rarity = rollRarity();
+  // 천장(피티) — pity.pulls마다 등급업 확정(헌장 #3·도움말 표기 실현, 감사 2026-07-22). 발동 시 카운터 리셋.
+  const pity = DEFENSE.summon.pity;
+  run.pity = (run.pity || 0) + 1;
+  if (pity && pity.effect === 'rarityUp' && run.pity >= pity.pulls) { rarity = Math.min(6, rarity + 1); run.pity = 0; }
   const pool = SUMMON_POOL[rarity];
   const heroId = pool[Math.floor(Math.random() * pool.length)];
   const unit = makeUnit(heroId, slot);
@@ -366,7 +370,9 @@ function enemyHp(stage, index, size, isBoss) {
 function killGold(stage, size, isBoss) {
   const w = DEFENSE.wave;
   const mult = isBoss ? w.boss.goldMult : w.sizes[size].gold;
-  return Math.round(w.goldPerKill * mult * Math.pow(w.goldPerStage, stage - 1));
+  // 소수 그대로 반환 — 킬마다 Math.round 하면 0.5→1로 반올림돼 소득이 2배 되던 버그(감사 2026-07-22).
+  //   누적 반올림은 registerKill의 goldFrac에서 처리(10킬=5골드 정확히).
+  return w.goldPerKill * mult * Math.pow(w.goldPerStage, stage - 1);
 }
 function bossPulls(stage) {
   return DEFENSE.wave.boss.rewardPullsBase + Math.floor(stage / 10) * DEFENSE.wave.boss.rewardPullsPerTen;
@@ -410,6 +416,9 @@ export function serializeRun(run) {
     dmgMult: run.dmgMult || 1,
     elemLevel: run.elemLevel || freshElemLevel(),
     prepLeft: run.prepLeft || 0,
+    goldFrac: run.goldFrac || 0, // 소수 골드 캐리(감사)
+    pity: run.pity || 0,         // 천장 카운터(감사)
+    storms: run.storms || [],    // 진행 중 조조 스톰(감사: 저장 누락 → 부활 시 소멸하던 것 보존)
     unitSeq, enemySeq,
   };
 }
@@ -424,6 +433,9 @@ export function deserializeRun(o) {
     dmgMult: o.dmgMult || 1,
     elemLevel: o.elemLevel || freshElemLevel(),
     prepLeft: o.prepLeft || 0,
+    goldFrac: o.goldFrac || 0,
+    pity: o.pity || 0,
+    storms: Array.isArray(o.storms) ? o.storms : [],
   };
   run.bossStage = isBossStage(run.stage);
   run.bossWarned = o.bossWarned || false; // 이미 이번 스테이지 보스 경보를 울렸는지(중복 배너 방지)
@@ -508,15 +520,19 @@ function densestEnemyPoint(run, radius) {
 // 적 처치 정산 — 골드·처치수·처치 fx·보스 보상. (일반타격·광역기 공용)
 function registerKill(run, target) {
   target.dead = true;
-  run.gold += killGold(run.stage, target.size, target.isBoss);
   run.killedThisStage += 1;
   run.kills = (run.kills || 0) + 1;
   run.fx.push({ type: 'kill', eid: target.eid, boss: target.isBoss, sprite: target.spriteId, x: target.x, y: target.y });
   if (target.isBoss) {
-    // 2026-07-22 수석: 보스 처치 = 캐릭/무료뽑기 지급 폐지. 보너스 골드(killGold)만 지급.
+    // 보스 = boss.killGold(50)만(수석). 체급 기본 골드는 더하지 않는다(감사: 중복 지급 54골드 방지).
     const bg = DEFENSE.wave.boss.killGold ?? 0;
     run.gold += bg;
     run.fx.push({ type: 'bossReward', gold: bg });
+  } else {
+    // 일반 킬 = 0.5/킬 균일(10킬=5골드). 소수 골드를 누적해 정확히 지급.
+    run.goldFrac = (run.goldFrac || 0) + killGold(run.stage, target.size, false);
+    const whole = Math.floor(run.goldFrac);
+    if (whole > 0) { run.gold += whole; run.goldFrac -= whole; }
   }
 }
 

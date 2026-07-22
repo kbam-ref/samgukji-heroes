@@ -47,6 +47,7 @@ export function renderTabs(navRoot, screenRoot) {
   navRoot.addEventListener('pointerdown', (e) => {
     const btn = e.target.closest('.tab');
     if (!btn || btn.id !== 'rd-nav-summon') return;
+    stopHold(); // 감사: 이전 홀드 정리 후 시작 — 멀티터치/재진입 시 setInterval 고아화(무한 자동소환) 방지
     vibrate(8); emit('rd:summon');
     holdT = setTimeout(() => { holdInt = setInterval(() => emit('rd:summon'), 170); }, 380);
   });

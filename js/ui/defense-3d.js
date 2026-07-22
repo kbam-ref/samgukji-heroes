@@ -197,6 +197,7 @@ export function init(mount, w, h) {
     const pmrem = new THREE.PMREMGenerator(renderer);
     const envScene = new THREE.Scene(); envScene.background = new THREE.Color(0x8a7a5a);
     scene.environment = pmrem.fromScene(envScene, 0.04).texture;
+    pmrem.dispose(); // 감사: 렌더타깃 누수 방지(환경맵 텍스처는 dispose()에서 해제)
   } catch { /* PMREM 불가 환경이면 무시 */ }
 
   // 바깥 지형(먼 바닥) — 아레나와 어울리는 따뜻한 톤(어두운 빈 공간 방지), 안개로 사라짐
@@ -240,7 +241,7 @@ function buildBoundary() {
   const x1 = wx(b.x1), x2 = wx(b.x2), zF = wz(b.y1), zN = wz(b.y2);
   let seed = 21; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
 
-  const stoneMat = new THREE.MeshStandardMaterial({ color: 0x8f8b81, roughness: 1, metalness: 0, flatShading: true }); // 회색 돌(따뜻한 흙과 대비)
+  const stoneMat = new THREE.MeshStandardMaterial({ color: 0x47453f, roughness: 1, metalness: 0, flatShading: true, envMapIntensity: 0.3 }); // 어두운 회색 돌
   const earthMat = new THREE.MeshStandardMaterial({ color: 0x745730, roughness: 1, metalness: 0, flatShading: true });
   const bagMat = new THREE.MeshStandardMaterial({ color: 0xb39457, roughness: 1, metalness: 0, flatShading: true });
   const grassMat = new THREE.MeshStandardMaterial({ color: 0x82913e, roughness: 1, metalness: 0, flatShading: true });
@@ -253,10 +254,10 @@ function buildBoundary() {
   const grass = (x, z) => { // 풀 포기(선명한 초록 — 색 대비로 '살아있는' 진영)
     for (let i = 0; i < 5; i++) { const h = 0.1 + rnd() * 0.13; const m = new THREE.Mesh(new THREE.ConeGeometry(0.03, h, 4), grassMat); m.position.set(x + (rnd() - 0.5) * 0.3, h / 2, z + (rnd() - 0.5) * 0.3); m.rotation.z = (rnd() - 0.5) * 0.4; scene.add(m); }
   };
-  const rocks = (x, z) => { // 회색 바위 무리
-    const n = 2 + (rnd() < 0.5 ? 1 : 0);
-    for (let i = 0; i < n; i++) { const s = 0.1 + rnd() * 0.13; const m = new THREE.Mesh(lumpGeo, stoneMat); m.scale.set(s, s * 0.7, s); m.position.set(x + (rnd() - 0.5) * 0.34, s * 0.34, z + (rnd() - 0.5) * 0.34); m.rotation.y = rnd() * 6.28; scene.add(m); }
-    blob(x, z, 0.55);
+  const rocks = (x, z) => { // 어두운 회색 바위 무리(1~2개, 작게)
+    const n = 1 + (rnd() < 0.4 ? 1 : 0);
+    for (let i = 0; i < n; i++) { const s = 0.09 + rnd() * 0.1; const m = new THREE.Mesh(lumpGeo, stoneMat); m.scale.set(s, s * 0.7, s); m.position.set(x + (rnd() - 0.5) * 0.3, s * 0.34, z + (rnd() - 0.5) * 0.3); m.rotation.y = rnd() * 6.28; scene.add(m); }
+    blob(x, z, 0.45);
   };
   const sandbags = (x, z) => { // 모래주머니 더미(낮게 쌓임)
     for (let i = 0; i < 3; i++) { const m = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.1, 0.12), bagMat); m.position.set(x + (i - 1) * 0.13, 0.05, z + (rnd() - 0.5) * 0.05); m.rotation.y = (rnd() - 0.5) * 0.4; scene.add(m); }
@@ -322,8 +323,8 @@ function scatterRocks() {
   const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
   for (const [x, y, sc] of spots) {
     const s = sc * (0.34 + rnd() * 0.22);
-    const col = new THREE.Color().setHSL(0.09 + rnd() * 0.03, 0.06 + rnd() * 0.05, 0.30 + rnd() * 0.08); // 회색 화강암(따뜻한 흙과 대비)
-    const mat = new THREE.MeshStandardMaterial({ color: col, roughness: 1, metalness: 0, flatShading: true });
+    const col = new THREE.Color().setHSL(0.09 + rnd() * 0.03, 0.06 + rnd() * 0.05, 0.13 + rnd() * 0.05); // 어두운 회색 화강암
+    const mat = new THREE.MeshStandardMaterial({ color: col, roughness: 1, metalness: 0, flatShading: true, envMapIntensity: 0.3 });
     const r = new THREE.Mesh(geo, mat);
     r.scale.set(s * (0.9 + rnd() * 0.4), s * (0.55 + rnd() * 0.3), s * (0.9 + rnd() * 0.4));
     r.position.set(wx(x), s * 0.22, wz(y)); r.rotation.y = rnd() * 6.28;
@@ -881,15 +882,25 @@ export function lunge(uid, tx, ty) {
 }
 
 export function dispose() {
+  // 2026-07-22 감사: 재마운트마다 GPU 자원(텍스처·지오·머티리얼·PMREM·WebGL 컨텍스트)이 새던 것 전면 수리.
   fx3d.length = 0;
   for (const k in pool) pool[k].length = 0;
-  for (const [, n] of units) disposeNode(n); units.clear();
-  for (const [, n] of enemies) disposeNode(n); enemies.clear();
-  if (renderer) {
-    renderer.dispose();
-    if (renderer.domElement.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement);
+  units.clear(); enemies.clear();
+  if (scene) {
+    // 씬의 모든 메시 지오메트리·머티리얼·텍스처 해제(프롭·바닥·유닛/적 노드·이펙트 풀 전부)
+    scene.traverse((o) => {
+      o.geometry?.dispose();
+      const mats = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : [];
+      for (const m of mats) {
+        if (!m) continue;
+        for (const k of ['map', 'emissiveMap', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'alphaMap']) m[k]?.dispose?.();
+        m.dispose();
+      }
+    });
+    if (scene.background && scene.background.isTexture) scene.background.dispose();
+    if (scene.environment && scene.environment.isTexture) scene.environment.dispose();
   }
-  renderer = scene = cam = null;
+  for (const [, e] of texCache) e.tex?.dispose?.(); // 캐시된 컷아웃 텍스처
   texCache.clear();
   for (const [, e] of modelCache) {
     if (e.proto) e.proto.traverse((o) => {
@@ -897,6 +908,12 @@ export function dispose() {
     });
   }
   modelCache.clear();
+  if (renderer) {
+    renderer.dispose();
+    renderer.forceContextLoss?.(); // WebGL 컨텍스트 즉시 해제 → 재마운트 반복 시 "too many contexts" 방지
+    if (renderer.domElement && renderer.domElement.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement);
+  }
+  renderer = scene = cam = null;
 }
 
 export function ready() { return !!renderer; }

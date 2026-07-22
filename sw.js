@@ -1,7 +1,7 @@
 // 서비스워커 — 전체 에셋을 캐시해 비행기 모드에서도 완전히 플레이 가능하게 한다.
 // 에셋이 바뀌면 CACHE 버전을 올린다.
 
-const CACHE = 'samgukji-v133';
+const CACHE = 'samgukji-v134';
 
 // 영웅 초상 — js/data/heroes.js의 id와 일치 (24명)
 const HERO_IDS = [
@@ -75,6 +75,7 @@ const ASSETS = [
   './js/vendor/three.module.js',
   './js/vendor/GLTFLoader.js',
   './js/vendor/BufferGeometryUtils.js',
+  './js/vendor/SkeletonUtils.js', // 감사 2026-07-22: defense-3d.js가 정적 import — 코어에 포함(오프라인 업데이트 시 백지 방지)
   './js/core/events.js',
   './js/core/state.js',
   './js/core/save.js',
@@ -162,8 +163,11 @@ self.addEventListener('fetch', (event) => {
       (hit) =>
         hit ||
         fetch(event.request).then((res) => {
-          const clone = res.clone();
-          caches.open(CACHE).then((cache) => cache.put(event.request, clone));
+          // 감사 2026-07-22: 정상 응답(200·비-opaque)만 캐시 — 404/500/opaque가 영구 캐시되어 계속 서빙되는 오염 방지.
+          if (res && res.ok && res.status === 200 && res.type !== 'opaque') {
+            const clone = res.clone();
+            caches.open(CACHE).then((cache) => cache.put(event.request, clone)).catch(() => {});
+          }
           return res;
         })
     )

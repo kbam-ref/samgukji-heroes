@@ -195,6 +195,8 @@ function onResize() {
 }
 function onDragUp() {
   window.removeEventListener('pointermove', onDragMove);
+  window.removeEventListener('pointerup', onDragUp);
+  window.removeEventListener('pointercancel', onDragUp);
   if (drag && !drag.moved) selectHero(drag.uid); // v114: 탭 = 왼쪽 정보 패널에 그 영웅 표시(끌면 이동)
   drag = null;
 }
@@ -468,7 +470,9 @@ export function render(root) {
     if (uid == null) return;
     drag = { uid, startX: e.clientX, startY: e.clientY, moved: false };
     window.addEventListener('pointermove', onDragMove);
-    window.addEventListener('pointerup', onDragUp, { once: true });
+    // 감사: pointercancel(터치 취소/스크롤/멀티터치)도 정리 — 안 그러면 onDragMove가 남아 다음 제스처가 엉뚱한 유닛을 옮김
+    window.addEventListener('pointerup', onDragUp);
+    window.addEventListener('pointercancel', onDragUp);
   });
 
   window.addEventListener('resize', onResize);
@@ -1339,12 +1343,16 @@ export function destroy() {
   closeReveal(); // 리빌 오버레이가 떠 있으면 걷어낸다
   stopHold();
   if (gambleTimer) { clearInterval(gambleTimer); gambleTimer = null; rolling = false; } // 주사위 타이머 정리
+  if (dice3d.ready()) dice3d.dispose(); // 감사: 도박 주사위 렌더러/자원 해제(굴리는 중 나가도)
+  gambleRolling = false; rolling = false;
   sheetMode = null;
   if (rafId) cancelAnimationFrame(rafId);
   rafId = 0;
   // 세이브는 loop()의 연속 자동저장 + main.js의 백그라운드/종료 스냅샷이 담당. 탭 전환엔 인메모리 run 유지.
   window.removeEventListener('resize', onResize);
   window.removeEventListener('pointermove', onDragMove);
+  window.removeEventListener('pointerup', onDragUp);      // 감사: 드래그 정리 리스너도 해제
+  window.removeEventListener('pointercancel', onDragUp);
   drag = null;
   for (const [, n] of labelNodes) { n.nameEl.remove(); }
   labelNodes.clear();

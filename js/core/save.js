@@ -176,5 +176,5 @@ export function persist(state, { seen = true } = {}) {
 }
 
 export function wipe() {
-  localStorage.removeItem(BALANCE.saveKey);
+  try { localStorage.removeItem(BALANCE.saveKey); } catch { /* 감사: 프라이빗 모드/차단 스토리지에서 throw 방지 */ }
 }
