@@ -10,7 +10,7 @@ import * as meta from '../systems/rd-meta.js';
 import { on, emit } from '../core/events.js';
 import { getState, setSetting } from '../core/state.js';
 import { fmt } from './format.js';
-import { floatText, flash } from './effects.js';
+import { floatText, flash, countUp, pulse, burst } from './effects.js';
 import { showModal } from './modal.js';
 import { play, vibrate } from './sound.js';
 
@@ -25,6 +25,8 @@ const DEATH_PROFILE = {
   'spear-guard': 'grunt', 'flag-bearer': 'cry',
 };
 let lastDeathT = 0; // 사망음 스로틀
+let lastKillFxT = 0; // 처치 파편(즉각보상) 스로틀 — 사망음과 별개로 시각만
+let goldShown = 0;  // HUD에 표시 중인 골드(증가 시 카운트업+맥동) — beginRun에서 리셋
 const ELEM_GLYPH = { water: '水', fire: '火', earth: '土', wind: '風' }; // 속성 배지 글자 — 색만으론 헷갈려서
 
 // 공격 형태 아이콘 — 이름 앞 작은 네모 안에 창·칼·활·기마 모양
@@ -509,7 +511,15 @@ function updateHud() {
   const g = document.getElementById('rd-gold');
   const a = document.getElementById('rd-alive');
   if (s) s.textContent = run.stage;
-  if (g) g.textContent = fmt(Math.floor(run.gold));
+  // 골드 — 즉각보상(헌장 #1): 킬로 쌓이는 골드가 눈에 보이게 카운트업 + 증가 시 맥동.
+  if (g) {
+    const target = Math.floor(run.gold);
+    if (target !== goldShown) {
+      countUp(g, goldShown, target, { duration: 340, format: fmt });
+      if (target > goldShown) pulse(g.parentElement, 'gold-gain'); // 늘 때만 반짝(소환 지출엔 조용히)
+      goldShown = target;
+    }
+  }
   if (a) {
     const alive = run.enemies.length;
     const loseAt = DEFENSE.wave.loseAt;
@@ -1013,7 +1023,9 @@ function updatePrep() {
     const nb = el.querySelector('.rd-prep-n');
     if (nb && nb.textContent !== n) nb.textContent = n;
     const sub = el.querySelector('.rd-prep-sub');
-    const txt = need ? "오른쪽 '장수소환'을 눌러 병력을 모으세요!" : '전투 시작까지 · 장수를 배치하세요';
+    // 첫 판=배치 안내 / 라운드간(정비, stage>1)=보강 안내
+    const txt = need ? "오른쪽 '장수소환'을 눌러 병력을 모으세요!"
+      : (run.stage > 1 ? '정비 시간 · 번 골드로 병력을 보강하세요' : '전투 시작까지 · 장수를 배치하세요');
     if (sub && sub.textContent !== txt) sub.textContent = txt;
   }
 }
@@ -1064,6 +1076,13 @@ function consumeFx() {
       const prof = fx.boss ? 'bellow' : DEATH_PROFILE[fx.sprite];
       const now = performance.now();
       if (fx.boss || now - lastDeathT > 95) { lastDeathT = now; play(prof ? 'death-' + prof : 'foehit'); }
+      // 즉각보상(헌장 #1) — 쓰러진 자리에서 금빛 파편이 튄다. 스로틀·저사양가드로 100마리 스팸 방지.
+      //   (보스는 bossReward에서 크게 연출하므로 여기선 일반 적만) fx.x/y=필드%, project→뷰포트좌표.
+      if (!fx.boss && now - lastKillFxT > 70 && fx.x != null) {
+        lastKillFxT = now;
+        const p = r3d.project(fx.x, fx.y, 0.45);
+        if (p) burst(p.sx, p.sy, { count: 5, color: '#ffd873' });
+      }
     } else if (fx.type === 'stageClear') {
       play('clear');
       if (fx.bonus) floatText(window.innerWidth / 2, 150, `라운드 클리어! +${fmt(fx.bonus)} 골드`, 'gold');
@@ -1128,6 +1147,7 @@ function beginRun(newRun) {
   closeSheet();  // 열려 있던 소환/반환/도박 시트 정리
   run = newRun;
   dangerLevel = 0; // 새 판 — 경보 단계 초기화
+  goldShown = Math.floor(newRun.gold || 0); // 골드 카운트업 기준점(이어하기면 현재값에서 시작)
   saveTick = 0;    // 자동저장 주기 초기화
   const over = document.getElementById('rd-over');
   if (over) { over.hidden = true; over.innerHTML = ''; }

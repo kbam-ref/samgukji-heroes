@@ -619,7 +619,8 @@ export function tick(run, dt) {
     const spdMul = Math.max(0.25, 1 - eu.spdPerLevel * (lv?.spd || 0));
 
     // 광역기(초월) — 간격마다 전 적을 한 번에 타격 (공격 쿨다운과 별개)
-    if (info.aoe && !prepping) {
+    // 프렙 게이트 제거(2026-07-22) — 라운드간 정비 중에도 기존 적을 상대로 전투 유지. 초기 프렙은 적 0이라 무동작.
+    if (info.aoe) {
       u.aoeCd = (u.aoeCd ?? info.aoe.interval) - dt;
       if (u.aoeCd <= 0 && run.enemies.length) {
         u.aoeCd = info.aoe.interval;
@@ -634,7 +635,7 @@ export function tick(run, dt) {
 
     // 마법 시전(제갈량 끈끈이) — cd초마다 적 밀집점에 슬로우 장 전개
     const cast = HERO_CAST[u.heroId];
-    if (cast && cast.type === 'slow' && !prepping) {
+    if (cast && cast.type === 'slow') {
       u.castCd = (u.castCd ?? cast.cd) - dt;
       if (u.castCd <= 0 && run.enemies.length) {
         u.castCd = cast.cd;
@@ -649,7 +650,7 @@ export function tick(run, dt) {
       }
     }
     // 싸이오닉 스톰(조조) — cd초마다 적 밀집점에 전기 폭풍 소환(지속 광역 데미지)
-    if (cast && cast.type === 'storm' && !prepping) {
+    if (cast && cast.type === 'storm') {
       u.castCd = (u.castCd ?? cast.cd) - dt;
       if (u.castCd <= 0 && run.enemies.length) {
         u.castCd = cast.cd;
@@ -725,6 +726,9 @@ export function tick(run, dt) {
       run.stage += 1;
       run.fx.push({ type: 'stageClear', stage: run.stage, bonus: w.roundClearGold ?? 0 });
       beginStage(run); // 다음 웨이브 스폰 개시 — 기존 적 위에 더 얹는다(run.enemies 유지)
+      // 2026-07-22 수석: 라운드간 정비창 — 다음 웨이브 신규 스폰을 betweenSeconds 동안 멈춘다.
+      //   (기존 적·전투는 그대로 진행) 번 골드로 소환/합성/단련하는 숨 고르기. 0이면 종전처럼 즉시 다음 웨이브.
+      run.prepLeft = DEFENSE.prep?.betweenSeconds ?? 0;
       run.roundLeft = w.roundTime;
     }
   }
