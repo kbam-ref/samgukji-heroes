@@ -178,9 +178,14 @@ function boot() {
   // 부팅(2026-07-20 수석): 재실행은 '항상 처음부터'. 남은 세이브를 지우고 시작화면으로 —
   //   강제종료로 죽음을 회피하는 이어하기가 생기지 않는다(세션 중 백그라운드 복귀는 그대로 이어감).
   on('plays:empty', showNoPlays); // 도전 소진 시 결제 화면
-  clearSavedRun();
+  // 예외(감사 2026-07-23): SW 자동 업데이트로 인한 재시작은 '우리가 일으킨' 새로고침 —
+  //   applyUpdate가 저장해 둔 판을 지우면 배포 때마다 유저 런·유료 도전이 증발한다. 그 판은 즉시 이어간다.
+  const swResume = sessionStorage.getItem('rd-sw-resume') === '1';
+  try { sessionStorage.removeItem('rd-sw-resume'); } catch { /* noop */ }
+  if (!swResume) clearSavedRun();
   // 2026-07-22 수석: 로딩 화면과 메인(타이틀)을 하나로 — 별도 로딩 없이 타이틀을 바로 띄운다(에셋은 SW 캐시라 즉시).
-  openTitle();
+  if (swResume && hasSavedRun()) emit('game:load'); // 업데이트 직전 판으로 곧장 복귀(도전 무소모)
+  else openTitle();
 
   // 랜덤 디펜스(아케이드)로 전환한 뒤 구 방치 전투엔진(battle.tick)은 쓰지 않는다.
   // 계속 돌리면 마이그레이션 세이브(파티 보유)에서 유령 처치음·진동이 나고 배터리만 축낸다.
@@ -272,6 +277,7 @@ function boot() {
       if (applied) return;
       applied = true;
       try { saveActiveRun(); } catch { /* noop */ }       // 진행 중이던 판을 저장 — 새 버전에서 도전 소모 없이 자동 이어가기
+      try { sessionStorage.setItem('rd-sw-resume', '1'); } catch { /* noop */ } // 부팅 루틴의 세이브 삭제를 이번 1회 건너뛰게
       try { persist(getState()); } catch { /* noop */ }   // 메타(최고기록 등) 저장
       showApplyingToast();                                // '새 버전 적용 중…' 잠깐 안내
       setTimeout(() => location.reload(), 500);           // 세이브가 끝날 여유를 준 뒤 새로고침

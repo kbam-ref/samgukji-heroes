@@ -14,7 +14,7 @@ import { MISSIONS, missionStat } from '../data/missions.js';
 import { fmt } from './format.js';
 import { floatText, flash, countUp, pulse, burst } from './effects.js';
 import { showModal } from './modal.js';
-import { play, vibrate } from './sound.js';
+import { play, vibrate, playHit, setBgmMood } from './sound.js';
 
 const HERO_NAME = new Map(HEROES.map((h) => [h.id, h.name]));
 const HERO_BY_ID = new Map(HEROES.map((h) => [h.id, h]));
@@ -28,7 +28,9 @@ const DEATH_PROFILE = {
 };
 let lastDeathT = 0; // 사망음 스로틀
 let lastKillFxT = 0; // 처치 파편(즉각보상) 스로틀 — 사망음과 별개로 시각만
+let lastHitT = 0;    // 타격음 스로틀(공격이 초당 수십 발이라 소리는 골라 낸다)
 let goldShown = 0;  // HUD에 표시 중인 골드(증가 시 카운트업+맥동) — beginRun에서 리셋
+let streakN = 0, streakT = 0; // 연쇄 처치(콤보) — 짧은 간격의 킬을 세어 '연격' 연출
 const ELEM_GLYPH = { water: '水', fire: '火', earth: '土', wind: '風' }; // 속성 배지 글자 — 색만으론 헷갈려서
 
 // 공격 형태 아이콘 — 이름 앞 작은 네모 안에 창·칼·활·기마 모양
@@ -98,6 +100,7 @@ on('game:suspend', () => { started = false; closeReveal(); });
 // 하단바 액션(소환/합성/반환/도박) — tabs.js가 이벤트를 쏘면 여기서 처리한다.
 // 방어 화면이 언마운트(설정 탭 등)면 nav:battle로 먼저 되살린 뒤 실행.
 function actGuard(fn) {
+  if (run && (run.gameOver || run.won)) return; // 결과 화면 — 죽은 런에 골드 소비·연출 방지(감사 2026-07-23)
   if (!fieldEl) emit('nav:battle');
   if (fieldEl) fn();
 }
@@ -132,7 +135,7 @@ function renderHeroInfo() {
   const box = document.getElementById('rd-hero-info');
   if (!box) return;
   const u = run && selectedUid != null ? run.units.find((x) => x.uid === selectedUid) : null;
-  if (!u) { selectedUid = null; box.innerHTML = '<p class="rd-hi-empty">영웅을 탭하면<br>정보가 나와요</p>'; return; }
+  if (!u) { selectedUid = null; box.innerHTML = '<p class="rd-hi-empty">장수를 탭하면<br>정보가 나와요</p>'; return; }
   const h = HERO_BY_ID.get(u.heroId) || {};
   const info = DEFENSE.unit.byRarity[u.rarity] || {};
   const atype = HERO_ATTACK_TYPE[u.heroId] || 'sword';
@@ -186,6 +189,7 @@ function pickUnitAt(clientX, clientY) {
 }
 function onDragMove(e) {
   if (!drag || !run) return;
+  if (drag.pid != null && e.pointerId !== drag.pid) return; // 멀티터치 — 시작한 손가락만 유효(감사 2026-07-23)
   if (!drag.moved && Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) > 16) drag.moved = true; // 탭 관대하게(모바일 손가락 오차 — Z.ai 리뷰 반영 11→16)
   if (!drag.moved) return;
   const p = fieldFromClient(e.clientX, e.clientY);
@@ -428,7 +432,7 @@ export function render(root) {
         </div>
         <div class="rd-over" id="rd-over" hidden></div>
       </div>
-        <p class="rd-tip" id="rd-tip"><b>소환</b>한 장수를 <b>끌어</b> 적 길목에 배치하세요 · 영웅마다 <b>사거리</b>가 달라요(등급↑ = 사거리↑, 안 닿으면 적 가까이)</p>
+        <p class="rd-tip" id="rd-tip"><b>소환</b>한 장수를 <b>끌어</b> 적 길목에 배치하세요 · 장수마다 <b>사거리</b>가 달라요 — 등급이 높을수록 멀리 칩니다</p>
       </div>
       <div class="rd-sheet" id="rd-sheet" hidden></div>
     </section>`
@@ -481,7 +485,7 @@ export function render(root) {
     if (e.target.closest('button, .rd-over, .rd-prep')) return; // 버튼/오버레이 위는 제외
     const uid = pickUnitAt(e.clientX, e.clientY);
     if (uid == null) return;
-    drag = { uid, startX: e.clientX, startY: e.clientY, moved: false };
+    drag = { uid, startX: e.clientX, startY: e.clientY, moved: false, pid: e.pointerId };
     window.addEventListener('pointermove', onDragMove);
     // 감사: pointercancel(터치 취소/스크롤/멀티터치)도 정리 — 안 그러면 onDragMove가 남아 다음 제스처가 엉뚱한 유닛을 옮김
     window.addEventListener('pointerup', onDragUp);
@@ -607,6 +611,15 @@ function updateHud() {
   // 하단바 '합성' 배지 — 합성 가능(5장) 또는 자동 합성 고정 중이면 점등
   const mergeBadge = document.querySelector('#rd-nav-merge .nav-badge');
   if (mergeBadge) mergeBadge.hidden = autoMergeMax === 0 && engine.mergeableHeroes(run).length === 0;
+  // 소환 버튼 천장 카운터 — 남은 뽑기 수 상시 표시(헌장 #3 '천장까지 남은 횟수를 항상 보여줘')
+  const pity = DEFENSE.summon.pity;
+  const pityEl = document.querySelector('#rd-nav-summon .nav-pity');
+  if (pityEl && pity) {
+    const rem = Math.max(0, pity.pulls - (run.pity || 0));
+    const txt = `천장 ${rem}`;
+    if (pityEl.textContent !== txt) pityEl.textContent = txt;
+    pityEl.classList.toggle('near', rem <= 8); // 임박하면 금빛 강조 — "조금만 더"
+  }
 
   // 열려 있는 시트 내용 실시간 갱신(소환 비용 / 속성단련 / 반환 미리보기 / 도박 쿨다운)
   if (sheetMode === 'summon') updateSummonSheet();
@@ -651,14 +664,14 @@ function showHelp() {
       <li><b>반환</b> — 필요 없는 장수를 골드로 되돌림</li>
       <li><b>행운의 주사위</b> — 주사위 2개, 합계×배수 골드(더블이면 잭팟)</li>
     </ul></section>
-    <section class="rd-hs"><h4>영웅 성급 (6단계)</h4>
+    <section class="rd-hs"><h4>장수 등급 (6단계)</h4>
       <p class="rd-hs-grades"><span class="g g1">일반</span><span class="g g2">희귀</span><span class="g g3">영웅</span><span class="g g4">전설</span><span class="g g5">신화</span><span class="g g6">초월</span></p>
       <p>성급이 높을수록 사거리·동시타격·데미지↑. <b>전설</b>부터는 몸에서 <b>빛기둥</b>이 솟아납니다. 판을 쓸어버리는 <b>초월</b>이 최고 등급.</p></section>
     <section class="rd-hs"><h4>속성 상성</h4>
       <p class="rd-hs-elem"><span style="color:#e0613a">불</span> ▸ <span style="color:#57bd86">바람</span> ▸ <span style="color:#b0803f">땅</span> ▸ <span style="color:#4f9dd6">물</span> ▸ <span style="color:#e0613a">불</span> <em>(▸ = 이김)</em></p>
       <p>상성 우위 데미지 <b>×1.5</b>, 열위 <b>×0.75</b>. 라운드마다 적 속성이 <b>통일</b>되니 그 속성을 이기는 장수를 준비하세요.</p></section>
     <section class="rd-hs"><h4>유닛 크기 상성</h4>
-      <p>적은 <b>소형</b>(빠르고 약함)·<b>중형</b>·<b>대형</b>(느리고 단단, 보상↑). 각 장수는 한 체급에 <b>강함(×1.25)</b>·다른 체급에 <b>약함(×0.8)</b> — 영웅을 탭해 확인.</p></section>`;
+      <p>적은 <b>소형</b>(빠르고 약함)·<b>중형</b>·<b>대형</b>(느리고 단단, 보상↑). 각 장수는 한 체급에 <b>강함(×1.25)</b>·다른 체급에 <b>약함(×0.8)</b> — 장수를 탭해 확인.</p></section>`;
   showModal({ title: '도움말', body: box }); // 닫기는 우상단 ✕로 통일(수석)
 }
 
@@ -994,11 +1007,11 @@ function openMergePicker() {
           <img src="${heroCut(g.heroId)}" alt="" draggable="false">
           <span class="rd-mo-body">
             <b class="rd-mo-name">${HERO_NAME.get(g.heroId)}</b>
-            <span class="rd-mo-info">${RARITY[g.rarity].name} <em>×${g.count}</em> → ${RARITY[g.rarity + 1].name} 랜덤</span>
+            <span class="rd-mo-info">${RARITY[g.rarity].name} <em>${g.count}/${g.need}</em> → ${RARITY[g.rarity + 1].name}</span>
           </span>
           <span class="rd-mo-go">합성 ›</span>
         </button>`).join('')
-      : `<p class="rd-merge-empty"><b>같은 영웅 5장</b>을 모으면 상위 등급으로 합성할 수 있어요.<br>소환으로 같은 장수를 모아 보세요.</p>`;
+      : `<p class="rd-merge-empty"><b>같은 장수</b>를 모으면 상위 등급이 됩니다.<br>1·2성 5장 · 3성 4장 · 4성 3장 · <b>신화 2장 = 초월</b></p>`;
     box.innerHTML = autoRow + list;
   };
   render();
@@ -1022,14 +1035,15 @@ function openMergePicker() {
     const nu = engine.mergeHero(run, btn.dataset.hero);
     if (nu) {
       play('epic'); vibrate(18);
-      floatText(window.innerWidth / 2, window.innerHeight * 0.4, `합성! ${RARITY[nu.rarity].name} ${HERO_NAME.get(nu.heroId)}`, 'gold');
+      if (nu.rarity >= 4) gradeReveal(nu.rarity, HERO_NAME.get(nu.heroId), nu.heroId); // 전설+ 합성은 등급 리빌 세리머니
+      else floatText(window.innerWidth / 2, window.innerHeight * 0.4, `합성! ${RARITY[nu.rarity].name} ${HERO_NAME.get(nu.heroId)}`, 'gold');
       syncUnits(); updateHud();
       render(); // 남은 합성 가능 목록 갱신 (연속 합성)
     } else {
       vibrate(8);
     }
   });
-  showModal({ title: '영웅 합성 — 같은 장수 5장', body: box }); // 닫기는 우상단 ✕로 통일(수석)
+  showModal({ title: '장수 합성', body: box }); // 닫기는 우상단 ✕로 통일(수석)
 }
 
 function clampSpeed(v) {
@@ -1056,7 +1070,10 @@ function updatePrep() {
     if (el.hidden) el.hidden = false;
     const n = String(Math.ceil(run.prepLeft));
     const nb = el.querySelector('.rd-prep-n');
-    if (nb && nb.textContent !== n) nb.textContent = n;
+    if (nb && nb.textContent !== n) {
+      nb.textContent = n;
+      if (+n <= 3) { play('tap'); vibrate(8); } // 마지막 3초 — 초침이 조여든다(전투 개시 빌드업)
+    }
     const sub = el.querySelector('.rd-prep-sub');
     // 첫 판=배치 안내 / 라운드간(정비, stage>1)=보강 안내
     const txt = need ? "오른쪽 '장수소환'을 눌러 병력을 모으세요!"
@@ -1106,6 +1123,13 @@ function consumeFx() {
       r3d.playAttack(fx.uid); // 영웅 스켈레탈 공격 애니 1회(창찌르기/휘두르기)
       r3d.lunge(fx.uid, fx.ex, fx.ey); // 그 적을 향해 살짝 돌진
       r3d.spawnShot3d(fx.ux, fx.uy, fx.ex, fx.ey, HERO_ATTACK_TYPE[fx.heroId] || 'sword', ELEMENT_COLOR[fx.element] || '#e9d6a0', reduceMotion, fx.rarity || 1); // 무기별 3D 공격(활/창/칼/마법), 등급↑=큰 이펙트
+      // 타격음(감사 2026-07-23: 제작된 hit-*.mp3가 배선 누락으로 무음이던 것) — 무기별 프로파일, 스로틀로 과밀 방지
+      const hitNow = performance.now();
+      if (hitNow - lastHitT > 120) {
+        lastHitT = hitNow;
+        const t = HERO_ATTACK_TYPE[fx.heroId];
+        playHit(t === 'bow' ? 'cloth' : t === 'magic' ? 'armor' : 'blade', { heavy: (fx.rarity || 1) >= 5 });
+      }
     } else if (fx.type === 'kill') {
       // 적 사망음 — 스프라이트별 죽는 소리(보스는 묵직하게). 다수 동시사망 스팸 방지 스로틀(보스는 항상).
       const prof = fx.boss ? 'bellow' : DEATH_PROFILE[fx.sprite];
@@ -1118,6 +1142,18 @@ function consumeFx() {
         const p = r3d.project(fx.x, fx.y, 0.45);
         if (p) burst(p.sx, p.sy, { count: 5, color: '#ffd873' });
       }
+      // 연쇄 처치(콤보) — 1.2초 안에 이어지는 킬을 세어 10·25·50에서 '연격' 팡파르(전투 리듬 장치)
+      if (now - streakT < 1200) streakN += 1; else streakN = 1;
+      streakT = now;
+      if (streakN === 10 || streakN === 25 || streakN === 50) {
+        play('combo'); vibrate(streakN >= 50 ? 40 : 18);
+        floatText(window.innerWidth / 2, window.innerHeight * 0.24, `${streakN}연격!`, streakN >= 50 ? 'gold' : '');
+        if (streakN >= 50) flash('gold');
+      }
+    } else if (fx.type === 'pity') {
+      // 천장 발동 — 40뽑 적립이 '전설 이상 확정'으로 터지는 순간(헌장 #3)
+      play('legend'); flash('gold'); vibrate(30);
+      floatText(window.innerWidth / 2, window.innerHeight * 0.36, '천장 발동! 전설 이상 확정', 'gold');
     } else if (fx.type === 'mission') {
       // 과업 완수 — 즉각보상(소리+골드 플로팅+스트립 맥동)
       play('claim'); vibrate(14);
@@ -1128,12 +1164,14 @@ function consumeFx() {
     } else if (fx.type === 'stageClear') {
       play('clear');
       if (fx.bonus) floatText(window.innerWidth / 2, 150, `라운드 돌파! +${fmt(fx.bonus)} 골드`, 'gold');
+      if (engine.isBossStage(fx.stage - 1)) setBgmMood(false); // 보스 라운드가 끝났다 — 장단을 가라앉힌다
       // 새 장(章) 진입 — 사건명 배너(황건의 난→적벽, 캠페인 진행감)
       if (isChapterStart(fx.stage)) setTimeout(() => chapterBanner(chapterOf(fx.stage)), 700);
       updateHud();
     } else if (fx.type === 'bossSpawn') {
-      // 보스 등장 — 헌장 #3(긴장 단계). 경보음·섬광·배너 + 보스 멘트(TTS).
+      // 보스 등장 — 헌장 #3(긴장 단계). 경보음·섬광·배너 + 보스 멘트(TTS) + BGM 전환(감사: bgm-boss 미배선이던 것).
       play('boss'); flash('ember'); vibrate([0, 45, 60, 45]);
+      setBgmMood(true);
       if (fx.sprite) setTimeout(() => play('boss-voice-' + fx.sprite), 260); // 징 뒤에 멘트
       bossBanner();
     } else if (fx.type === 'bossReward') {
@@ -1215,6 +1253,7 @@ function beginRun(newRun) {
 function showOver(won) {
   cancelAnimationFrame(rafId);
   rafId = 0;
+  setBgmMood(false); // 보스 BGM 중이었다면 원래 장단으로
   const reachedStage = run.stage;
   const sec = Math.round(run.elapsed);
   // 기록·세이브 삭제·종료음은 판당 1회만 — 탭 왕복으로 재진입해도 '신기록' 라벨이 사라지거나

@@ -30,7 +30,7 @@ const ACTIONS = [
 
 export function renderTabs(navRoot, screenRoot) {
   navRoot.innerHTML = ACTIONS.map((a) =>
-    `<button class="tab act" data-act="${a.event}" id="rd-nav-${a.id}" aria-label="${a.label}">${ICONS[a.id]}<span>${a.label}</span><i class="nav-badge" hidden></i></button>`
+    `<button class="tab act" data-act="${a.event}" id="rd-nav-${a.id}" aria-label="${a.label}">${ICONS[a.id]}<span>${a.label}</span>${a.id === 'summon' ? '<em class="nav-pity">천장 40</em>' : ''}<i class="nav-badge" hidden></i></button>`
   ).join('');
 
   navRoot.addEventListener('click', (e) => {

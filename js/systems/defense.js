@@ -12,6 +12,7 @@ import { MISSIONS, missionStat } from '../data/missions.js';
 
 const BASE = new Map(HEROES.map((h) => [h.id, h.base]));
 const RARITY = new Map(HEROES.map((h) => [h.id, h.rarity]));
+const PERK = new Map(HEROES.map((h) => [h.id, h.perk]));
 
 // ── 경로(사각 트랙) 둘레 위 한 점 — prog∈[0,1) ──
 const PATH = DEFENSE.field.path;
@@ -35,21 +36,30 @@ export function pathPoint(prog) {
 
 // ── 유닛 배치 칸 좌표 — 배치 박스(bounds) 안에 고루 편다. 배치칸 무제한(2026-07-20 수석)이라
 //    30칸을 넘으면 다음 무리를 살짝 어긋나게 겹쳐 쌓는다(플레이어가 끌어 펴거나 합성). ──
-export function slotPos(i) {
+// 2026-07-23 감사: 중앙 뭉침 기본 배치는 1성 사거리(18)가 트랙에 안 닿아 '방치하면 1라운드 0킬 전멸'.
+//   → 처음 16자리는 트랙에 근접한 링(상·하·좌·우변 교대)으로 깔아, 안 옮겨도 교전이 되게 한다.
+const RING_SPOTS = (() => {
   const b = DEFENSE.unit.bounds;
-  const cx = (b.x1 + b.x2) / 2; // 가로 중앙
-  const cy = (b.y1 + b.y2) / 2; // 세로 중앙
-  // 가운데를 중심으로 6×5 그리드에 모아 배치(수석). 많이 소환하면 경계 대신 중앙에 겹쳐 쌓아
-  //   발끝이 점선 밖으로 튀어나오지 않게 한다(마진 확보).
-  const cols = 6, rows = 5, per = cols * rows;
-  const cell = ((i % per) + per) % per;
-  const col = cell % cols;
-  const row = Math.floor(cell / cols);
-  const wrap = Math.floor(i / per) * 2.5; // 30명 초과분은 중앙에서 살짝 어긋나 겹침
-  const gx = 6.2, gy = 5.4;
-  const x = cx + (col - (cols - 1) / 2) * gx + wrap;
-  const y = cy + (row - (rows - 1) / 2) * gy + wrap;
-  const mx = 3, my = 5; // 경계 여유 — 가장자리에 딱 붙지 않게
+  const T = (x) => ({ x, y: b.y1 + 2 }), B = (x) => ({ x, y: b.y2 - 2 });
+  const L = (y) => ({ x: b.x1 + 2, y }), R = (y) => ({ x: b.x2 - 2, y });
+  // 교대 순서 — 소환 순서대로 사방에 고르게 퍼진다
+  return [
+    T(50), B(50), L(51), R(51), T(39), B(39), T(61), B(61),
+    L(38), R(38), L(64), R(64), T(28), B(28), T(72), B(72),
+  ];
+})();
+export function slotPos(i) {
+  if (i < RING_SPOTS.length) return { ...RING_SPOTS[i] };
+  // 17번째부터는 중앙 그리드(증원 — 플레이어가 끌어 재배치)
+  const b = DEFENSE.unit.bounds;
+  const cx = (b.x1 + b.x2) / 2, cy = (b.y1 + b.y2) / 2;
+  const j = i - RING_SPOTS.length;
+  const cols = 5, rows = 4, per = cols * rows;
+  const cell = j % per;
+  const wrap = Math.floor(j / per) * 2.5; // 초과분은 살짝 어긋나 겹침
+  const x = cx + ((cell % cols) - (cols - 1) / 2) * 7 + wrap;
+  const y = cy + (Math.floor(cell / cols) - (rows - 1) / 2) * 6 + wrap;
+  const mx = 3, my = 5;
   return { x: Math.max(b.x1 + mx, Math.min(b.x2 - mx, x)), y: Math.max(b.y1 + my, Math.min(b.y2 - my, y)) };
 }
 
@@ -127,10 +137,15 @@ export function summon(run) {
   if (useFree) run.freePulls -= 1;
   else run.gold -= DEFENSE.summon.cost;
   let rarity = rollRarity();
-  // 천장(피티) — pity.pulls마다 등급업 확정(헌장 #3·도움말 표기 실현, 감사 2026-07-22). 발동 시 카운터 리셋.
+  // 천장(피티) — pulls마다 발동(헌장 #3). minRarity: 하한 등급 확정(전설 이상). 발동 시 카운터 리셋.
   const pity = DEFENSE.summon.pity;
   run.pity = (run.pity || 0) + 1;
-  if (pity && pity.effect === 'rarityUp' && run.pity >= pity.pulls) { rarity = Math.min(6, rarity + 1); run.pity = 0; }
+  if (pity && run.pity >= pity.pulls) {
+    if (pity.effect === 'minRarity') rarity = Math.max(rarity, pity.min || 4);
+    else rarity = Math.min(6, rarity + 1); // 구 rarityUp 폴백
+    run.pity = 0;
+    run.fx.push({ type: 'pity', rarity }); // 천장 발동 — UI가 '확정' 연출
+  }
   const pool = SUMMON_POOL[rarity];
   const heroId = pool[Math.floor(Math.random() * pool.length)];
   const unit = makeUnit(heroId, slot);
@@ -298,17 +313,23 @@ export function refundBulk(run, filter) {
 export function sameHeroCount(run, heroId) {
   return run.units.filter((u) => u.heroId === heroId).length;
 }
-export function canMergeHero(run, heroId) {
-  return RARITY.get(heroId) < 6 && sameHeroCount(run, heroId) >= DEFENSE.merge.need;
+/** 등급별 합성 필요 장수 — 높은 등급일수록 적게(사다리 유지). needByRarity 없으면 need 폴백. */
+export function mergeNeed(rarity) {
+  const by = DEFENSE.merge.needByRarity;
+  return (by && by[rarity]) || DEFENSE.merge.need;
 }
-/** 3장 이상 모인 '같은 영웅' 목록 — 합성 대상 선택 UI용. [{heroId, count, rarity}] */
+export function canMergeHero(run, heroId) {
+  const r = RARITY.get(heroId);
+  return r < 6 && sameHeroCount(run, heroId) >= mergeNeed(r);
+}
+/** 합성 가능한 '같은 영웅' 목록 — 합성 대상 선택 UI용. [{heroId, count, need, rarity}] */
 export function mergeableHeroes(run) {
   const byHero = new Map();
   for (const u of run.units) byHero.set(u.heroId, (byHero.get(u.heroId) || 0) + 1);
   const out = [];
   for (const [heroId, count] of byHero) {
     const rarity = RARITY.get(heroId);
-    if (count >= DEFENSE.merge.need && rarity < 6) out.push({ heroId, count, rarity });
+    if (rarity < 6 && count >= mergeNeed(rarity)) out.push({ heroId, count, need: mergeNeed(rarity), rarity });
   }
   return out.sort((a, b) => b.rarity - a.rarity || b.count - a.count);
 }
@@ -325,7 +346,7 @@ export function mergeAuto(run, maxRarity) {
 }
 export function mergeHero(run, heroId) {
   if (!canMergeHero(run, heroId)) return null;
-  const mats = run.units.filter((u) => u.heroId === heroId).slice(0, DEFENSE.merge.need);
+  const mats = run.units.filter((u) => u.heroId === heroId).slice(0, mergeNeed(RARITY.get(heroId)));
   const topLv = Math.max(...mats.map((m) => m.upgradeLv || 0)); // 승급체가 계승할 단련 레벨
   const matUids = new Set(mats.map((m) => m.uid));
   run.units = run.units.filter((u) => !matUids.has(u.uid));
@@ -357,12 +378,14 @@ export function gamble(run) {
 }
 
 // ── 데미지 계산 ──
-function damage(unit, enemy) {
+function damage(unit, enemy, perks) {
   const r = DEFENSE.unit.byRarity[unit.rarity];
   let d = unit.base * r.dmg * (1 + DEFENSE.unit.upgrade.dmgPerLevel * unit.upgradeLv);
   if (ELEMENT_BEATS[unit.element] === enemy.element) d *= DEFENSE.element.strong;
   else if (ELEMENT_BEATS[enemy.element] === unit.element) d *= DEFENSE.element.weak;
   d *= SIZE_ROLE_MULT[unit.sizeRole][enemy.size];
+  // 특성(2026-07-23 실동작화) — might: 전군 공격력, boss: 적장 추가 피해
+  if (perks) { d *= 1 + (perks.might || 0) / 100; if (enemy.isBoss) d *= 1 + (perks.boss || 0) / 100; }
   return d;
 }
 
@@ -371,7 +394,13 @@ function enemyHp(stage, index, size, isBoss) {
   const w = DEFENSE.wave;
   // 초반 온램프(2026-07-22 수석) — 1~3단계 HP를 배수로 낮춰 약한 로스터도 진입 가능. 4단계부터 1.0.
   const ramp = (w.hpOnramp && w.hpOnramp[stage - 1] != null) ? w.hpOnramp[stage - 1] : 1;
-  const base = w.hpBase * Math.pow(w.hpPerStage, stage - 1) * (1 + w.hpPerIndex * index) * ramp;
+  // 후반 소프트캡(2026-07-23) — hpLateStage 이후는 완화된 지수(hpPerStageLate)로. 유닛 성장(선형)과
+  //   적 HP(지수)의 격차가 후반에 폭주해 '초월을 뽑아도 30R 승리 불가'(시뮬 0/14)였던 것을 잡는다.
+  const lateAt = w.hpLateStage ?? Infinity;
+  const early = Math.max(0, Math.min(stage, lateAt) - 1);
+  const late = Math.max(0, stage - lateAt);
+  const base = w.hpBase * Math.pow(w.hpPerStage, early) * Math.pow(w.hpPerStageLate ?? w.hpPerStage, late)
+    * (1 + w.hpPerIndex * index) * ramp;
   if (isBoss) return base * w.sizes.medium.hp * w.boss.hpMult;
   return base * w.sizes[size].hp;
 }
@@ -547,13 +576,14 @@ function registerKill(run, target) {
   run.kills = (run.kills || 0) + 1;
   run.fx.push({ type: 'kill', eid: target.eid, boss: target.isBoss, sprite: target.spriteId, x: target.x, y: target.y });
   if (target.isBoss) {
-    // 보스 = boss.killGold(50)만(수석). 체급 기본 골드는 더하지 않는다(감사: 중복 지급 54골드 방지).
-    const bg = DEFENSE.wave.boss.killGold ?? 0;
+    // 보스 = killGold + 라운드 비례(killGoldPerStage). 체급 기본 골드는 더하지 않는다(중복 지급 방지).
+    const b = DEFENSE.wave.boss;
+    const bg = Math.round(((b.killGold ?? 0) + (b.killGoldPerStage ?? 0) * run.stage) * (1 + (run.perks?.coin || 0) / 100));
     run.gold += bg;
     run.fx.push({ type: 'bossReward', gold: bg });
   } else {
     // 일반 킬 = 0.5/킬 균일(10킬=5골드). 소수 골드를 누적해 정확히 지급.
-    run.goldFrac = (run.goldFrac || 0) + killGold(run.stage, target.size, false);
+    run.goldFrac = (run.goldFrac || 0) + killGold(run.stage, target.size, false) * (1 + (run.perks?.coin || 0) / 100); // coin 특성
     const whole = Math.floor(run.goldFrac);
     if (whole > 0) { run.gold += whole; run.goldFrac -= whole; }
   }
@@ -575,6 +605,15 @@ export function tick(run, dt) {
     run.missionIdx = (run.missionIdx ?? 0) + 1;
     run.fx.push({ type: 'mission', text: m.text, gold: m.gold });
   }
+
+  // 특성(perk) 집계 — 종류별 '출전 중 최고값'만 적용(합산 스택은 시뮬 13/14 승리로 과폭주 — 넓은 로스터
+  //   깔아두기 악용 차단. '더 좋은 장수를 세울수록 오라가 세진다'는 유지). UI도 run.perks를 읽는다.
+  const perks = { boss: 0, coin: 0, haste: 0, might: 0 };
+  for (const u of run.units) {
+    const p = PERK.get(u.heroId);
+    if (p && perks[p.kind] != null && p.value > perks[p.kind]) perks[p.kind] = p.value;
+  }
+  run.perks = perks;
 
   // 준비 시간(프렙) — 적이 아직 안 나온다. 유닛 소환·이동만 진행. 0이 되면 전투 개시 + 라운드 타이머 시작.
   if (run.prepLeft > 0) {
@@ -655,7 +694,9 @@ export function tick(run, dt) {
       u.aoeCd = (u.aoeCd ?? info.aoe.interval) - dt;
       if (u.aoeCd <= 0 && run.enemies.length) {
         u.aoeCd = info.aoe.interval;
-        const aoeDmg = u.base * info.dmg * info.aoe.dmgMult * (run.dmgMult || 1) * atkBoost;
+        // 개별 단련도 광역기에 반영(감사 2026-07-23: 누락돼 초월 단련이 절반만 일하던 것)
+        const aoeDmg = u.base * info.dmg * info.aoe.dmgMult * (run.dmgMult || 1) * atkBoost
+          * (1 + DEFENSE.unit.upgrade.dmgPerLevel * (u.upgradeLv || 0)) * (1 + (perks.might || 0) / 100);
         // 2026-07-22 수석: 광역기 연출은 시전자 발밑이 아니라 '적 무리' 위에 터지게(자기가 얻어맞는 듯 보이던 문제).
         let cx = 0, cy = 0, na = 0;
         for (const e of run.enemies) { if (!e.dead) { cx += e.x; cy += e.y; na++; } }
@@ -691,7 +732,8 @@ export function tick(run, dt) {
         u.castCd = cast.cd;
         const c = densestEnemyPoint(run, cast.radius); // 적 밀집점에 폭풍
         if (c) {
-          const dmg = u.base * info.dmg * cast.dmgMult * (run.dmgMult || 1) * atkBoost;
+          const dmg = u.base * info.dmg * cast.dmgMult * (run.dmgMult || 1) * atkBoost
+            * (1 + DEFENSE.unit.upgrade.dmgPerLevel * (u.upgradeLv || 0)) * (1 + (perks.might || 0) / 100); // 단련·특성 반영
           (run.storms = run.storms || []).push({ x: c.x, y: c.y, radius: cast.radius, dmg, t: 0, dur: cast.dur, tickCd: 0, tickEvery: cast.tickEvery });
           run.fx.push({ type: 'storm', uid: u.uid, x: c.x, y: c.y, radius: cast.radius, dur: cast.dur, element: u.element });
         }
@@ -709,10 +751,10 @@ export function tick(run, dt) {
     if (!inRange.length) continue;
     inRange.sort((a, b) => a.d - b.d);
     const targets = inRange.slice(0, info.multi || 1);
-    u.cd = info.cooldown * spdMul;
+    u.cd = info.cooldown * spdMul * Math.max(0.5, 1 - (perks.haste || 0) / 100); // haste 특성 — 전군 공속
     u.face = targets[0].e.x < u.x ? -1 : 1; // 공격 대상 쪽으로 몸을 돌린다
     for (const { e: target } of targets) {
-      const dmg = damage(u, target) * (run.dmgMult || 1) * atkBoost;
+      const dmg = damage(u, target, perks) * (run.dmgMult || 1) * atkBoost;
       target.hp -= dmg;
       target.hit = 0.18;
       // 투사체 연출용 — 쏜 자리(u)·맞는 자리(target)·병기 판별용 heroId·속성색

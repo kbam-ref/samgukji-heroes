@@ -270,6 +270,12 @@ body.force-rotate #viewport {
   box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.45), 0 0 11px rgba(228, 197, 92, 0.28);
 }
 /* '합성 가능' 배지 — 우상단 금점 */
+/* 소환 버튼 천장 카운터 — 남은 뽑기 수 상시 표기(헌장 #3), 임박(≤8)하면 금빛 */
+.tab .nav-pity {
+  font-style: normal; font-size: 8.5px; font-weight: 700; letter-spacing: 0.04em;
+  color: rgba(240, 230, 207, 0.55); margin-top: 1px;
+}
+.tab .nav-pity.near { color: var(--gold-bright, #e9c76a); text-shadow: 0 0 6px rgba(233, 199, 106, 0.5); }
 .tab .nav-badge {
   position: absolute; top: 6px; right: calc(50% - 15px);
   width: 6px; height: 6px; border-radius: 50%;

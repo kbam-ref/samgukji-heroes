@@ -84,6 +84,8 @@ export function burst(x, y, { count = 7, color = '#b9ad94' } = {}) {
   const layer = fxLayer();
   if (!layer || reducedMotion) return;
   if (layer.childElementCount > 40) return; // 저사양 보호 — 연출이 밀리면 건너뛴다
+  // 강제 가로(90° 회전 레이어) — 뷰포트 좌표를 회전 레이어 로컬로 매핑(floatText와 동일. 감사 2026-07-23: 미보정으로 어긋나던 것)
+  if (document.body.classList.contains('force-rotate')) { const t = x; x = y; y = window.innerWidth - t; }
   for (let i = 0; i < count; i++) {
     const bit = document.createElement('i');
     bit.className = 'ash-bit';
