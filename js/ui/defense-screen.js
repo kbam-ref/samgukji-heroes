@@ -90,8 +90,9 @@ on('game:load', () => {
   if (!fieldEl) return;
   const saved = loadRun();
   clearRun();
+  if (!saved) { emit('title:open'); return; } // 세이브 파손/유실 — 몰래 새 판을 열지 않고 타이틀로(감사 2026-07-23)
   started = true;
-  beginRun(saved || engine.createRun({}));
+  beginRun(saved);
 });
 
 // 앱이 백그라운드로 나갔다 시작화면이 다시 뜨는 동안 — 월드 정지 + 리빌 잔재 정리
@@ -147,7 +148,7 @@ function renderHeroInfo() {
   box.innerHTML = `
     <div class="rd-hi-head">
       <div class="rd-hi-name tier-${tier}">${weaponIcon(u.heroId)}<b>${h.name || ''}</b></div>
-      <div class="rd-hi-stars tier-${tier}" aria-label="성급 ${u.rarity}성">${'★'.repeat(u.rarity)}${'☆'.repeat(6 - u.rarity)}<em>${RARITY[u.rarity]?.name || ''}</em></div>
+      <div class="rd-hi-stars tier-${tier}" aria-label="등급 ${u.rarity}성">${'★'.repeat(u.rarity)}${'☆'.repeat(6 - u.rarity)}<em>${RARITY[u.rarity]?.name || ''}</em></div>
       <div class="rd-hi-sub">${FACTIONS[h.faction]?.name || '군웅'}${h.title ? ` · 「${h.title}」` : ''}</div>
     </div>
     <div class="rd-hi-tags">
@@ -432,7 +433,7 @@ export function render(root) {
         </div>
         <div class="rd-over" id="rd-over" hidden></div>
       </div>
-        <p class="rd-tip" id="rd-tip"><b>소환</b>한 장수를 <b>끌어</b> 적 길목에 배치하세요 · 장수마다 <b>사거리</b>가 달라요 — 등급이 높을수록 멀리 칩니다</p>
+        <p class="rd-tip" id="rd-tip"><b>소환</b>한 장수를 <b>끌어</b> 적 길목에 배치하세요 · 장수마다 <b>사거리</b>가 달라요 — 등급이 높을수록 멀리 쳐요</p>
       </div>
       <div class="rd-sheet" id="rd-sheet" hidden></div>
     </section>`
@@ -670,7 +671,7 @@ function showHelp() {
       <li><b>장수단련</b> — 속성별 전군 공격력·공속 강화</li>
       <li><b>장수합성</b> — 같은 장수를 모아 상위 등급으로: 1·2성 <b>5장</b> · 3성 <b>4장</b> · 4성 <b>3장</b> · 신화 <b>2장</b>=초월</li>
       <li><b>장수반환</b> — 필요 없는 장수를 골드로 되돌림</li>
-      <li><b>주사위</b> — 두 개 굴려 합계만큼 골드, <b>더블은 잭팟</b>(1분 1회)</li>
+      <li><b>주사위</b> — 두 개 굴려 눈 합에 비례한 골드, <b>더블은 잭팟</b>(1분 1회)</li>
     </ul></section>
     <section class="rd-hs"><h4>장수 등급 (6단계)</h4>
       <p class="rd-hs-grades"><span class="g g1">일반</span><span class="g g2">희귀</span><span class="g g3">영웅</span><span class="g g4">전설</span><span class="g g5">신화</span><span class="g g6">초월</span></p>
@@ -681,7 +682,7 @@ function showHelp() {
     <section class="rd-hs"><h4>체급 상성</h4>
       <p>적은 <b>소형</b>(빠르고 약함)·<b>중형</b>·<b>대형</b>(느리고 단단). 장수마다 잘 잡는 체급이 있다(<b>×1.25</b>/<b>×0.8</b>) — 장수를 탭해 확인.</p></section>
     <section class="rd-hs"><h4>특성</h4>
-      <p>장수마다 고유 특성이 있다 — <b>적장 피해</b>·<b>군자금</b>(처치 골드)·<b>전군 공속</b>·<b>전군 공격</b>. 출전 중이면 전군에 적용되며, 같은 종류는 <b>최고 등급 장수의 값</b>만 쓴다.</p></section>
+      <p>장수마다 고유 특성이 있다 — <b>적장 피해</b>·<b>군자금</b>(처치 골드)·<b>전군 공속</b>·<b>전군 공격</b>. 출전 중이면 전군에 적용되며, 같은 종류는 <b>가장 높은 값 하나</b>만 쓴다.</p></section>
   `;
   showModal({ title: '도움말', body: box }); // 닫기는 우상단 ✕로 통일(수석)
 }
@@ -743,7 +744,7 @@ function sheetUpgradeHtml() {
     </div>`).join('');
   const g = DEFENSE.gamble.up;
   return `
-    <div class="rd-sheet-head"><b>속성 단련 — 그 속성 전 유닛 공격력·공속</b><button class="rd-sheet-x" data-x aria-label="닫기">✕</button></div>
+    <div class="rd-sheet-head"><b>속성 단련 — 그 속성 전 장수 공격력·공속</b><button class="rd-sheet-x" data-x aria-label="닫기">✕</button></div>
     <div class="rd-eu-list">${rows}</div>
     <button class="btn rd-gup-btn" data-gup>승급 도박 · 골드 ${g.cost} <em>${Math.round(g.chance * 100)}% 확률로 1등급↑</em></button>`;
 }
@@ -753,7 +754,7 @@ function sheetRefundHtml() {
     .map(([k, l]) => `<button class="rd-chip${rfFilter.element === k ? ' on' : ''}" data-el="${k}">${l}</button>`).join('');
   return `
     <div class="rd-sheet-head"><b>반환 — 조건 선택</b><button class="rd-sheet-x" data-x aria-label="닫기">✕</button></div>
-    <div class="rd-rf-row"><span>성급</span><div class="rd-chips">${rar}</div></div>
+    <div class="rd-rf-row"><span>등급</span><div class="rd-chips">${rar}</div></div>
     <div class="rd-rf-row"><span>속성</span><div class="rd-chips">${els}</div></div>
     <button class="btn primary rd-rf-go" data-go></button>
     <button class="rd-auto-switch${autoRefundOn ? ' on' : ''}" data-autorf>
@@ -964,7 +965,7 @@ function onSheetClick(e) {
 // 승급 도박 — 골드로 20% 유닛 1등급 승급. 성공/실패 연출은 consumeFx(gambleUp)가 처리.
 function doGambleUpgrade() {
   const r = engine.gambleUpgrade(run);
-  if (!r.ok) { vibrate(8); floatText(window.innerWidth / 2, window.innerHeight * 0.42, r.noTarget ? '승급할 유닛이 없어요' : '골드가 부족해요', 'warn'); return; }
+  if (!r.ok) { vibrate(8); floatText(window.innerWidth / 2, window.innerHeight * 0.42, r.noTarget ? '승급할 장수가 없어요' : '골드가 부족해요', 'warn'); return; }
   play('tap'); vibrate(8); updateHud();
 }
 // 자동 반환 스위치 — 켜면 지금 한 번 반환 + 이후 소환할 때마다 이 조건으로 자동 반환
@@ -1011,7 +1012,7 @@ function openMergePicker() {
           ${[2, 3, 4, 5].map((r) => `<button class="rd-chip${autoMergeMax === r ? ' on' : ''}" data-auto="${r}">${r}★ 이하</button>`).join('')}
         </div>
       </div>
-      <p class="rd-merge-hint">켜두면 <b>소환할 때마다</b> 그 성급 이하가 자동으로 합성돼요</p>`;
+      <p class="rd-merge-hint">켜두면 <b>소환할 때마다</b> 그 등급 이하가 자동으로 합성돼요</p>`;
     const list = groups.length
       ? groups.map((g) => `
         <button class="rd-merge-opt r${g.rarity}" data-hero="${g.heroId}">
@@ -1175,7 +1176,7 @@ function consumeFx() {
     } else if (fx.type === 'stageClear') {
       play('clear');
       if (fx.bonus) floatText(window.innerWidth / 2, 150, `라운드 돌파! +${fmt(fx.bonus)} 골드`, 'gold');
-      if (engine.isBossStage(fx.stage - 1)) setBgmMood(false); // 보스 라운드가 끝났다 — 장단을 가라앉힌다
+      if (engine.isBossStage(fx.stage - 1) && !run.enemies.some((e) => e.isBoss)) setBgmMood(false); // 보스가 다 잡혔을 때만 장단 복귀(이월 보스 생존 시 유지)
       // 새 장(章) 진입 — 사건명 배너(황건의 난→적벽, 캠페인 진행감)
       if (isChapterStart(fx.stage)) setTimeout(() => chapterBanner(chapterOf(fx.stage)), 700);
       updateHud();
@@ -1271,6 +1272,7 @@ function showOver(won) {
   cancelAnimationFrame(rafId);
   rafId = 0;
   setBgmMood(false); // 보스 BGM 중이었다면 원래 장단으로
+  fieldEl?.classList.remove('peril', 'peril-hard'); // 결과 화면 뒤 비네트 맥동 정지(검증 2026-07-23)
   const reachedStage = run.stage;
   const sec = Math.round(run.elapsed);
   // 기록·세이브 삭제·종료음은 판당 1회만 — 탭 왕복으로 재진입해도 '신기록' 라벨이 사라지거나

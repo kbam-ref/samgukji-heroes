@@ -5,6 +5,7 @@ import * as defenseScreen from './defense-screen.js';
 import * as settingsScreen from './settings-screen.js';
 import { vibrate } from './sound.js';
 import { on, emit } from '../core/events.js';
+import { DEFENSE } from '../data/defense.js';
 
 // 액션 아이콘 — 각 기능이 한눈에 읽히게 재도안(2026-07-22 수석). currentColor 라인아트 + 포인트 채움.
 const ICONS = {
@@ -30,7 +31,7 @@ const ACTIONS = [
 
 export function renderTabs(navRoot, screenRoot) {
   navRoot.innerHTML = ACTIONS.map((a) =>
-    `<button class="tab act" data-act="${a.event}" id="rd-nav-${a.id}" aria-label="${a.label}">${ICONS[a.id]}<span>${a.label}</span>${a.id === 'summon' ? '<em class="nav-pity">천장 40</em>' : ''}<i class="nav-badge" hidden></i></button>`
+    `<button class="tab act" data-act="${a.event}" id="rd-nav-${a.id}" aria-label="${a.label}">${ICONS[a.id]}<span>${a.label}</span>${a.id === 'summon' ? `<em class="nav-pity">천장 ${DEFENSE.summon.pity?.pulls ?? ''}</em>` : ''}<i class="nav-badge" hidden></i></button>`
   ).join('');
 
   navRoot.addEventListener('click', (e) => {

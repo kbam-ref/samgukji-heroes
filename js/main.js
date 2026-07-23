@@ -178,6 +178,7 @@ function boot() {
   // 부팅(2026-07-20 수석): 재실행은 '항상 처음부터'. 남은 세이브를 지우고 시작화면으로 —
   //   강제종료로 죽음을 회피하는 이어하기가 생기지 않는다(세션 중 백그라운드 복귀는 그대로 이어감).
   on('plays:empty', showNoPlays); // 도전 소진 시 결제 화면
+  on('title:open', () => openTitle()); // 세이브 파손 등 — 화면 쪽에서 타이틀 복귀 요청
   // 예외(감사 2026-07-23): SW 자동 업데이트로 인한 재시작은 '우리가 일으킨' 새로고침 —
   //   applyUpdate가 저장해 둔 판을 지우면 배포 때마다 유저 런·유료 도전이 증발한다. 그 판은 즉시 이어간다.
   const swResume = sessionStorage.getItem('rd-sw-resume') === '1';
@@ -248,7 +249,8 @@ function boot() {
     } else {
       // 이미 시작화면·결제화면·모달·리빌이 떠 있으면 건드리지 않는다(런 교체·상태 오염 방지)
       const busy = document.getElementById('title-screen') || document.getElementById('no-plays')
-        || document.getElementById('rd-reveal') || document.getElementById('modal-root')?.hasChildNodes();
+        || document.getElementById('rd-reveal') || document.getElementById('settings-overlay') // 설정 열림(감사: 누락돼 설정 중 복귀 시 런 재로드)
+        || document.getElementById('modal-root')?.hasChildNodes();
       if (bgAt && performance.now() - bgAt > 1500 && !busy) {
         if (hasSavedRun()) {
           emit('game:load');   // 저장돼 있으면 자동으로 그 판 이어서(도전 안 씀)

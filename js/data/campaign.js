@@ -53,7 +53,7 @@ export const CAMPAIGN = [
     intro: '동남풍이 분다 — 장강 위 십만 함대에 불길이 번진다',
     arenas: ['arena-crimson', 'arena-ash'],
     foes: ['spear-guard', 'crossbowman', 'shield-brute', 'flag-bearer'],
-    boss: { sprite: 'boss-general', name: '채모', title: '위 수군 도독' },
+    boss: { sprite: 'boss-general', name: '채모', title: '조조군 수군 도독' },
   },
 ];
 

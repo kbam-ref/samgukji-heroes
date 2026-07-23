@@ -437,7 +437,7 @@ body.force-rotate #viewport {
   position: relative;
   width: 92%;
   max-width: 460px;
-  max-height: 88%; /* v121 가로 — dvh 대신 % */
+  max-height: 84%; /* 상하 여백 확보 — 화면 끝에 붙어 '더 있음'이 안 보이던 것(검증 2026-07-23) */
   overflow-y: auto;
   background: linear-gradient(180deg, #2a2318, #201b15);
   border: 1px solid var(--ink-600);

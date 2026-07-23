@@ -2299,7 +2299,8 @@
 .rd-tip {
   flex: none; text-align: center; font-size: 11px; color: var(--paper-faint);
   letter-spacing: 0.01em; line-height: 1.3; padding: 0 8px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; /* 한 줄 고정(수석) */
+  /* 좁은 뷰포트(포트레이트 회전)에선 …로 문장이 잘리던 것 — 최대 2줄 줄바꿈 허용(검증 2026-07-23) */
+  overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
 }
 .rd-tip b { color: var(--gold-bright); font-weight: 700; }
 .rd-tip[hidden] { display: none; }
@@ -2609,6 +2610,8 @@
 }
 .rd-gear svg { width: 18px; height: 18px; }
 .rd-gear:active { transform: scale(0.92); }
+/* 시각 크기는 유지, 실터치 44px 확보(자체 규약) — 톱니·배속·도움말 공통 */
+.rd-gear::after, .rd-speed::after, .rd-help::after { content: ''; position: absolute; inset: -8px; }
 /* 도움말 ? 버튼 — 톱니 아래 */
 .rd-help {
   position: absolute; top: 44px; left: 8px; z-index: 4;

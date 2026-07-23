@@ -394,8 +394,8 @@ function enemyHp(stage, index, size, isBoss) {
   const w = DEFENSE.wave;
   // 초반 온램프(2026-07-22 수석) — 1~3단계 HP를 배수로 낮춰 약한 로스터도 진입 가능. 4단계부터 1.0.
   const ramp = (w.hpOnramp && w.hpOnramp[stage - 1] != null) ? w.hpOnramp[stage - 1] : 1;
-  // 후반 소프트캡(2026-07-23) — hpLateStage 이후는 완화된 지수(hpPerStageLate)로. 유닛 성장(선형)과
-  //   적 HP(지수)의 격차가 후반에 폭주해 '초월을 뽑아도 30R 승리 불가'(시뮬 0/14)였던 것을 잡는다.
+  // 후반 지수 분리(2026-07-23) — hpLateStage부터 별도 지수(hpPerStageLate=1.21, 전반 1.19보다 가파름)로
+  //   최종 국면을 조여 '결전화'. (사다리·특성·경제 강화로 플레이어 파워가 올라 조임이 필요해짐 — data 주석 참고)
   const lateAt = w.hpLateStage ?? Infinity;
   const early = Math.max(0, Math.min(stage, lateAt) - 1);
   const late = Math.max(0, stage - lateAt);
@@ -479,6 +479,12 @@ export function deserializeRun(o) {
     missionIdx: o.missionIdx || 0,
     summons: o.summons || 0, merges: o.merges || 0, upgrades: o.upgrades || 0,
   };
+  // 구(v154-) 세이브 — 과업 필드가 없으면 이미 충족된 과업을 '보상 없이' 건너뛴다(소급 일괄 지급 방지, 검증 2026-07-23)
+  if (o.missionIdx == null) {
+    let mi = 0;
+    while (MISSIONS[mi] && missionStat(run, MISSIONS[mi]) >= MISSIONS[mi].target) mi++;
+    run.missionIdx = mi;
+  }
   run.bossStage = isBossStage(run.stage);
   run.bossWarned = o.bossWarned || false; // 이미 이번 스테이지 보스 경보를 울렸는지(중복 배너 방지)
   run.stageElement = o.stageElement || 'fire'; // 이번 라운드 통일 속성(이어하기 유지)

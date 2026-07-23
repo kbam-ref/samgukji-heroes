@@ -52,12 +52,15 @@ export function flyCoins(x, y, n = 4) {
 /** 요소의 숫자를 from → to로 굴려 올린다. */
 export function countUp(el, from, to, { duration = 500, format = (v) => String(v) } = {}) {
   if (!el) return;
+  // 동시 실행 경합 방지(감사 2026-07-23) — 연속 킬로 겹쳐 불리면 이전 애니를 끊는다(숫자 되감김 깜빡임 수리)
+  const runId = (el._countUpId = (el._countUpId || 0) + 1);
   if (reducedMotion || from === to) {
     el.textContent = format(to);
     return;
   }
   const start = performance.now();
   function step(now) {
+    if (el._countUpId !== runId) return; // 새 카운트업이 시작됨 — 이 애니는 조용히 종료
     const t = Math.min(1, (now - start) / duration);
     const eased = 1 - Math.pow(1 - t, 3);
     el.textContent = format(Math.round(from + (to - from) * eased));
