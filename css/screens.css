@@ -1906,7 +1906,17 @@
 }
 .rd-stat b { font-size: 16px; font-weight: 800; color: var(--paper); font-variant-numeric: tabular-nums; }
 .rd-stat span { font-size: 9.5px; color: var(--paper-faint); letter-spacing: 0.02em; }
-.rd-stat.rd-gold b { color: var(--gold-bright); }
+.rd-stat.rd-gold b { color: var(--gold-bright); font-size: 19px; } /* 골드 = 초당 의사결정 재화 — 최상 위계 */
+.rd-stat.rd-gold { border-color: rgba(228, 197, 92, 0.35); }
+.rd-stat.rd-time b { font-size: 13px; font-weight: 600; color: var(--paper-dim); } /* 경과 = 참고 정보 — 감쇠 */
+/* 적체(패배 조건) — 채움 게이지로 위기가 '보이게' */
+.rd-stat.rd-alive { position: relative; overflow: hidden; }
+.rd-stat.rd-alive::before {
+  content: ''; position: absolute; inset: 0; width: calc(var(--fill, 0) * 1%);
+  background: linear-gradient(90deg, rgba(208, 133, 115, 0.07), rgba(208, 133, 115, 0.3));
+  transition: width 0.3s; pointer-events: none;
+}
+.rd-stat.rd-alive > * { position: relative; }
 /* 즉각보상(헌장 #1) — 골드가 늘 때 살짝 튀며 반짝(킬로 쌓이는 재화를 눈에 보이게) */
 .rd-stat.rd-gold.gold-gain { animation: rd-gold-gain 0.34s ease-out; transform-origin: left center; }
 @keyframes rd-gold-gain {
@@ -2463,9 +2473,7 @@
   letter-spacing: 0.02em; border-radius: 13px;
   box-shadow: inset 0 1px 0 rgba(255, 240, 224, 0.4), 0 4px 14px rgba(228, 197, 92, 0.28);
 }
-.rd-gm-go::before { content: '🎲'; margin-right: 7px; font-size: 16px; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.4)); }
 .rd-gm-go:disabled { opacity: 0.55; }
-.rd-gm-go:disabled::before { content: '⏳'; }
 
 /* ── 전설+ 소환 획득 연출 (v118) — 화면 가운데 빛살+등급명+영웅명. 운빨 디펜스식 희열 ── */
 .rd-grade-reveal {
@@ -2518,8 +2526,8 @@
 .rd-next {
   position: absolute; left: 50%; top: 41%; transform: translateX(-50%); z-index: 8;
   appearance: none; cursor: pointer; padding: 13px 34px; border-radius: 15px; overflow: hidden;
-  background: linear-gradient(180deg, #ffcf86 0%, var(--cta) 52%, var(--cta-deep) 100%);
-  border: 0; color: var(--cta-ink);
+  background: linear-gradient(96deg, #ffdf8e 0%, #ffb14e 46%, #ff8f3a 100%); /* CTA 앰버 통일(2026-07-23) */
+  border: 0; color: #3a1e08;
   font-family: var(--font-display); font-size: 21px; font-weight: 800; letter-spacing: 0.04em;
   text-shadow: 0 1px 0 rgba(255, 236, 210, 0.55);
   box-shadow: inset 0 2px 0 rgba(255, 246, 228, 0.7), inset 0 -3px 7px rgba(150, 74, 20, 0.4), 0 6px 16px rgba(0, 0, 0, 0.5), 0 0 0 1.5px var(--cta-deep);

@@ -327,11 +327,12 @@ body.force-rotate #viewport {
 .btn:active { transform: scale(0.95); }
 .btn span { font-size: 11px; font-weight: 500; color: var(--paper-dim); }
 .btn.primary {
-  background: linear-gradient(160deg, var(--cta-bright), var(--cta) 55%, var(--cta-deep));
+  /* 2026-07-23 감사: CTA 색 통일 — 타이틀·재도전과 같은 앰버 램프(주홍 이원화 폐지) */
+  background: linear-gradient(96deg, #ffdf8e 0%, #ffb14e 46%, #ff8f3a 100%);
   border-color: transparent;
-  color: var(--cta-ink);
-  box-shadow: inset 0 1px 0 rgba(255, 240, 224, 0.35), 0 2px 10px var(--cta-tint);
-  text-shadow: 0 1px 0 rgba(255, 228, 200, 0.4);
+  color: #3a1e08;
+  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.45), 0 2px 12px rgba(255, 140, 50, 0.32);
+  text-shadow: none;
 }
 .btn.primary span { color: rgba(42, 20, 8, 0.72); }
 .btn.danger { background: transparent; border-color: #6e3b33; color: var(--alert); }
@@ -733,23 +734,13 @@ body.modal-open #tab-bar { visibility: hidden; }
 .np-card .btn { min-width: 220px; min-height: 50px; }
 .np-buy em { font-style: normal; font-size: 11px; opacity: 0.82; }
 
-/* ── 그려진 UI 스킨 (v37) ── */
-
-/* 모달 — 옻칠 금장 패널로 승격
-   (border 단축 속성에 !important를 걸면 border-image까지 통째로 리셋되어
-   금장 테두리가 사라지는 CSS 함정이 있었다 — !important 제거로 해결) */
+/* ── 모달 — 모던 프리미엄 패널(2026-07-23 감사: v37 금장 액자 스킨은 게임 전체 디자인 언어와
+   충돌하는 유일한 '동양풍 클리셰' 잔재였다 — 다크 그라디언트+금 헤어라인으로 통일) ── */
 .modal-panel {
-  border: 14px solid transparent;
-  border-image: url('../assets/ui/panel-frame.png') 70 fill / 14px stretch;
-  border-radius: 0;
-  background: none;
+  background: linear-gradient(180deg, #1c140b, #100b06);
+  border: 1px solid rgba(247, 215, 131, 0.28);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 220, 150, 0.12);
 }
-.modal-panel::before { display: none; } /* 손잡이 바는 프레임과 어울리지 않는다 */
-
-
-/* 주요 버튼 — 주홍(朱) 그라데이션. 진행 CTA는 금과 색을 달리한다 (v58) */
-.btn.primary {
-  border: 1px solid var(--cta-deep);
-}
+.modal-panel::before { display: none; } /* 구 하단시트 손잡이 바 — 중앙 모달엔 불필요 */
 
 /* v117: 방향 가드 폐지 — 세로로 들어도 #viewport를 90° 회전해 항상 가로로 띄운다(body.force-rotate). */

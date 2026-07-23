@@ -2,6 +2,7 @@
 
 import { getState, initState, setSetting } from '../core/state.js';
 import { persist, wipe, createNewSave, migrate, isUsableSave, SAVE_VERSION } from '../core/save.js';
+import { best, playsInfo, playsLeft } from '../systems/rd-meta.js';
 import { showModal } from './modal.js';
 import { floatText } from './effects.js';
 import { fmt } from './format.js';
@@ -27,14 +28,10 @@ export function render(root) {
 
     <div class="settings-group">
       <h3>기록</h3>
-      <div class="settings-row"><span>여정을 시작한 날</span><b>${startedText}</b></div>
-      <div class="settings-row"><span>무찌른 적</span><b>${fmt(s.stats?.totalKills ?? 0)}명</b></div>
-      <div class="settings-row"><span>돌파한 전장</span><b>${fmt(s.stats?.totalClears ?? 0)}곳</b></div>
-      <div class="settings-row"><span>모집 횟수</span><b>${fmt(s.gacha.total)}회</b></div>
-      <div class="settings-row"><span>최고 전투력</span><b>${fmt(s.records?.bestPower ?? 0)}</b></div>
-      <div class="settings-row"><span>최고 도달</span><b>${s.records?.bestStage ?? '난이도 1 ‧ 1장 1전장'}</b></div>
-      <div class="settings-row"><span>시련의 탑</span><b>${fmt(s.records?.bestTower ?? 0)}층</b></div>
-      <div class="settings-row"><span>누적 출석</span><b>${fmt(s.attendance?.totalDays ?? 0)}일</b></div>
+      <div class="settings-row"><span>참전한 날</span><b>${startedText}</b></div>
+      <div class="settings-row"><span>최고 라운드</span><b>${best().stage ? `${best().stage}라운드` : '—'}</b></div>
+      <div class="settings-row"><span>최단 평정</span><b>${best().sec ? `${Math.floor(best().sec / 60)}분 ${best().sec % 60}초` : '—'}</b></div>
+      <div class="settings-row"><span>남은 도전</span><b>${playsLeft()}회 <em class="st-sub">(매일 무료 ${playsInfo().dailyFree}회)</em></b></div>
       <div class="settings-row"><span>세이브 버전</span><b>v${SAVE_VERSION}</b></div>
       <div class="settings-row"><span>게임 버전</span><b id="st-build">확인 중…</b></div>
     </div>

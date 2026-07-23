@@ -159,7 +159,7 @@ function renderHeroInfo() {
       <li><span>공격력</span><b>${fmt(atk)}</b></li>
       <li><span>사거리</span><b>${info.range || '—'}</b></li>
       <li><span>공속</span><b>${rate}/초</b></li>
-      <li><span>동시타격</span><b>${info.multi || 1}마리</b></li>
+      <li><span>동시타격</span><b>${info.multi || 1}명</b></li>
       ${info.aoe ? `<li><span>광역기</span><b>${info.aoe.interval}초</b></li>` : ''}
       ${u.upgradeLv ? `<li><span>단련</span><b>+${u.upgradeLv}</b></li>` : ''}
     </ul>
@@ -401,7 +401,7 @@ export function render(root) {
         <div class="rd-hud">
           <div class="rd-stat"><b id="rd-stage">1</b><span>/ ${cap} 라운드</span></div>
           <div class="rd-stat rd-gold"><b id="rd-gold">0</b><span>골드</span></div>
-          <div class="rd-stat rd-alive"><b id="rd-alive">0</b><span>/ ${loseAt}마리</span></div>
+          <div class="rd-stat rd-alive"><b id="rd-alive">0</b><span>/ ${loseAt}명 적체</span></div>
           <div class="rd-stat rd-time"><b id="rd-time">0:00</b><span>경과</span></div>
         </div>
         <div class="rd-mission" id="rd-mission" hidden><em>과업</em><span id="rd-mission-txt"></span><b id="rd-mission-n"></b></div>
@@ -557,6 +557,7 @@ function updateHud() {
     const alive = run.enemies.length;
     const loseAt = DEFENSE.wave.loseAt;
     a.textContent = alive;
+    a.parentElement.style.setProperty('--fill', ((alive / loseAt) * 100).toFixed(1)); // 적체 게이지
     a.parentElement.classList.toggle('danger', alive >= loseAt * 0.75);
     // 패배 임박 경보 — 임계를 '처음' 넘는 순간 1회 소리·진동(방치·배속 중 조용히 100 도달 방지)
     const lvl = alive >= loseAt * 0.9 ? 2 : alive >= loseAt * 0.75 ? 1 : 0;
@@ -655,23 +656,28 @@ function showHelp() {
   const box = document.createElement('div');
   box.className = 'rd-help-body';
   box.innerHTML = `
-    <section class="rd-hs"><h4>게임 방법</h4>
-      <p>소환한 장수를 <b>끌어</b> 배치하면 사거리 안의 적을 자동 공격합니다. 적은 길목을 돌며 계속 <b>누적</b>돼요 — 시간은 웨이브와 무관하게 흐릅니다. 화면에 적이 <b>100</b> 쌓이면 패배!</p></section>
+    <section class="rd-hs"><h4>싸우는 법</h4>
+      <p>소환한 장수를 <b>끌어</b> 길목에 배치하면 사거리 안의 적을 알아서 벤다. 적은 트랙을 돌며 계속 <b>쌓인다</b> — 화면에 <b>100명</b>이 쌓이면 패배. <b>30라운드(적벽대전)</b>를 넘기면 천하 평정.</p></section>
+    <section class="rd-hs"><h4>전역(戰役)</h4>
+      <p>황건적의 난 → 동탁 토벌전 → 강동 평정 → 관도대전 → 형주 남정 → <b>적벽대전</b>. 5라운드마다 <b>적장</b>이 온다 — 잡으면 큰 군자금.</p></section>
     <section class="rd-hs"><h4>버튼</h4><ul>
-      <li><b>소환</b> — 랜덤 장수 1명(꾹 누르면 연속). 50뽑마다 등급업 확정(천장)</li>
-      <li><b>단련</b> — 속성별 전 유닛 공격력·공속 강화</li>
-      <li><b>합성</b> — 같은 장수 5장 → 상위 등급 랜덤 1장</li>
-      <li><b>반환</b> — 필요 없는 장수를 골드로 되돌림</li>
-      <li><b>행운의 주사위</b> — 주사위 2개, 합계×배수 골드(더블이면 잭팟)</li>
+      <li><b>장수소환</b> — 랜덤 장수 1명(꾹 누르면 연속). <b>40뽑마다 전설 이상 확정</b>(천장)</li>
+      <li><b>장수단련</b> — 속성별 전군 공격력·공속 강화</li>
+      <li><b>장수합성</b> — 같은 장수를 모아 상위 등급으로: 1·2성 <b>5장</b> · 3성 <b>4장</b> · 4성 <b>3장</b> · 신화 <b>2장</b>=초월</li>
+      <li><b>장수반환</b> — 필요 없는 장수를 골드로 되돌림</li>
+      <li><b>주사위</b> — 두 개 굴려 합계만큼 골드, <b>더블은 잭팟</b>(1분 1회)</li>
     </ul></section>
     <section class="rd-hs"><h4>장수 등급 (6단계)</h4>
       <p class="rd-hs-grades"><span class="g g1">일반</span><span class="g g2">희귀</span><span class="g g3">영웅</span><span class="g g4">전설</span><span class="g g5">신화</span><span class="g g6">초월</span></p>
-      <p>성급이 높을수록 사거리·동시타격·데미지↑. <b>전설</b>부터는 몸에서 <b>빛기둥</b>이 솟아납니다. 판을 쓸어버리는 <b>초월</b>이 최고 등급.</p></section>
+      <p>등급이 높을수록 사거리·동시타격·데미지↑. <b>전설</b>부터 몸에서 빛기둥이 솟고, <b>초월</b>은 광역기로 판을 쓸어버린다.</p></section>
     <section class="rd-hs"><h4>속성 상성</h4>
       <p class="rd-hs-elem"><span style="color:#e0613a">불</span> ▸ <span style="color:#57bd86">바람</span> ▸ <span style="color:#b0803f">땅</span> ▸ <span style="color:#4f9dd6">물</span> ▸ <span style="color:#e0613a">불</span> <em>(▸ = 이김)</em></p>
-      <p>상성 우위 데미지 <b>×1.5</b>, 열위 <b>×0.75</b>. 라운드마다 적 속성이 <b>통일</b>되니 그 속성을 이기는 장수를 준비하세요.</p></section>
-    <section class="rd-hs"><h4>유닛 크기 상성</h4>
-      <p>적은 <b>소형</b>(빠르고 약함)·<b>중형</b>·<b>대형</b>(느리고 단단, 보상↑). 각 장수는 한 체급에 <b>강함(×1.25)</b>·다른 체급에 <b>약함(×0.8)</b> — 장수를 탭해 확인.</p></section>`;
+      <p>우위 <b>×1.5</b>, 열위 <b>×0.75</b>. 라운드마다 적 속성이 <b>통일</b>된다 — 그 속성을 이기는 장수를 앞세워라.</p></section>
+    <section class="rd-hs"><h4>체급 상성</h4>
+      <p>적은 <b>소형</b>(빠르고 약함)·<b>중형</b>·<b>대형</b>(느리고 단단). 장수마다 잘 잡는 체급이 있다(<b>×1.25</b>/<b>×0.8</b>) — 장수를 탭해 확인.</p></section>
+    <section class="rd-hs"><h4>특성</h4>
+      <p>장수마다 고유 특성이 있다 — <b>적장 피해</b>·<b>군자금</b>(처치 골드)·<b>전군 공속</b>·<b>전군 공격</b>. 출전 중이면 전군에 적용되며, 같은 종류는 <b>최고 등급 장수의 값</b>만 쓴다.</p></section>
+  `;
   showModal({ title: '도움말', body: box }); // 닫기는 우상단 ✕로 통일(수석)
 }
 
@@ -734,7 +740,7 @@ function sheetUpgradeHtml() {
   return `
     <div class="rd-sheet-head"><b>속성 단련 — 그 속성 전 유닛 공격력·공속</b><button class="rd-sheet-x" data-x aria-label="닫기">✕</button></div>
     <div class="rd-eu-list">${rows}</div>
-    <button class="btn rd-gup-btn" data-gup>🎲 승급 도박 · 골드 ${g.cost} <em>${Math.round(g.chance * 100)}% 확률로 1등급↑</em></button>`;
+    <button class="btn rd-gup-btn" data-gup>승급 도박 · 골드 ${g.cost} <em>${Math.round(g.chance * 100)}% 확률로 1등급↑</em></button>`;
 }
 function sheetRefundHtml() {
   const rar = [1, 2, 3, 4].map((r) => `<button class="rd-chip${rfFilter.maxRarity === r ? ' on' : ''}" data-mr="${r}">${r}★ 이하</button>`).join('');
@@ -743,7 +749,7 @@ function sheetRefundHtml() {
   return `
     <div class="rd-sheet-head"><b>반환 — 조건 선택</b><button class="rd-sheet-x" data-x aria-label="닫기">✕</button></div>
     <div class="rd-rf-row"><span>성급</span><div class="rd-chips">${rar}</div></div>
-    <div class="rd-rf-row"><span>성향</span><div class="rd-chips">${els}</div></div>
+    <div class="rd-rf-row"><span>속성</span><div class="rd-chips">${els}</div></div>
     <button class="btn primary rd-rf-go" data-go></button>
     <button class="rd-auto-switch${autoRefundOn ? ' on' : ''}" data-autorf>
       <span class="rd-switch"><i></i></span>
@@ -1270,7 +1276,7 @@ function showOver(won) {
   over.hidden = false;
   over.innerHTML = `
     <div class="rd-over-card ${won ? 'win' : 'lose'}">
-      <span class="rd-over-eyebrow">${won ? '천 하 평 정' : '전 투 종 료'}</span>
+      <span class="rd-over-eyebrow">${won ? '전 역 완 수' : '전 투 종 료'}</span>
       <b class="rd-over-title">${won ? '천하 평정!' : '패배'}</b>
       <p class="rd-over-msg">${won
         ? '적벽의 불길 끝에서 천하를 지켜냈다'

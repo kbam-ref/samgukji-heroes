@@ -320,10 +320,10 @@ function showNoPlays() {
   el.className = 'no-plays';
   el.innerHTML = `
     <div class="np-card">
-      <b>도전 횟수를 다 썼어요</b>
-      <p>내일 무료 ${info.dailyFree}회가 다시 채워집니다.<br>지금 이어서 도전하려면 충전하세요.</p>
-      <button class="btn primary np-buy">도전 충전 <em>(테스트 +5)</em></button>
-      <button class="btn np-close">나중에</button>
+      <b>오늘의 도전을 다 썼습니다</b>
+      <p>내일 무료 ${info.dailyFree}회가 다시 채워집니다.<br>지금 바로 이어가려면 충전하세요.</p>
+      <button class="btn primary np-buy">도전 5회 충전</button>
+      <button class="btn np-close">내일 다시</button>
     </div>`;
   document.body.appendChild(el);
   el.querySelector('.np-buy').addEventListener('click', () => {
