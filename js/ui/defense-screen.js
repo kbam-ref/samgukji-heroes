@@ -566,6 +566,11 @@ function updateHud() {
       else { play('foehit'); vibrate(30); }
     }
     dangerLevel = lvl;
+    // 패배 임박 비네트(감사 2026-07-23) — 75%부터 전장 가장자리가 붉게 맥동, 90%에선 더 짙게(위기의 드라마)
+    if (fieldEl) {
+      fieldEl.classList.toggle('peril', lvl >= 1);
+      fieldEl.classList.toggle('peril-hard', lvl >= 2);
+    }
   }
   // 경과 시간(기록) — 처치 수 대신
   const tEl = document.getElementById('rd-time');
@@ -1206,6 +1211,12 @@ function consumeFx() {
       r3d.spawnStorm3d(fx.x, fx.y, fx.radius);
     } else if (fx.type === 'summon') {
       syncUnits();
+      // 등장 연출(감사 2026-07-23: 무연출 '팝인'이던 것) — 착지점에 금빛 파편이 터진다
+      const su = run.units.find((x) => x.uid === fx.uid);
+      if (su) {
+        const p = r3d.project(su.x, su.y, 0.3);
+        if (p) burst(p.sx, p.sy, { count: 6, color: fx.rarity >= 4 ? '#ffe486' : '#d9c9a6' });
+      }
     } else if (fx.type === 'prepEnd') {
       // 준비 끝 — '전투 개시!' 한 번 번쩍이고 카운트다운을 걷는다
       play('drum'); vibrate(30);
