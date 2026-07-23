@@ -7,6 +7,8 @@ import {
   DEFENSE, SUMMON_POOL, HERO_ELEMENT, HERO_SIZE_ROLE,
   ELEMENT_BEATS, SIZE_ROLE_MULT, ENEMY_SPRITES, BOSS_SPRITES, ELEMENTS, HERO_CAST,
 } from '../data/defense.js';
+import { chapterOf } from '../data/campaign.js';
+import { MISSIONS, missionStat } from '../data/missions.js';
 
 const BASE = new Map(HEROES.map((h) => [h.id, h.base]));
 const RARITY = new Map(HEROES.map((h) => [h.id, h.rarity]));
@@ -135,6 +137,7 @@ export function summon(run) {
   const mate = run.units.find((x) => x.heroId === heroId);
   if (mate) unit.upgradeLv = mate.upgradeLv; // 같은 영웅이 이미 있으면 공유 단련 레벨 계승
   run.units.push(unit);
+  run.summons = (run.summons || 0) + 1; // 과업 카운터
   run.fx.push({ type: 'summon', uid: unit.uid, rarity, free: useFree });
   return unit;
 }
@@ -214,6 +217,7 @@ export function upgrade(run, uid) {
   if (run.gold < cost) return false;
   run.gold -= cost;
   for (const m of mates) m.upgradeLv = lv + 1;
+  run.upgrades = (run.upgrades || 0) + 1; // 과업 카운터
   run.fx.push({ type: 'upgrade', uid });
   return true;
 }
@@ -240,6 +244,7 @@ export function elemUpgrade(run, element, kind) {
   if (run.gold < cost) return false;
   run.gold -= cost;
   run.elemLevel[element][kind] = lv + 1;
+  run.upgrades = (run.upgrades || 0) + 1; // 과업 카운터(개별 단련과 합산)
   run.fx.push({ type: 'elemUpgrade', element, kind, level: lv + 1 });
   return true;
 }
@@ -331,6 +336,7 @@ export function mergeHero(run, heroId) {
   const unit = makeUnit(newHeroId, slot);
   unit.upgradeLv = topLv; // 최고 단련 계승
   run.units.push(unit);
+  run.merges = (run.merges || 0) + 1; // 과업 카운터
   run.fx.push({ type: 'merge', rarity: nr, uid: unit.uid });
   return unit;
 }
@@ -421,6 +427,9 @@ export function serializeRun(run) {
     goldFrac: run.goldFrac || 0, // 소수 골드 캐리(감사)
     pity: run.pity || 0,         // 천장 카운터(감사)
     storms: run.storms || [],    // 진행 중 조조 스톰(감사: 저장 누락 → 부활 시 소멸하던 것 보존)
+    // 과업 진행(사슬 위치 + 카운터)
+    missionIdx: run.missionIdx || 0,
+    summons: run.summons || 0, merges: run.merges || 0, upgrades: run.upgrades || 0,
     unitSeq, enemySeq,
   };
 }
@@ -438,6 +447,8 @@ export function deserializeRun(o) {
     goldFrac: o.goldFrac || 0,
     pity: o.pity || 0,
     storms: Array.isArray(o.storms) ? o.storms : [],
+    missionIdx: o.missionIdx || 0,
+    summons: o.summons || 0, merges: o.merges || 0, upgrades: o.upgrades || 0,
   };
   run.bossStage = isBossStage(run.stage);
   run.bossWarned = o.bossWarned || false; // 이미 이번 스테이지 보스 경보를 울렸는지(중복 배너 방지)
@@ -481,9 +492,13 @@ function spawnEnemy(run) {
   const isBoss = run.bossIdx.has(idx);
   const size = isBoss ? rollSize() : rollSize(); // 보스도 소/중/대
   const hp = enemyHp(run.stage, idx, size, isBoss);
+  // 캠페인(장章) 테마 — 장별 적 병종 풀·적장 스프라이트(황건→적벽 사건 순서, 헌장 #2). 없으면 구 순환 폴백.
+  const ch = chapterOf(run.stage);
   const spriteId = isBoss
-    ? BOSS_SPRITES[Math.floor(run.stage / DEFENSE.wave.boss.everyStages - 1) % BOSS_SPRITES.length]
-    : ENEMY_SPRITES[(run.stage - 1) % ENEMY_SPRITES.length];
+    ? (ch.boss?.sprite || BOSS_SPRITES[Math.floor(run.stage / DEFENSE.wave.boss.everyStages - 1) % BOSS_SPRITES.length])
+    : (ch.foes?.length
+      ? ch.foes[(run.stage - ch.from + idx) % ch.foes.length] // 라운드+스폰순서로 풀 안에서 섞임(같은 장 안에서 병종이 섞여 나온다)
+      : ENEMY_SPRITES[(run.stage - 1) % ENEMY_SPRITES.length]);
   run.enemies.push({
     eid: enemySeq++,
     spriteId,
@@ -550,6 +565,16 @@ export function tick(run, dt) {
   if (run.prepLeft <= 0) run.elapsed += dt; // 2026-07-21 수석: 경과시간은 몬스터 출현(프렙 종료) 후부터 카운팅
   if (run.gambleCd > 0) run.gambleCd = Math.max(0, run.gambleCd - dt); // 도박 쿨다운
   const w = DEFENSE.wave;
+
+  // 과업 — 현재 과업 달성 검사(카운터 비교뿐이라 매 프레임 무료). 한 프레임에 여러 개 완수도 순서대로 처리.
+  let guard = 0;
+  while (guard++ < 8) {
+    const m = MISSIONS[run.missionIdx ?? 0];
+    if (!m || missionStat(run, m) < m.target) break;
+    run.gold += m.gold;
+    run.missionIdx = (run.missionIdx ?? 0) + 1;
+    run.fx.push({ type: 'mission', text: m.text, gold: m.gold });
+  }
 
   // 준비 시간(프렙) — 적이 아직 안 나온다. 유닛 소환·이동만 진행. 0이 되면 전투 개시 + 라운드 타이머 시작.
   if (run.prepLeft > 0) {

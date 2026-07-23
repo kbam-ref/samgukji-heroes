@@ -9,6 +9,8 @@ import * as dice3d from './dice-3d.js'; // 3D 주사위(Three.js 육면체)
 import * as meta from '../systems/rd-meta.js';
 import { on, emit } from '../core/events.js';
 import { getState, setSetting } from '../core/state.js';
+import { chapterOf, isChapterStart } from '../data/campaign.js';
+import { MISSIONS, missionStat } from '../data/missions.js';
 import { fmt } from './format.js';
 import { floatText, flash, countUp, pulse, burst } from './effects.js';
 import { showModal } from './modal.js';
@@ -244,7 +246,10 @@ const ARENAS = ['arena-plain', 'arena-grass', 'arena-sand', 'arena-camp', 'arena
 let shownArena = '';
 function updateBg() {
   if (!run) return;
-  const id = ARENAS[Math.floor((run.stage - 1) / 3) % ARENAS.length]; // ~3라운드마다 전장 교체(30라운드에 10종 순환)
+  // 캠페인(장章) 전장 — 장 분위기와 일치하는 바닥(1장 들판→6장 적벽). 장 안에서 2~3라운드마다 교대.
+  const ch = chapterOf(run.stage);
+  const list = ch.arenas?.length ? ch.arenas : ARENAS;
+  const id = list[Math.floor((run.stage - ch.from) / 3) % list.length];
   if (id !== shownArena) { r3d.setArena(`./assets/bg/${id}.png`); shownArena = id; } // 3D 전장 바닥에 아레나 그림
 }
 
@@ -336,33 +341,32 @@ function aoeRing(x, y, element) {
   setTimeout(() => r.remove(), 640);
 }
 
-// 보스 출현 배너 — 필드 위로 '보스 출현!'이 크게 밀려들었다 사라진다 (긴장 연출)
+// 적장 출현 배너 — 캠페인의 실존 적장 이름·칭호를 크게 (긴장 연출 + IP 몰입)
 function bossBanner() {
   if (!fieldEl || reduceMotion) return;
   const old = fieldEl.querySelector('.rd-boss-banner');
   if (old) old.remove();
+  const boss = chapterOf(run?.stage || 1).boss;
   const b = document.createElement('div');
   b.className = 'rd-boss-banner';
-  b.innerHTML = '<b>보스 출현!</b><span>강한 적이 밀려온다</span>';
+  b.innerHTML = boss
+    ? `<em>적장 출현</em><b>${boss.name}</b><span>${boss.title}</span>`
+    : '<em>적장 출현</em><b>보스</b><span>강한 적이 밀려온다</span>';
   fieldEl.appendChild(b);
-  setTimeout(() => b.remove(), 1600);
+  setTimeout(() => b.remove(), 2100);
 }
 
-function hud() {
-  const cap = engine.stageCap();
-  const per = DEFENSE.wave.perStage;
-  return `
-    <div class="rd-hud">
-      <div class="rd-stat"><b id="rd-stage">1</b><span>/ ${cap} 라운드</span></div>
-      <div class="rd-stat rd-gold"><b id="rd-gold">0</b><span>골드</span></div>
-      <div class="rd-stat rd-alive"><b id="rd-alive">0</b><span>/ ${DEFENSE.wave.loseAt}마리</span></div>
-      <div class="rd-stat rd-time"><b id="rd-time">0:00</b><span>경과</span></div>
-    </div>
-    <div class="rd-spawnbar" aria-hidden="true">
-      <i id="rd-spawn-fill"></i>
-      <b id="rd-spawn-txt">이번 라운드 0 / ${per} 출현</b>
-      <em id="rd-round-elem" class="rd-round-elem"></em>
-    </div>`;
+// 장(章) 배너 — 새 장에 들어설 때 사건명·한 줄 인트로 (황건의 난→적벽, 진행감의 뼈대)
+function chapterBanner(ch) {
+  if (!fieldEl || !ch) return;
+  const old = fieldEl.querySelector('.rd-ch-banner');
+  if (old) old.remove();
+  const b = document.createElement('div');
+  b.className = 'rd-ch-banner';
+  b.innerHTML = `<em>제${ch.ch}장</em><b>${ch.name}</b><span>${ch.intro}</span>`;
+  fieldEl.appendChild(b);
+  play('chapter');
+  setTimeout(() => b.remove(), 3000);
 }
 
 function trackRectStyle() {
@@ -389,13 +393,15 @@ export function render(root) {
     `
     <section class="screen rd-screen">
       <aside class="rd-info" id="rd-info">
+        <div class="rd-chapter" id="rd-chapter">제1장 · 황건적의 난</div>
         <div class="rd-hud">
           <div class="rd-stat"><b id="rd-stage">1</b><span>/ ${cap} 라운드</span></div>
           <div class="rd-stat rd-gold"><b id="rd-gold">0</b><span>골드</span></div>
           <div class="rd-stat rd-alive"><b id="rd-alive">0</b><span>/ ${loseAt}마리</span></div>
           <div class="rd-stat rd-time"><b id="rd-time">0:00</b><span>경과</span></div>
         </div>
-        <div class="rd-hero-info" id="rd-hero-info"><p class="rd-hi-empty">영웅을 탭하면<br>정보가 나와요</p></div>
+        <div class="rd-mission" id="rd-mission" hidden><em>과업</em><span id="rd-mission-txt"></span><b id="rd-mission-n"></b></div>
+        <div class="rd-hero-info" id="rd-hero-info"><p class="rd-hi-empty">장수를 탭하면<br>정보가 나와요</p></div>
       </aside>
       <div class="rd-center">
         <div class="rd-spawnbar" aria-hidden="true">
@@ -511,6 +517,29 @@ function updateHud() {
   const g = document.getElementById('rd-gold');
   const a = document.getElementById('rd-alive');
   if (s) s.textContent = run.stage;
+  // 현재 장(章) — 캠페인 진행 상시 표시
+  const chEl = document.getElementById('rd-chapter');
+  if (chEl) {
+    const ch = chapterOf(run.stage);
+    const txt = `제${ch.ch}장 · ${ch.name}`;
+    if (chEl.textContent !== txt) chEl.textContent = txt;
+  }
+  // 과업 스트립 — 현재 소목표와 진행(겹치는 목표, 헌장 #5). 사슬 끝나면 숨김.
+  const ms = document.getElementById('rd-mission');
+  if (ms) {
+    const m = MISSIONS[run.missionIdx || 0];
+    if (m) {
+      ms.hidden = false;
+      const t = document.getElementById('rd-mission-txt');
+      const n = document.getElementById('rd-mission-n');
+      if (t && t.textContent !== m.text) t.textContent = m.text;
+      if (n) {
+        const cur = Math.min(missionStat(run, m), m.target);
+        const txt = `${fmt(cur)}/${fmt(m.target)}`;
+        if (n.textContent !== txt) n.textContent = txt;
+      }
+    } else ms.hidden = true;
+  }
   // 골드 — 즉각보상(헌장 #1): 킬로 쌓이는 골드가 눈에 보이게 카운트업 + 증가 시 맥동.
   if (g) {
     const target = Math.floor(run.gold);
@@ -1089,9 +1118,18 @@ function consumeFx() {
         const p = r3d.project(fx.x, fx.y, 0.45);
         if (p) burst(p.sx, p.sy, { count: 5, color: '#ffd873' });
       }
+    } else if (fx.type === 'mission') {
+      // 과업 완수 — 즉각보상(소리+골드 플로팅+스트립 맥동)
+      play('claim'); vibrate(14);
+      floatText(window.innerWidth / 2, window.innerHeight * 0.3, `과업 완수! +${fmt(fx.gold)} 골드`, 'gold');
+      const strip = document.getElementById('rd-mission');
+      if (strip) pulse(strip, 'gold-gain');
+      updateHud();
     } else if (fx.type === 'stageClear') {
       play('clear');
-      if (fx.bonus) floatText(window.innerWidth / 2, 150, `라운드 클리어! +${fmt(fx.bonus)} 골드`, 'gold');
+      if (fx.bonus) floatText(window.innerWidth / 2, 150, `라운드 돌파! +${fmt(fx.bonus)} 골드`, 'gold');
+      // 새 장(章) 진입 — 사건명 배너(황건의 난→적벽, 캠페인 진행감)
+      if (isChapterStart(fx.stage)) setTimeout(() => chapterBanner(chapterOf(fx.stage)), 700);
       updateHud();
     } else if (fx.type === 'bossSpawn') {
       // 보스 등장 — 헌장 #3(긴장 단계). 경보음·섬광·배너 + 보스 멘트(TTS).
@@ -1168,6 +1206,10 @@ function beginRun(newRun) {
   last = performance.now();
   cancelAnimationFrame(rafId);
   rafId = requestAnimationFrame(loop);
+  // 새 판 첫 진입(스폰 전) — 제1장 배너로 캠페인의 시작을 알린다(이어하기 중간 진입엔 안 띄움)
+  if (isChapterStart(run.stage) && !run.spawned && !run.enemies.length) {
+    setTimeout(() => { if (run && started) chapterBanner(chapterOf(run.stage)); }, 500);
+  }
 }
 
 function showOver(won) {
@@ -1189,9 +1231,11 @@ function showOver(won) {
   over.hidden = false;
   over.innerHTML = `
     <div class="rd-over-card ${won ? 'win' : 'lose'}">
-      <span class="rd-over-eyebrow">${won ? '천 하 통 일' : '전 투 종 료'}</span>
-      <b class="rd-over-title">${won ? '천하 통일!' : '패배'}</b>
-      <p class="rd-over-msg">${won ? '천하를 지켜냈다' : `${reachedStage}라운드에서 무너졌다`}</p>
+      <span class="rd-over-eyebrow">${won ? '천 하 평 정' : '전 투 종 료'}</span>
+      <b class="rd-over-title">${won ? '천하 평정!' : '패배'}</b>
+      <p class="rd-over-msg">${won
+        ? '적벽의 불길 끝에서 천하를 지켜냈다'
+        : `${chapterOf(reachedStage).name}, ${reachedStage}라운드에서 무너졌다`}</p>
       <div class="rd-over-stats">
         <div class="rd-over-cell"><b>${fmt(run.kills || 0)}</b><span>처치</span></div>
         <div class="rd-over-cell"><b>${formatSec(sec)}</b><span>생존</span></div>

@@ -1884,7 +1884,21 @@
 .rd-info::-webkit-scrollbar { display: none; }
 .rd-center { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; padding-right: 2px; }
 /* HUD — 왼쪽 패널 상단에 세로 스택 */
+/* 현재 장(章) — HUD 위 캠페인 진행 표시 */
+.rd-chapter {
+  font-size: 10.5px; font-weight: 800; letter-spacing: 0.08em; color: var(--gold-bright, #e9c76a);
+  padding: 5px 9px 0; opacity: 0.92; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .rd-hud { display: flex; flex-direction: column; gap: 4px; padding: 0; }
+/* 과업 스트립 — HUD 아래 소목표 한 줄(겹치는 목표). 완수 시 gold-gain 맥동 재사용 */
+.rd-mission {
+  display: flex; align-items: baseline; gap: 5px; padding: 5px 9px; border-radius: 9px;
+  background: rgba(201, 162, 39, 0.08); border: 1px solid rgba(201, 162, 39, 0.22);
+}
+.rd-mission em { font-style: normal; font-size: 9px; font-weight: 800; letter-spacing: 0.1em; color: var(--gold-bright, #e9c76a); }
+.rd-mission span { flex: 1; font-size: 10.5px; font-weight: 700; color: var(--paper); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rd-mission b { font-size: 10.5px; font-weight: 800; color: var(--gold-bright, #e9c76a); font-variant-numeric: tabular-nums; }
+.rd-mission.gold-gain { animation: rd-gold-gain 0.34s ease-out; }
 .rd-stat {
   display: flex; flex-direction: row; align-items: baseline; justify-content: space-between;
   line-height: 1.05; padding: 5px 9px; border-radius: 9px;
@@ -3080,23 +3094,55 @@
 .rd-boss-banner {
   position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%);
   z-index: 9; pointer-events: none; text-align: center; white-space: nowrap;
-  animation: rd-boss-in 1.6s cubic-bezier(0.2, 1.2, 0.35, 1) both;
+  animation: rd-boss-in 2.1s cubic-bezier(0.2, 1.2, 0.35, 1) both;
+}
+.rd-boss-banner em {
+  display: block; font-style: normal; font-size: 11px; font-weight: 800; letter-spacing: 0.42em;
+  color: #ff9a72; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8); margin-bottom: 2px;
 }
 .rd-boss-banner b {
-  display: block; font-family: var(--font-display); font-size: 42px; font-weight: 800;
-  letter-spacing: 0.06em; color: #ffd9a0;
+  display: block; font-family: var(--font-display); font-size: 44px; font-weight: 800;
+  letter-spacing: 0.14em; color: #ffd9a0;
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8), 0 0 22px rgba(226, 88, 52, 0.7);
 }
 .rd-boss-banner span {
-  display: block; margin-top: 3px; font-size: 12px; letter-spacing: 0.08em; color: #f4c9b4;
+  display: block; margin-top: 3px; font-size: 12.5px; letter-spacing: 0.14em; color: #f4c9b4;
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
 }
 @keyframes rd-boss-in {
   0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
-  16% { opacity: 1; transform: translate(-50%, -50%) scale(1.12); }
-  28% { transform: translate(-50%, -50%) scale(1); }
-  78% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  13% { opacity: 1; transform: translate(-50%, -50%) scale(1.12); }
+  24% { transform: translate(-50%, -50%) scale(1); }
+  80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
   100% { opacity: 0; transform: translate(-50%, -50%) scale(1.04); }
+}
+
+/* 장(章) 배너 — 새 사건 진입. 어두운 띠 위 금빛 사건명(모던 프리미엄 — 인장·베벨 없음) */
+.rd-ch-banner {
+  position: absolute; top: 38%; left: 0; right: 0; transform: translateY(-50%);
+  z-index: 9; pointer-events: none; text-align: center; padding: 16px 8px 17px;
+  background: linear-gradient(180deg, transparent, rgba(8, 6, 4, 0.78) 22%, rgba(8, 6, 4, 0.78) 78%, transparent);
+  animation: rd-ch-in 3s ease both;
+}
+.rd-ch-banner em {
+  display: block; font-style: normal; font-size: 11px; font-weight: 800; letter-spacing: 0.5em;
+  color: var(--gold-bright, #e9c76a); opacity: 0.85; margin-bottom: 3px;
+}
+.rd-ch-banner b {
+  display: block; font-family: var(--font-display); font-size: 34px; font-weight: 800; letter-spacing: 0.2em;
+  background: linear-gradient(180deg, #fff3d6 20%, #e9c76a 58%, #b98f3e 100%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.75));
+}
+.rd-ch-banner span {
+  display: block; margin-top: 5px; font-size: 12px; letter-spacing: 0.06em; color: #d9cdb4;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+}
+@keyframes rd-ch-in {
+  0% { opacity: 0; transform: translateY(calc(-50% + 14px)); }
+  12% { opacity: 1; transform: translateY(-50%); }
+  84% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(calc(-50% - 8px)); }
 }
 
 /* 결과화면 — 이번 판 성과 한 줄(처치·생존시간) */
